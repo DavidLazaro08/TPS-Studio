@@ -1,14 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.tpsstudio.view.MainViewController">
+            fx:controller="com.tpsstudio.view.MainViewController"
+            prefWidth="1100" prefHeight="700">
+
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #2c3e50; -fx-padding: 15;">
+            <Label text="TPS Studio" style="-fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;" />
+            <Button text="Probar binding" onAction="#onTestAction" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;" />
+        </HBox>
+    </top>
 
     <center>
-        <Label text="TPS Studio (bootstrap)" />
+        <Label fx:id="lblStatus" style="-fx-font-size: 16px; -fx-text-fill: #34495e;" />
     </center>
 
 </BorderPane>
