@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -15,7 +16,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.tpsstudio.view.MainViewController"
-            prefWidth="1400" prefHeight="800" styleClass="root">
+            styleClass="root">
     
     <!-- TOOLBAR SUPERIOR -->
     <top>
@@ -61,6 +62,12 @@
                 <!-- Toggle Guías -->
                 <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias" 
                               styleClass="toolbar-toggle" selected="true" />
+
+                <Separator orientation="VERTICAL" />
+
+                <!-- Toggle Propiedades -->
+                <ToggleButton fx:id="togglePropiedades" text="Propiedades" onAction="#onTogglePropiedades" 
+                              styleClass="toolbar-toggle" selected="true" />
             </HBox>
         </VBox>
     </top>
@@ -71,19 +78,21 @@
             
             <!-- PANEL IZQUIERDO DINÁMICO -->
             <left>
-                <VBox fx:id="leftPanel" styleClass="side-panel" prefWidth="220" />
+                <VBox fx:id="leftPanel" styleClass="side-panel" 
+                      prefWidth="240" minWidth="200" maxWidth="300" />
             </left>
             
             <!-- CENTRO: Canvas de edición -->
             <center>
                 <StackPane fx:id="canvasContainer" styleClass="canvas-area">
-                    <Canvas fx:id="canvas" width="900" height="600" />
+                    <Canvas fx:id="canvas" width="750" height="600" />
                 </StackPane>
             </center>
             
             <!-- PANEL DERECHO DINÁMICO -->
             <right>
-                <VBox fx:id="rightPanel" styleClass="side-panel" prefWidth="280" />
+                <VBox fx:id="rightPanel" styleClass="side-panel" 
+                      prefWidth="300" minWidth="300" maxWidth="300" />
             </right>
             
         </BorderPane>

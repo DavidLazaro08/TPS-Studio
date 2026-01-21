@@ -229,8 +229,8 @@ public class LoginViewController {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/main_view.fxml"));
 
-            // Crear nueva escena con la vista principal
-            Scene scene = new Scene(loader.load(), 1100, 700);
+            // Crear nueva escena SIN tamaño fijo para que se adapte
+            Scene scene = new Scene(loader.load());
 
             // Aplicar la hoja de estilos CSS
             scene.getStylesheets().add(
@@ -240,13 +240,13 @@ public class LoginViewController {
             stage.setScene(scene);
             stage.setTitle("TPS Studio");
 
-            // Ajustar tamaño y centrar ventana
-            stage.sizeToScene();
-            stage.centerOnScreen();
-
             // Establecer tamaños mínimos
-            stage.setMinWidth(900);
-            stage.setMinHeight(600);
+            // Panel izq (240) + Canvas mínimo (500) + Panel der (380) + márgenes = 1150px
+            stage.setMinWidth(1150);
+            stage.setMinHeight(700);
+
+            // MAXIMIZAR la ventana para aprovechar todo el espacio
+            stage.setMaximized(true);
 
         } catch (Exception e) {
             lblError.setText("Error al cargar la aplicación");

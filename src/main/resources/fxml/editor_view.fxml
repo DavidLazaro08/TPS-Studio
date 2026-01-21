@@ -28,7 +28,7 @@
     <center>
         <StackPane styleClass="canvas-area">
             <!-- Canvas para dibujar tarjeta y guías -->
-            <Canvas fx:id="canvas" width="800" height="600" />
+            <Canvas fx:id="canvas" width="750" height="600" />
         </StackPane>
     </center>
     

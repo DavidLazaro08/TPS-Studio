@@ -39,6 +39,8 @@ public class MainViewController {
     private ToggleButton btnModeEdit;
     @FXML
     private ToggleButton btnModeExport;
+    @FXML
+    private ToggleButton togglePropiedades;
 
     // ========== State Variables ==========
     private AppMode currentMode = AppMode.PRODUCTION;
@@ -242,7 +244,14 @@ public class MainViewController {
 
     private void buildPropertiesPanel() {
         VBox props = new VBox(8);
-        props.setPadding(new Insets(12));
+        props.setPadding(new Insets(30)); // Padding aumentado visualmente
+        props.setFillWidth(true); // Los hijos ocupan todo el ancho (hasta el padding)
+        props.setAlignment(javafx.geometry.Pos.TOP_LEFT); // CRÍTICO: Alineación izquierda
+
+        // CRÍTICO: Limitar ancho máximo de controles individuales
+        // Reducido a 200px para aumentar los márgenes visuales y evitar sensación de
+        // "apretado"
+        final double MAX_CONTROL_WIDTH = 200.0;
 
         Label lblProps = new Label("Propiedades");
         lblProps.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
@@ -261,6 +270,8 @@ public class MainViewController {
             Label lblDim = new Label(String.format("Dimensiones: %.0f × %.0f px",
                     fondo.getWidth(), fondo.getHeight()));
             lblDim.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+            lblDim.setMaxWidth(MAX_CONTROL_WIDTH);
+            lblDim.setWrapText(true);
 
             // Modo de ajuste
             Label lblModo = new Label("Modo de ajuste:");
@@ -271,11 +282,15 @@ public class MainViewController {
             rbBleed.setToggleGroup(modoGroup);
             rbBleed.setSelected(fondo.getFitMode() == FondoFitMode.BLEED);
             rbBleed.setStyle("-fx-text-fill: #e8e6e7;");
+            rbBleed.setMaxWidth(MAX_CONTROL_WIDTH);
+            rbBleed.setWrapText(true);
 
             RadioButton rbFinal = new RadioButton("Sin sangre (CR80 final)");
             rbFinal.setToggleGroup(modoGroup);
             rbFinal.setSelected(fondo.getFitMode() == FondoFitMode.FINAL);
             rbFinal.setStyle("-fx-text-fill: #e8e6e7;");
+            rbFinal.setMaxWidth(MAX_CONTROL_WIDTH);
+            rbFinal.setWrapText(true);
 
             modoGroup.selectedToggleProperty().addListener((obs, old, newVal) -> {
                 if (newVal == rbBleed) {
@@ -289,7 +304,7 @@ public class MainViewController {
             });
 
             Button btnReemplazar = new Button("Reemplazar Fondo");
-            btnReemplazar.setMaxWidth(Double.MAX_VALUE);
+            btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
             btnReemplazar.getStyleClass().add("toolbox-btn");
             btnReemplazar.setOnAction(e -> {
                 FileChooser fileChooser = new FileChooser();
@@ -311,12 +326,12 @@ public class MainViewController {
             });
 
             Button btnEditarExterno = new Button("Editar Externa...");
-            btnEditarExterno.setMaxWidth(Double.MAX_VALUE);
+            btnEditarExterno.setMaxWidth(MAX_CONTROL_WIDTH);
             btnEditarExterno.getStyleClass().add("toolbox-btn");
             btnEditarExterno.setOnAction(e -> abrirEditorExterno(fondo));
 
             Button btnRecargar = new Button("Recargar");
-            btnRecargar.setMaxWidth(Double.MAX_VALUE);
+            btnRecargar.setMaxWidth(MAX_CONTROL_WIDTH);
             btnRecargar.getStyleClass().add("toolbox-btn");
             btnRecargar.setOnAction(e -> recargarFondo(fondo));
 
@@ -338,6 +353,11 @@ public class MainViewController {
             txtW.setPromptText("Ancho");
             txtH.setPromptText("Alto");
 
+            txtX.setMaxWidth(MAX_CONTROL_WIDTH);
+            txtY.setMaxWidth(MAX_CONTROL_WIDTH);
+            txtW.setMaxWidth(MAX_CONTROL_WIDTH);
+            txtH.setMaxWidth(MAX_CONTROL_WIDTH);
+
             // Text-specific properties
             if (elementoSeleccionado instanceof TextoElemento) {
                 TextoElemento texto = (TextoElemento) elementoSeleccionado;
@@ -347,6 +367,7 @@ public class MainViewController {
 
                 TextField txtContenido = new TextField(texto.getContenido());
                 txtContenido.setPromptText("Contenido");
+                txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
                 txtContenido.textProperty().addListener((obs, old, newVal) -> {
                     texto.setContenido(newVal);
                     dibujarCanvas();
@@ -359,7 +380,7 @@ public class MainViewController {
                 ComboBox<String> cmbFuente = new ComboBox<>();
                 cmbFuente.getItems().addAll(javafx.scene.text.Font.getFamilies());
                 cmbFuente.setValue(texto.getFontFamily());
-                cmbFuente.setMaxWidth(Double.MAX_VALUE);
+                cmbFuente.setMaxWidth(MAX_CONTROL_WIDTH);
                 cmbFuente.valueProperty().addListener((obs, old, newVal) -> {
                     if (newVal != null) {
                         texto.setFontFamily(newVal);
@@ -368,13 +389,13 @@ public class MainViewController {
                 });
 
                 // Tamaño
-                Label lblSize = new Label("Tamaño:");
-                lblSize.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+                Label lblTamaño = new Label("Tamaño:");
+                lblTamaño.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
-                Spinner<Integer> spnSize = new Spinner<>(8, 72, (int) texto.getFontSize());
-                spnSize.setEditable(true);
-                spnSize.setMaxWidth(Double.MAX_VALUE);
-                spnSize.valueProperty().addListener((obs, old, newVal) -> {
+                Spinner<Integer> spnTamaño = new Spinner<>(8, 72, (int) texto.getFontSize());
+                spnTamaño.setEditable(true);
+                spnTamaño.setMaxWidth(MAX_CONTROL_WIDTH);
+                spnTamaño.valueProperty().addListener((obs, old, newVal) -> {
                     texto.setFontSize(newVal);
                     dibujarCanvas();
                 });
@@ -383,9 +404,9 @@ public class MainViewController {
                 Label lblColor = new Label("Color:");
                 lblColor.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
-                ColorPicker colorPicker = new ColorPicker(Color.web(texto.getColor()));
-                colorPicker.setMaxWidth(Double.MAX_VALUE);
-                colorPicker.valueProperty().addListener((obs, old, newVal) -> {
+                ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
+                cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
+                cpColor.valueProperty().addListener((obs, old, newVal) -> {
                     texto.setColor(String.format("#%02X%02X%02X",
                             (int) (newVal.getRed() * 255),
                             (int) (newVal.getGreen() * 255),
@@ -394,20 +415,20 @@ public class MainViewController {
                 });
 
                 // Alineación
-                Label lblAlign = new Label("Alineación:");
-                lblAlign.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+                Label lblAlineacion = new Label("Alineación:");
+                lblAlineacion.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
-                ComboBox<String> cmbAlign = new ComboBox<>();
-                cmbAlign.getItems().addAll("Izquierda", "Centro", "Derecha");
-                cmbAlign.setValue(
-                        texto.getAlineacion().equals("LEFT") ? "Izquierda"
-                                : texto.getAlineacion().equals("CENTER") ? "Centro" : "Derecha");
-                cmbAlign.setMaxWidth(Double.MAX_VALUE);
-                cmbAlign.valueProperty().addListener((obs, old, newVal) -> {
+                ComboBox<String> cmbAlineacion = new ComboBox<>();
+                cmbAlineacion.getItems().addAll("Izquierda", "Centro", "Derecha");
+                String currentAlign = texto.getAlineacion();
+                cmbAlineacion.setValue(
+                        "LEFT".equals(currentAlign) ? "Izquierda"
+                                : "CENTER".equals(currentAlign) ? "Centro" : "Derecha");
+                cmbAlineacion.setMaxWidth(MAX_CONTROL_WIDTH);
+                cmbAlineacion.valueProperty().addListener((obs, old, newVal) -> {
                     if (newVal != null) {
-                        String align = newVal.equals("Izquierda") ? "LEFT"
-                                : newVal.equals("Centro") ? "CENTER" : "RIGHT";
-                        texto.setAlineacion(align);
+                        texto.setAlineacion(
+                                "Izquierda".equals(newVal) ? "LEFT" : "Centro".equals(newVal) ? "CENTER" : "RIGHT");
                         dibujarCanvas();
                     }
                 });
@@ -419,6 +440,7 @@ public class MainViewController {
                 CheckBox chkNegrita = new CheckBox("Negrita");
                 chkNegrita.setSelected(texto.isNegrita());
                 chkNegrita.setStyle("-fx-text-fill: #e8e6e7;");
+                chkNegrita.setMaxWidth(MAX_CONTROL_WIDTH);
                 chkNegrita.selectedProperty().addListener((obs, old, newVal) -> {
                     texto.setNegrita(newVal);
                     dibujarCanvas();
@@ -427,6 +449,7 @@ public class MainViewController {
                 CheckBox chkCursiva = new CheckBox("Cursiva");
                 chkCursiva.setSelected(texto.isCursiva());
                 chkCursiva.setStyle("-fx-text-fill: #e8e6e7;");
+                chkCursiva.setMaxWidth(MAX_CONTROL_WIDTH);
                 chkCursiva.selectedProperty().addListener((obs, old, newVal) -> {
                     texto.setCursiva(newVal);
                     dibujarCanvas();
@@ -434,10 +457,8 @@ public class MainViewController {
 
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
                         new Separator(), lblTexto, txtContenido,
-                        new Separator(), lblFuente, cmbFuente,
-                        lblSize, spnSize,
-                        lblColor, colorPicker,
-                        lblAlign, cmbAlign,
+                        lblFuente, cmbFuente, lblTamaño, spnTamaño,
+                        lblColor, cpColor, lblAlineacion, cmbAlineacion,
                         lblEstilo, chkNegrita, chkCursiva);
             } else if (elementoSeleccionado instanceof ImagenElemento) {
                 // Image-specific properties
@@ -446,20 +467,23 @@ public class MainViewController {
                 Label lblImagen = new Label("Imagen");
                 lblImagen.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-                Label lblOriginal = new Label(String.format("Original: %.0f × %.0f px",
+                Label lblDimOrig = new Label(String.format("Original: %.0f × %.0f px",
                         imagen.getOriginalWidth(), imagen.getOriginalHeight()));
-                lblOriginal.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+                lblDimOrig.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+                lblDimOrig.setMaxWidth(MAX_CONTROL_WIDTH);
+                lblDimOrig.setWrapText(true);
 
                 // Opacidad
-                Label lblOpacity = new Label(String.format("Opacidad: %.0f%%", imagen.getOpacity() * 100));
-                lblOpacity.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+                Label lblOpacidad = new Label("Opacidad:");
+                lblOpacidad.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-                Slider sliderOpacity = new Slider(0, 100, imagen.getOpacity() * 100);
-                sliderOpacity.setShowTickLabels(false);
-                sliderOpacity.setShowTickMarks(false);
-                sliderOpacity.valueProperty().addListener((obs, old, newVal) -> {
+                Slider sldOpacidad = new Slider(0, 100, imagen.getOpacity() * 100);
+                sldOpacidad.setShowTickLabels(true);
+                sldOpacidad.setShowTickMarks(true);
+                sldOpacidad.setMajorTickUnit(25);
+                sldOpacidad.setMaxWidth(MAX_CONTROL_WIDTH);
+                sldOpacidad.valueProperty().addListener((obs, old, newVal) -> {
                     imagen.setOpacity(newVal.doubleValue() / 100.0);
-                    lblOpacity.setText(String.format("Opacidad: %.0f%%", newVal.doubleValue()));
                     dibujarCanvas();
                 });
 
@@ -467,18 +491,19 @@ public class MainViewController {
                 CheckBox chkProporcion = new CheckBox("Mantener proporción");
                 chkProporcion.setSelected(imagen.isMantenerProporcion());
                 chkProporcion.setStyle("-fx-text-fill: #e8e6e7;");
+                chkProporcion.setMaxWidth(MAX_CONTROL_WIDTH);
                 chkProporcion.selectedProperty().addListener((obs, old, newVal) -> {
                     imagen.setMantenerProporcion(newVal);
                 });
 
                 // Botón reemplazar
                 Button btnReemplazar = new Button("Reemplazar Imagen");
-                btnReemplazar.setMaxWidth(Double.MAX_VALUE);
+                btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
                 btnReemplazar.getStyleClass().add("toolbox-btn");
                 btnReemplazar.setOnAction(e -> {
                     FileChooser fileChooser = new FileChooser();
                     fileChooser.setTitle("Reemplazar Imagen");
-                    fileChooser.getExtensionFilters().add(
+                    fileChooser.getExtensionFilters().addAll(
                             new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
                     File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
                     if (file != null) {
@@ -486,6 +511,9 @@ public class MainViewController {
                             Image img = new Image(file.toURI().toString());
                             imagen.setImagen(img);
                             imagen.setRutaArchivo(file.getAbsolutePath());
+                            // OriginalW/H updated inside setImagen automatically? No, setImagen usually
+                            // updates it but ImagenElemento.setImagen DOES update them.
+                            // I checked ImagenElemento.java, setImagen DOES update originalWidth/Height.
                             buildPropertiesPanel();
                             dibujarCanvas();
                         } catch (Exception ex) {
@@ -495,23 +523,55 @@ public class MainViewController {
                 });
 
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
-                        new Separator(), lblImagen, lblOriginal,
-                        lblOpacity, sliderOpacity,
-                        chkProporcion, btnReemplazar);
+                        new Separator(), lblImagen, lblDimOrig,
+                        lblOpacidad, sldOpacidad, chkProporcion, btnReemplazar);
             } else {
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH);
             }
 
+            // Listeners for position/size
+            txtX.textProperty().addListener((obs, old, newVal) -> {
+                try {
+                    elementoSeleccionado.setX(Double.parseDouble(newVal));
+                    dibujarCanvas();
+                } catch (NumberFormatException ignored) {
+                }
+            });
+            txtY.textProperty().addListener((obs, old, newVal) -> {
+                try {
+                    elementoSeleccionado.setY(Double.parseDouble(newVal));
+                    dibujarCanvas();
+                } catch (NumberFormatException ignored) {
+                }
+            });
+            txtW.textProperty().addListener((obs, old, newVal) -> {
+                try {
+                    elementoSeleccionado.setWidth(Double.parseDouble(newVal));
+                    dibujarCanvas();
+                } catch (NumberFormatException ignored) {
+                }
+            });
+            txtH.textProperty().addListener((obs, old, newVal) -> {
+                try {
+                    elementoSeleccionado.setHeight(Double.parseDouble(newVal));
+                    dibujarCanvas();
+                } catch (NumberFormatException ignored) {
+                }
+            });
         }
 
-        // Envolver en ScrollPane para que siempre sea visible
+        // CRÍTICO: Configuración defensiva del ScrollPane
         ScrollPane scrollPane = new ScrollPane(props);
-        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToWidth(true); // Content fills viewport width
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c;");
+        scrollPane.setStyle("-fx-background: #141012; -fx-background-color: #141012; -fx-padding: 0;");
+        scrollPane.setPadding(javafx.geometry.Insets.EMPTY); // Remove all padding
 
+        rightPanel.getChildren().clear();
         rightPanel.getChildren().add(scrollPane);
+        rightPanel.setAlignment(javafx.geometry.Pos.TOP_LEFT); // Ensure container aligns left
+        rightPanel.setPadding(javafx.geometry.Insets.EMPTY);
     }
 
     // ========== BUILD EXPORT PANELS ==========
@@ -547,37 +607,47 @@ public class MainViewController {
         projectPanel.getChildren().addAll(lblTrabajos, listProyectos, btnNuevoCR80);
         leftPanel.getChildren().add(projectPanel);
 
-        // RIGHT: Export options
-        VBox exportPanel = new VBox(12);
-        exportPanel.setPadding(new Insets(12));
+        // RIGHT: Export controls
+        VBox exportPanel = new VBox(15);
+        exportPanel.setPadding(new Insets(30)); // Padding aumentado (antes 12)
+        exportPanel.setFillWidth(true); // Permitir llenar hasta el padding
 
         Label lblExport = new Label("Exportación");
         lblExport.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
 
-        Label lblFormato = new Label("Formato: PNG/PDF (placeholder)");
-        Label lblDPI = new Label("DPI: 300 (placeholder)");
+        Label lblInfoExp = new Label("Formato: PNG/PDF (placeholder)");
+        lblInfoExp.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+        Label lblDpi = new Label("DPI: 300 (placeholder)");
+        lblDpi.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
         Label lblGuias = new Label("Incluir guías: No (placeholder)");
-        Label lblCara = new Label("Exportar: Frente (placeholder)");
-
-        lblFormato.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
-        lblDPI.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
         lblGuias.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
-        lblCara.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-        Button btnExportarGrande = new Button("Exportar");
-        btnExportarGrande.getStyleClass().add("primary-btn");
-        btnExportarGrande.setMaxWidth(Double.MAX_VALUE);
-        btnExportarGrande.setOnAction(e -> onExportarProyecto());
+        Label lblSide = new Label("Exportar: Frente (placeholder)");
+        lblSide.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-        exportPanel.getChildren().addAll(lblExport, lblFormato, lblDPI, lblGuias, lblCara,
-                new Separator(), btnExportarGrande);
+        Button btnDoExport = new Button("Exportar");
+        btnDoExport.getStyleClass().add("success-btn"); // Estilo verde/destacado
+        // Aplicar el mismo límite de ancho que en propiedades para consistencia visual
+        btnDoExport.setMaxWidth(200.0);
+        btnDoExport.setOnAction(e -> onExportarProyecto());
+
+        exportPanel.getChildren().addAll(lblExport, lblInfoExp, lblDpi, lblGuias, lblSide, new Separator(),
+                btnDoExport);
+
+        // Envolver en ScrollPane para consistencia
+        // Establecer el mismo color de fondo para el VBox que para el ScrollPane
+        // para evitar el efecto de "dos tonos" si el contenido es corto
+        exportPanel.setStyle("-fx-background-color: #1e1b1c;");
 
         // Envolver en ScrollPane para consistencia
         ScrollPane scrollPane = new ScrollPane(exportPanel);
         scrollPane.setFitToWidth(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c;");
+        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-padding: 0;");
+        scrollPane.setPadding(javafx.geometry.Insets.EMPTY);
 
         rightPanel.getChildren().add(scrollPane);
     }
@@ -1114,6 +1184,15 @@ public class MainViewController {
                 errorAlert.setContentText(ex.getMessage());
                 errorAlert.showAndWait();
             }
+        }
+    }
+
+    @FXML
+    private void onTogglePropiedades() {
+        if (rightPanel != null && togglePropiedades != null) {
+            boolean visible = togglePropiedades.isSelected();
+            rightPanel.setVisible(visible);
+            rightPanel.setManaged(visible);
         }
     }
 }
