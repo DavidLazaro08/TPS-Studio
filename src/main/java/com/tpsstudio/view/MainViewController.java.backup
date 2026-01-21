@@ -1,4 +1,4 @@
-package com.tpsstudio.view;
+﻿package com.tpsstudio.view;
 
 import com.tpsstudio.model.*;
 import javafx.collections.FXCollections;
@@ -41,7 +41,7 @@ public class MainViewController {
     private ToggleButton btnModeExport;
 
     // ========== State Variables ==========
-    private AppMode currentMode = AppMode.PRODUCTION;
+    private AppMode currentMode = AppMode.DESIGN;
     private final ObservableList<Proyecto> proyectos = FXCollections.observableArrayList();
     private Proyecto proyectoActual;
     private Elemento elementoSeleccionado;
@@ -63,7 +63,7 @@ public class MainViewController {
     @FXML
     private void initialize() {
         setupCanvas();
-        switchMode(AppMode.PRODUCTION); // Start in PRODUCTION mode
+        switchMode(AppMode.DESIGN); // Start in EDIT mode
     }
 
     private void setupCanvas() {
@@ -126,26 +126,26 @@ public class MainViewController {
         lblToolbox.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
 
         Button btnTexto = new Button("T Texto");
-        btnTexto.setOnAction(e -> onAñadirTexto());
+        btnTexto.setOnAction(e -> onAÃ±adirTexto());
         btnTexto.setMaxWidth(Double.MAX_VALUE);
         btnTexto.getStyleClass().add("toolbox-btn");
 
-        Button btnImagen = new Button("🖼 Imagen");
-        btnImagen.setOnAction(e -> onAñadirImagen());
+        Button btnImagen = new Button("ðŸ–¼ Imagen");
+        btnImagen.setOnAction(e -> onAÃ±adirImagen());
         btnImagen.setMaxWidth(Double.MAX_VALUE);
         btnImagen.getStyleClass().add("toolbox-btn");
-
-        Button btnFondo = new Button("🎨 Fondo");
-        btnFondo.setOnAction(e -> onAñadirFondo());
+        
+        Button btnFondo = new Button(" Fondo");
+        btnFondo.setOnAction(e -> onAnadirFondo());
         btnFondo.setMaxWidth(Double.MAX_VALUE);
         btnFondo.getStyleClass().add("toolbox-btn");
 
-        Button btnRectangulo = new Button("▭ Rectángulo");
+        Button btnRectangulo = new Button("â–­ RectÃ¡ngulo");
         btnRectangulo.setMaxWidth(Double.MAX_VALUE);
         btnRectangulo.getStyleClass().add("toolbox-btn");
         btnRectangulo.setDisable(true); // Placeholder
 
-        Button btnElipse = new Button("○ Elipse");
+        Button btnElipse = new Button("â—‹ Elipse");
         btnElipse.setMaxWidth(Double.MAX_VALUE);
         btnElipse.getStyleClass().add("toolbox-btn");
         btnElipse.setDisable(true); // Placeholder
@@ -164,30 +164,7 @@ public class MainViewController {
         listCapas.setPrefHeight(200);
 
         if (proyectoActual != null) {
-            // Combine background + normal elements
-            ObservableList<Elemento> allElements = FXCollections.observableArrayList();
-            ImagenFondoElemento fondo = proyectoActual.getFondoActual();
-            if (fondo != null) {
-                allElements.add(fondo);
-            }
-            allElements.addAll(proyectoActual.getElementosActuales());
-
-            listCapas.setItems(allElements);
-
-            // Custom cell factory to show lock icon for background
-            listCapas.setCellFactory(lv -> new ListCell<Elemento>() {
-                @Override
-                protected void updateItem(Elemento item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                    } else {
-                        String lockIcon = item.isLocked() ? "🔒 " : "";
-                        setText(lockIcon + item.getNombre());
-                    }
-                }
-            });
-
+            listCapas.setItems(proyectoActual.getElementosActuales());
             listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
                 elementoSeleccionado = newVal;
                 buildEditPanels(); // Refresh to update properties
@@ -214,54 +191,9 @@ public class MainViewController {
             Label placeholder = new Label("Seleccione un elemento");
             placeholder.setStyle("-fx-text-fill: #6a6568; -fx-font-size: 12px; -fx-font-style: italic;");
             props.getChildren().addAll(lblProps, placeholder);
-        } else if (elementoSeleccionado instanceof ImagenFondoElemento) {
-            // Background-specific properties
-            ImagenFondoElemento fondo = (ImagenFondoElemento) elementoSeleccionado;
-
-            Label lblInfo = new Label("Fondo de la tarjeta");
-            lblInfo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px; -fx-font-style: italic;");
-
-            Label lblDim = new Label(String.format("Dimensiones: %.0f × %.0f px",
-                    fondo.getWidth(), fondo.getHeight()));
-            lblDim.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
-
-            CheckBox chkSangrado = new CheckBox("Ajustar a sangrado (bleed)");
-            chkSangrado.setSelected(fondo.isAjustarASangrado());
-            chkSangrado.setStyle("-fx-text-fill: #e8e6e7;");
-            chkSangrado.selectedProperty().addListener((obs, old, newVal) -> {
-                fondo.setAjustarASangrado(newVal);
-                fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
-                buildEditPanels();
-                dibujarCanvas();
-            });
-
-            Button btnReemplazar = new Button("Reemplazar Fondo");
-            btnReemplazar.setMaxWidth(Double.MAX_VALUE);
-            btnReemplazar.getStyleClass().add("toolbox-btn");
-            btnReemplazar.setOnAction(e -> {
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.setTitle("Reemplazar Fondo");
-                fileChooser.getExtensionFilters().addAll(
-                        new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-                File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-                if (file != null) {
-                    try {
-                        Image img = new Image(file.toURI().toString());
-                        fondo.setImagen(img);
-                        fondo.setRutaArchivo(file.getAbsolutePath());
-                        fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
-                        dibujarCanvas();
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            });
-
-            props.getChildren().addAll(lblProps, lblInfo, lblDim,
-                    new Separator(), chkSangrado, btnReemplazar);
         } else {
             // Position and size
-            Label lblPos = new Label("Posición y Tamaño");
+            Label lblPos = new Label("PosiciÃ³n y TamaÃ±o");
             lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
             TextField txtX = new TextField(String.format("%.0f", elementoSeleccionado.getX()));
@@ -289,7 +221,7 @@ public class MainViewController {
                 });
 
                 TextField txtSize = new TextField(String.format("%.0f", texto.getFontSize()));
-                txtSize.setPromptText("Tamaño fuente");
+                txtSize.setPromptText("TamaÃ±o fuente");
 
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
                         new Separator(), lblTexto, txtContenido, txtSize);
@@ -338,12 +270,12 @@ public class MainViewController {
         VBox exportPanel = new VBox(12);
         exportPanel.setPadding(new Insets(12));
 
-        Label lblExport = new Label("Exportación");
+        Label lblExport = new Label("ExportaciÃ³n");
         lblExport.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
 
         Label lblFormato = new Label("Formato: PNG/PDF (placeholder)");
         Label lblDPI = new Label("DPI: 300 (placeholder)");
-        Label lblGuias = new Label("Incluir guías: No (placeholder)");
+        Label lblGuias = new Label("Incluir guÃ­as: No (placeholder)");
         Label lblCara = new Label("Exportar: Frente (placeholder)");
 
         lblFormato.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
@@ -393,21 +325,9 @@ public class MainViewController {
                     scaledWidth + (bleedScaled * 2), scaledHeight + (bleedScaled * 2));
         }
 
-        // Background (if exists)
-        ImagenFondoElemento fondo = proyectoActual.getFondoActual();
-        if (fondo != null && fondo.getImagen() != null) {
-            double fx = cardX + (fondo.getX() * zoomLevel);
-            double fy = cardY + (fondo.getY() * zoomLevel);
-            double fw = fondo.getWidth() * zoomLevel;
-            double fh = fondo.getHeight() * zoomLevel;
-            gc.drawImage(fondo.getImagen(), fx, fy, fw, fh);
-        } else {
-            // Card (white background only if no background image)
-            gc.setFill(Color.WHITE);
-            gc.fillRect(cardX, cardY, scaledWidth, scaledHeight);
-        }
-
-        // Card border
+        // Card
+        gc.setFill(Color.WHITE);
+        gc.fillRect(cardX, cardY, scaledWidth, scaledHeight);
         gc.setStroke(Color.web("#c4c0c2"));
         gc.setLineWidth(1);
         gc.setLineDashes();
@@ -458,7 +378,7 @@ public class MainViewController {
         gc.setLineDashes();
         gc.setFont(Font.font("Arial", 12));
         String lado = proyectoActual.isMostrandoFrente() ? "Frente" : "Dorso";
-        gc.fillText("CR80: 85.60 × 53.98 mm - " + lado, cardX, cardY - 10);
+        gc.fillText("CR80: 85.60 Ã— 53.98 mm - " + lado, cardX, cardY - 10);
 
         gc.restore();
     }
@@ -586,7 +506,7 @@ public class MainViewController {
 
     // ========== EDIT MODE ACTIONS ==========
 
-    private void onAñadirTexto() {
+    private void onAÃ±adirTexto() {
         if (proyectoActual == null)
             return;
 
@@ -598,14 +518,14 @@ public class MainViewController {
         dibujarCanvas();
     }
 
-    private void onAñadirImagen() {
+    private void onAÃ±adirImagen() {
         if (proyectoActual == null)
             return;
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Seleccionar Imagen");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                new FileChooser.ExtensionFilter("ImÃ¡genes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
 
         File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
         if (file != null) {
@@ -632,49 +552,47 @@ public class MainViewController {
             dibujarCanvas();
         }
     }
+}
 
-    private void onAñadirFondo() {
-        if (proyectoActual == null)
-            return;
 
+
+    private void onAnadirFondo() {
+        if (proyectoActual == null) return;
+        
         // Check if background already exists
-        ImagenFondoElemento fondoExistente = proyectoActual.getFondoActual();
-        if (fondoExistente != null) {
+        if (proyectoActual.getFondoActual() != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Reemplazar Fondo");
             alert.setHeaderText("Ya existe un fondo en esta cara");
             alert.setContentText("¿Desea reemplazar el fondo actual?");
-
-            if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            
+            if (alert.showAndWait().get() != ButtonType.OK) {
                 return;
             }
         }
-
+        
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Seleccionar Imagen de Fondo");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
+            new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg")
+        );
+        
         File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
         if (file != null) {
             try {
                 Image img = new Image(file.toURI().toString());
-                ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
-                        file.getAbsolutePath(), img, CARD_WIDTH, CARD_HEIGHT);
-                nuevoFondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
-
-                proyectoActual.setFondoActual(nuevoFondo);
-                elementoSeleccionado = nuevoFondo;
+                ImagenFondoElemento fondo = new ImagenFondoElemento(
+                    file.getAbsolutePath(), img, CARD_WIDTH, CARD_HEIGHT
+                );
+                fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+                
+                proyectoActual.setFondoActual(fondo);
                 buildEditPanels();
                 dibujarCanvas();
             } catch (Exception ex) {
                 ex.printStackTrace();
-                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                errorAlert.setTitle("Error");
-                errorAlert.setHeaderText("No se pudo cargar la imagen");
-                errorAlert.setContentText(ex.getMessage());
-                errorAlert.showAndWait();
             }
         }
     }
+
 }

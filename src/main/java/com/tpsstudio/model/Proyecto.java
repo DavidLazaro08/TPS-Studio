@@ -17,6 +17,10 @@ public class Proyecto {
     private final ObservableList<Elemento> elementosFrente;
     private final ObservableList<Elemento> elementosDorso;
 
+    // Fondos (uno por cara)
+    private ImagenFondoElemento fondoFrente;
+    private ImagenFondoElemento fondoDorso;
+
     private static int contadorId = 1;
 
     public Proyecto(String nombre) {
@@ -26,6 +30,8 @@ public class Proyecto {
         this.mostrandoFrente = true;
         this.elementosFrente = FXCollections.observableArrayList();
         this.elementosDorso = FXCollections.observableArrayList();
+        this.fondoFrente = null;
+        this.fondoDorso = null;
     }
 
     // Getters y setters
@@ -66,6 +72,40 @@ public class Proyecto {
 
     public ObservableList<Elemento> getElementosDorso() {
         return elementosDorso;
+    }
+
+    /**
+     * Obtiene el fondo de la cara actual
+     */
+    public ImagenFondoElemento getFondoActual() {
+        return mostrandoFrente ? fondoFrente : fondoDorso;
+    }
+
+    /**
+     * Establece el fondo de la cara actual
+     */
+    public void setFondoActual(ImagenFondoElemento fondo) {
+        if (mostrandoFrente) {
+            fondoFrente = fondo;
+        } else {
+            fondoDorso = fondo;
+        }
+    }
+
+    public ImagenFondoElemento getFondoFrente() {
+        return fondoFrente;
+    }
+
+    public void setFondoFrente(ImagenFondoElemento fondoFrente) {
+        this.fondoFrente = fondoFrente;
+    }
+
+    public ImagenFondoElemento getFondoDorso() {
+        return fondoDorso;
+    }
+
+    public void setFondoDorso(ImagenFondoElemento fondoDorso) {
+        this.fondoDorso = fondoDorso;
     }
 
     @Override
