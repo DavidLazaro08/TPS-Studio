@@ -1,104 +1,261 @@
-/* ========================================
-   TPS Studio - Professional Dark Theme
-   ======================================== */
+/* =====================================================
+   TPS Studio — Tema Dark Profesional
+   Paleta: Vino oscuro/berenjena + Azul petróleo discreto
+   Estilo: Herramienta industrial, sobria, seria
+   ===================================================== */
 
-/* Root - Fondo general oscuro */
+/* -----------------------------------------------------
+   ROOT — Fondo casi negro con degradado mínimo
+   ----------------------------------------------------- */
 .root {
-    -fx-background-color: #2b2b2b;
+    /* Degradado muy sutil: negro puro → negro con tinte berenjena */
+    -fx-background-color:
+        radial-gradient(center 30% 25%, radius 70%, rgba(40, 30, 35, 0.08), transparent),
+        linear-gradient(to bottom right, #0a0809, #120e10);
     -fx-font-family: "Segoe UI", "Arial", sans-serif;
 }
 
-/* Barra superior oscura */
-.topbar {
-    -fx-background-color: #3c3f41;
-    -fx-padding: 15;
-    -fx-spacing: 20;
+
+/* =====================================================
+   LOGIN — DOBLE PANEL (OUTER + INNER)
+   ===================================================== */
+
+/* CAJA 1: Panel exterior — Casi negro con tinte berenjena */
+.login-outer {
+    -fx-background-color: #141012;
+    /* Negro berenjena muy oscuro */
+    -fx-padding: 20;
+    -fx-background-radius: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 25, 0, 0, 5);
 }
 
-/* Título principal */
-.title {
-    -fx-text-fill: #ffffff;
-    -fx-font-size: 20px;
+
+/* CAJA 2: Panel interior — Gris neutro-cálido (NO rosado) */
+.login-inner {
+    -fx-background-color: #1e1a1c;
+    /* Gris oscuro neutro con tinte mínimo */
+    -fx-padding: 35 40;
+    -fx-background-radius: 14;
+}
+
+
+/* -----------------------------------------------------
+   TÍTULOS — Blancos neutros
+   ----------------------------------------------------- */
+.login-title {
+    -fx-text-fill: #e8e6e7;
+    /* Blanco neutro */
+    -fx-font-size: 26px;
     -fx-font-weight: bold;
 }
 
-/* Botón primario (azul acento) */
-.primary-btn {
-    -fx-background-color: #4a9eff;
-    -fx-text-fill: white;
+.login-subtitle {
+    -fx-text-fill: #9a9598;
+    /* Gris neutro */
     -fx-font-size: 14px;
-    -fx-padding: 8 16;
-    -fx-background-radius: 4;
-    -fx-cursor: hand;
 }
 
-.primary-btn:hover {
-    -fx-background-color: #3d8ce6;
+
+/* -----------------------------------------------------
+   LABELS DE CAMPOS — Gris claro neutro
+   ----------------------------------------------------- */
+.field-label {
+    -fx-text-fill: #c4c0c2;
+    /* Gris claro neutro */
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
 }
 
-.primary-btn:pressed {
-    -fx-background-color: #2e7dd1;
+
+/* -----------------------------------------------------
+   CAMPOS DE TEXTO — Fondo gris neutro, borde discreto
+   ----------------------------------------------------- */
+.form-field {
+    -fx-background-color: #2a2628;
+    /* Gris oscuro neutro-cálido */
+    -fx-text-fill: #e8e6e7;
+    -fx-prompt-text-fill: #6a6568;
+    /* Placeholder gris neutro */
+
+    -fx-font-size: 14px;
+    -fx-padding: 10 12;
+
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-border-color: #3d3739;
+    /* Borde gris oscuro sutil */
 }
 
-/* Botón de éxito (verde para "Entrar") */
+.form-field:focused {
+    -fx-border-color: #4a6b7c;
+    /* Azul petróleo DISCRETO */
+    -fx-border-width: 2;
+    -fx-background-color: #322e30;
+    /* Ligeramente más claro */
+}
+
+
+/* -----------------------------------------------------
+   BOTÓN PRINCIPAL — Burdeos profundo casi negro (NO rosa)
+   ----------------------------------------------------- */
 .success-btn {
-    -fx-background-color: #5cb85c;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+    -fx-background-color: #3d1f28;
+    /* Vino tinto oscuro, muy desaturado */
+    -fx-text-fill: #e8e6e7;
+
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
-    -fx-padding: 10 20;
-    -fx-background-radius: 4;
+
+    -fx-padding: 12 24;
+    -fx-background-radius: 6;
+
     -fx-cursor: hand;
 }
 
 .success-btn:hover {
-    -fx-background-color: #4cae4c;
+    -fx-background-color: #4d2a34;
+    /* Un paso más claro, NO más saturado */
 }
 
 .success-btn:pressed {
-    -fx-background-color: #3d9c3d;
+    -fx-background-color: #2d1620;
+    /* Más oscuro */
 }
 
-/* Campos de formulario (TextField, PasswordField) */
-.form-field {
-    -fx-background-color: #ffffff;
-    -fx-text-fill: #2b2b2b;
-    -fx-font-size: 14px;
-    -fx-padding: 8 12;
+
+/* -----------------------------------------------------
+   BOTÓN OJO (MOSTRAR / OCULTAR CONTRASEÑA)
+   ----------------------------------------------------- */
+.eye-button {
+    -fx-background-color: transparent;
+    -fx-padding: 5;
+    -fx-cursor: hand;
     -fx-background-radius: 4;
-    -fx-border-color: #cccccc;
+}
+
+.eye-button:hover {
+    -fx-background-color: rgba(74, 107, 124, 0.06);
+    /* Azul petróleo muy sutil */
+}
+
+.eye-button:pressed {
+    -fx-background-color: rgba(74, 107, 124, 0.12);
+}
+
+.eye-icon {
+    -fx-fill: #9a9598;
+    /* Gris neutro */
+    -fx-scale-x: 0.7;
+    -fx-scale-y: 0.7;
+}
+
+.eye-button:hover .eye-icon {
+    -fx-fill: #c4c0c2;
+    /* Más claro al hover */
+}
+
+
+/* -----------------------------------------------------
+   CHECKBOX — Recordar usuario
+   ----------------------------------------------------- */
+.remember-checkbox {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.remember-checkbox .box {
+    -fx-background-color: #2a2628;
+    -fx-border-color: #3d3739;
+    -fx-border-width: 1.5;
+
+    -fx-background-radius: 4;
     -fx-border-radius: 4;
-    -fx-border-width: 1;
 }
 
-.form-field:focused {
-    -fx-border-color: #4a9eff;
-    -fx-border-width: 2;
+.remember-checkbox:hover .box {
+    -fx-border-color: #4a6b7c;
+    /* Azul petróleo discreto */
 }
 
-/* Texto de error */
+.remember-checkbox:selected .box {
+    -fx-background-color: #4a6b7c;
+    /* Azul petróleo discreto */
+    -fx-border-color: #4a6b7c;
+}
+
+/* Tick blanco visible */
+.remember-checkbox:selected .mark {
+    -fx-background-color: #e8e6e7;
+    -fx-shape: "M 0 4 L 3 7 L 8 0";
+    -fx-scale-shape: true;
+    -fx-padding: 0.4em;
+}
+
+
+/* -----------------------------------------------------
+   TEXTO DE ERROR — Rojo desaturado, no agresivo
+   ----------------------------------------------------- */
 .error-text {
-    -fx-text-fill: #ff6b6b;
-    -fx-font-size: 12px;
-    -fx-font-weight: normal;
+    -fx-text-fill: #d48a8a;
+    /* Rojo desaturado, neutro */
+    -fx-font-size: 13px;
+    -fx-alignment: center;
 }
 
-/* Zona de contenido central */
+
+/* -----------------------------------------------------
+   LINK — Solicitar acceso (Azul petróleo discreto)
+   ----------------------------------------------------- */
+.link-text {
+    -fx-text-fill: #5a8599;
+    /* Azul petróleo discreto */
+    -fx-font-size: 13px;
+    -fx-underline: false;
+    -fx-cursor: hand;
+}
+
+.link-text:hover {
+    -fx-text-fill: #6a9bb0;
+    /* Ligeramente más claro */
+    -fx-underline: true;
+}
+
+
+/* =====================================================
+   MAIN VIEW (BASE, PARA MÁS ADELANTE)
+   ===================================================== */
+.primary-btn {
+    -fx-background-color: #4a6b7c;
+    /* Azul petróleo */
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 14px;
+    -fx-padding: 8 16;
+    -fx-background-radius: 4;
+}
+
+.primary-btn:hover {
+    -fx-background-color: #5a7b8c;
+}
+
 .content-bg {
-    -fx-background-color: #3c3f41;
+    -fx-background-color: #1e1a1c;
     -fx-padding: 20;
 }
 
-/* Contenedor de login centrado */
-.login-container {
-    -fx-background-color: #3c3f41;
-    -fx-padding: 40 50;
-    -fx-background-radius: 8;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 2);
+.status-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 16px;
 }
 
-/* Label de estado en main */
-.status-label {
-    -fx-font-size: 16px;
-    -fx-text-fill: #a9b7c6;
+.topbar {
+    -fx-background-color: #141012;
+    -fx-padding: 15;
+    -fx-spacing: 20;
+}
+
+.title {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
 }
