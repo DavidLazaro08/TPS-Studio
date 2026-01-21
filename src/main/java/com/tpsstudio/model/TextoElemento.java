@@ -9,6 +9,9 @@ public class TextoElemento extends Elemento {
     private double fontSize;
     private String fontFamily;
     private String color; // Formato hex: #RRGGBB
+    private String alineacion; // "LEFT", "CENTER", "RIGHT"
+    private boolean negrita;
+    private boolean cursiva;
 
     public TextoElemento(String nombre, double x, double y) {
         super(nombre, x, y, 100, 30); // Tamaño por defecto
@@ -16,6 +19,9 @@ public class TextoElemento extends Elemento {
         this.fontSize = 14;
         this.fontFamily = "Arial";
         this.color = "#000000";
+        this.alineacion = "LEFT";
+        this.negrita = false;
+        this.cursiva = false;
     }
 
     // Getters y setters
@@ -49,5 +55,29 @@ public class TextoElemento extends Elemento {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public String getAlineacion() {
+        return alineacion;
+    }
+
+    public void setAlineacion(String alineacion) {
+        this.alineacion = alineacion;
+    }
+
+    public boolean isNegrita() {
+        return negrita;
+    }
+
+    public void setNegrita(boolean negrita) {
+        this.negrita = negrita;
+    }
+
+    public boolean isCursiva() {
+        return cursiva;
+    }
+
+    public void setCursiva(boolean cursiva) {
+        this.cursiva = cursiva;
     }
 }

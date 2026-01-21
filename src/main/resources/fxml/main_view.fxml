@@ -30,10 +30,10 @@
                     <ToggleGroup fx:id="modeToggleGroup" />
                 </fx:define>
                 
-                <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup" 
-                              onAction="#onModeEdit" styleClass="mode-toggle" />
                 <ToggleButton fx:id="btnModeExport" text="📦 Producción" toggleGroup="$modeToggleGroup" 
                               onAction="#onModeExport" styleClass="mode-toggle" selected="true" />
+                <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup" 
+                              onAction="#onModeEdit" styleClass="mode-toggle" />
                 
                 <Separator orientation="VERTICAL" />
                 

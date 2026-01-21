@@ -10,24 +10,34 @@ public class ImagenFondoElemento extends Elemento {
 
     private String rutaArchivo;
     private Image imagen;
-    private boolean ajustarASangrado; // true = con bleed, false = solo CR80
+    private FondoFitMode fitMode; // BLEED = con sangre, FINAL = sin sangre
 
-    public ImagenFondoElemento(String rutaArchivo, Image imagen, double cardWidth, double cardHeight) {
+    public ImagenFondoElemento(String rutaArchivo, Image imagen, double cardWidth, double cardHeight,
+            FondoFitMode fitMode) {
         super("[Fondo]", 0, 0, cardWidth, cardHeight);
         this.rutaArchivo = rutaArchivo;
         this.imagen = imagen;
-        this.ajustarASangrado = true; // Por defecto con sangrado
+        this.fitMode = fitMode != null ? fitMode : FondoFitMode.BLEED; // Por defecto con sangrado
         this.locked = true; // Siempre bloqueado
     }
 
     /**
-     * Ajusta el tamaño del fondo al tamaño de la tarjeta
+     * Ajusta el tamaño del fondo según el modo de ajuste
      */
     public void ajustarATamaño(double cardWidth, double cardHeight, double bleedPx) {
-        this.x = ajustarASangrado ? -bleedPx : 0;
-        this.y = ajustarASangrado ? -bleedPx : 0;
-        this.width = ajustarASangrado ? cardWidth + (bleedPx * 2) : cardWidth;
-        this.height = ajustarASangrado ? cardHeight + (bleedPx * 2) : cardHeight;
+        if (fitMode == FondoFitMode.BLEED) {
+            // Con sangrado: cubre CR80 + bleed
+            this.x = -bleedPx;
+            this.y = -bleedPx;
+            this.width = cardWidth + (bleedPx * 2);
+            this.height = cardHeight + (bleedPx * 2);
+        } else {
+            // Sin sangrado: solo CR80 final
+            this.x = 0;
+            this.y = 0;
+            this.width = cardWidth;
+            this.height = cardHeight;
+        }
     }
 
     // Getters y setters
@@ -47,12 +57,12 @@ public class ImagenFondoElemento extends Elemento {
         this.imagen = imagen;
     }
 
-    public boolean isAjustarASangrado() {
-        return ajustarASangrado;
+    public FondoFitMode getFitMode() {
+        return fitMode;
     }
 
-    public void setAjustarASangrado(boolean ajustarASangrado) {
-        this.ajustarASangrado = ajustarASangrado;
+    public void setFitMode(FondoFitMode fitMode) {
+        this.fitMode = fitMode;
     }
 
     /**

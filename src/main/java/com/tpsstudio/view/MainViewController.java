@@ -45,7 +45,7 @@ public class MainViewController {
     private final ObservableList<Proyecto> proyectos = FXCollections.observableArrayList();
     private Proyecto proyectoActual;
     private Elemento elementoSeleccionado;
-    private double zoomLevel = 1.0;
+    private double zoomLevel = 1.3; // 130% zoom inicial
 
     // Drag & drop state
     private double dragStartX, dragStartY;
@@ -54,11 +54,21 @@ public class MainViewController {
     // CR80 dimensions (4px = 1mm)
     private static final double CR80_WIDTH_MM = 85.60;
     private static final double CR80_HEIGHT_MM = 53.98;
-    private static final double SCALE = 4.0;
-    private static final double CARD_WIDTH = CR80_WIDTH_MM * SCALE;
-    private static final double CARD_HEIGHT = CR80_HEIGHT_MM * SCALE;
-    private static final double SAFETY_MARGIN = 3.0 * SCALE;
-    private static final double BLEED_MARGIN = 3.0 * SCALE;
+    private static final double SCALE = 4.0; // 4 píxeles = 1 mm
+    private static final double CARD_WIDTH = CR80_WIDTH_MM * SCALE; // 342.4 px
+    private static final double CARD_HEIGHT = CR80_HEIGHT_MM * SCALE; // 215.92 px
+
+    // Bleed: 2mm por lado (estándar de preimpresión)
+    private static final double BLEED_MM = 2.0;
+    private static final double BLEED_MARGIN = BLEED_MM * SCALE; // 8 px
+
+    // Safety margin: 2mm dentro del borde final
+    private static final double SAFETY_MM = 2.0;
+    private static final double SAFETY_MARGIN = SAFETY_MM * SCALE; // 8 px
+
+    // Dimensiones totales con sangrado
+    private static final double CARD_WITH_BLEED_WIDTH = CR80_WIDTH_MM + (BLEED_MM * 2); // 89.60 mm
+    private static final double CARD_WITH_BLEED_HEIGHT = CR80_HEIGHT_MM + (BLEED_MM * 2); // 57.98 mm
 
     @FXML
     private void initialize() {
@@ -79,6 +89,9 @@ public class MainViewController {
                 onEliminarElemento();
             }
         });
+
+        // Inicializar label de zoom con el valor correcto
+        actualizarZoom();
 
         dibujarCanvas();
     }
@@ -181,9 +194,33 @@ public class MainViewController {
                     super.updateItem(item, empty);
                     if (empty || item == null) {
                         setText(null);
+                        setContextMenu(null);
                     } else {
                         String lockIcon = item.isLocked() ? "🔒 " : "";
                         setText(lockIcon + item.getNombre());
+
+                        // Context menu for background element
+                        if (item instanceof ImagenFondoElemento) {
+                            ContextMenu contextMenu = new ContextMenu();
+
+                            MenuItem menuEditar = new MenuItem("Editar imagen externa...");
+                            menuEditar.setOnAction(e -> abrirEditorExterno((ImagenFondoElemento) item));
+
+                            MenuItem menuRecargar = new MenuItem("Recargar desde disco");
+                            menuRecargar.setOnAction(e -> recargarFondo((ImagenFondoElemento) item));
+
+                            MenuItem menuLock = new MenuItem(item.isLocked() ? "Desbloquear" : "Bloquear");
+                            menuLock.setOnAction(e -> {
+                                item.setLocked(!item.isLocked());
+                                buildEditPanels();
+                                dibujarCanvas();
+                            });
+
+                            contextMenu.getItems().addAll(menuEditar, menuRecargar, new SeparatorMenuItem(), menuLock);
+                            setContextMenu(contextMenu);
+                        } else {
+                            setContextMenu(null);
+                        }
                     }
                 }
             });
@@ -225,11 +262,27 @@ public class MainViewController {
                     fondo.getWidth(), fondo.getHeight()));
             lblDim.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
-            CheckBox chkSangrado = new CheckBox("Ajustar a sangrado (bleed)");
-            chkSangrado.setSelected(fondo.isAjustarASangrado());
-            chkSangrado.setStyle("-fx-text-fill: #e8e6e7;");
-            chkSangrado.selectedProperty().addListener((obs, old, newVal) -> {
-                fondo.setAjustarASangrado(newVal);
+            // Modo de ajuste
+            Label lblModo = new Label("Modo de ajuste:");
+            lblModo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+            ToggleGroup modoGroup = new ToggleGroup();
+            RadioButton rbBleed = new RadioButton("Con sangre (CR80 + sangrado)");
+            rbBleed.setToggleGroup(modoGroup);
+            rbBleed.setSelected(fondo.getFitMode() == FondoFitMode.BLEED);
+            rbBleed.setStyle("-fx-text-fill: #e8e6e7;");
+
+            RadioButton rbFinal = new RadioButton("Sin sangre (CR80 final)");
+            rbFinal.setToggleGroup(modoGroup);
+            rbFinal.setSelected(fondo.getFitMode() == FondoFitMode.FINAL);
+            rbFinal.setStyle("-fx-text-fill: #e8e6e7;");
+
+            modoGroup.selectedToggleProperty().addListener((obs, old, newVal) -> {
+                if (newVal == rbBleed) {
+                    fondo.setFitMode(FondoFitMode.BLEED);
+                } else {
+                    fondo.setFitMode(FondoFitMode.FINAL);
+                }
                 fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
                 buildEditPanels();
                 dibujarCanvas();
@@ -257,8 +310,19 @@ public class MainViewController {
                 }
             });
 
+            Button btnEditarExterno = new Button("Editar Externa...");
+            btnEditarExterno.setMaxWidth(Double.MAX_VALUE);
+            btnEditarExterno.getStyleClass().add("toolbox-btn");
+            btnEditarExterno.setOnAction(e -> abrirEditorExterno(fondo));
+
+            Button btnRecargar = new Button("Recargar");
+            btnRecargar.setMaxWidth(Double.MAX_VALUE);
+            btnRecargar.getStyleClass().add("toolbox-btn");
+            btnRecargar.setOnAction(e -> recargarFondo(fondo));
+
             props.getChildren().addAll(lblProps, lblInfo, lblDim,
-                    new Separator(), chkSangrado, btnReemplazar);
+                    new Separator(), lblModo, rbBleed, rbFinal, new Separator(),
+                    btnReemplazar, btnEditarExterno, btnRecargar);
         } else {
             // Position and size
             Label lblPos = new Label("Posición y Tamaño");
@@ -288,17 +352,166 @@ public class MainViewController {
                     dibujarCanvas();
                 });
 
-                TextField txtSize = new TextField(String.format("%.0f", texto.getFontSize()));
-                txtSize.setPromptText("Tamaño fuente");
+                // Fuente (usando fuentes del sistema)
+                Label lblFuente = new Label("Fuente:");
+                lblFuente.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                ComboBox<String> cmbFuente = new ComboBox<>();
+                cmbFuente.getItems().addAll(javafx.scene.text.Font.getFamilies());
+                cmbFuente.setValue(texto.getFontFamily());
+                cmbFuente.setMaxWidth(Double.MAX_VALUE);
+                cmbFuente.valueProperty().addListener((obs, old, newVal) -> {
+                    if (newVal != null) {
+                        texto.setFontFamily(newVal);
+                        dibujarCanvas();
+                    }
+                });
+
+                // Tamaño
+                Label lblSize = new Label("Tamaño:");
+                lblSize.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                Spinner<Integer> spnSize = new Spinner<>(8, 72, (int) texto.getFontSize());
+                spnSize.setEditable(true);
+                spnSize.setMaxWidth(Double.MAX_VALUE);
+                spnSize.valueProperty().addListener((obs, old, newVal) -> {
+                    texto.setFontSize(newVal);
+                    dibujarCanvas();
+                });
+
+                // Color
+                Label lblColor = new Label("Color:");
+                lblColor.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                ColorPicker colorPicker = new ColorPicker(Color.web(texto.getColor()));
+                colorPicker.setMaxWidth(Double.MAX_VALUE);
+                colorPicker.valueProperty().addListener((obs, old, newVal) -> {
+                    texto.setColor(String.format("#%02X%02X%02X",
+                            (int) (newVal.getRed() * 255),
+                            (int) (newVal.getGreen() * 255),
+                            (int) (newVal.getBlue() * 255)));
+                    dibujarCanvas();
+                });
+
+                // Alineación
+                Label lblAlign = new Label("Alineación:");
+                lblAlign.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                ComboBox<String> cmbAlign = new ComboBox<>();
+                cmbAlign.getItems().addAll("Izquierda", "Centro", "Derecha");
+                cmbAlign.setValue(
+                        texto.getAlineacion().equals("LEFT") ? "Izquierda"
+                                : texto.getAlineacion().equals("CENTER") ? "Centro" : "Derecha");
+                cmbAlign.setMaxWidth(Double.MAX_VALUE);
+                cmbAlign.valueProperty().addListener((obs, old, newVal) -> {
+                    if (newVal != null) {
+                        String align = newVal.equals("Izquierda") ? "LEFT"
+                                : newVal.equals("Centro") ? "CENTER" : "RIGHT";
+                        texto.setAlineacion(align);
+                        dibujarCanvas();
+                    }
+                });
+
+                // Estilo (Negrita/Cursiva)
+                Label lblEstilo = new Label("Estilo:");
+                lblEstilo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                CheckBox chkNegrita = new CheckBox("Negrita");
+                chkNegrita.setSelected(texto.isNegrita());
+                chkNegrita.setStyle("-fx-text-fill: #e8e6e7;");
+                chkNegrita.selectedProperty().addListener((obs, old, newVal) -> {
+                    texto.setNegrita(newVal);
+                    dibujarCanvas();
+                });
+
+                CheckBox chkCursiva = new CheckBox("Cursiva");
+                chkCursiva.setSelected(texto.isCursiva());
+                chkCursiva.setStyle("-fx-text-fill: #e8e6e7;");
+                chkCursiva.selectedProperty().addListener((obs, old, newVal) -> {
+                    texto.setCursiva(newVal);
+                    dibujarCanvas();
+                });
 
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
-                        new Separator(), lblTexto, txtContenido, txtSize);
+                        new Separator(), lblTexto, txtContenido,
+                        new Separator(), lblFuente, cmbFuente,
+                        lblSize, spnSize,
+                        lblColor, colorPicker,
+                        lblAlign, cmbAlign,
+                        lblEstilo, chkNegrita, chkCursiva);
+            } else if (elementoSeleccionado instanceof ImagenElemento) {
+                // Image-specific properties
+                ImagenElemento imagen = (ImagenElemento) elementoSeleccionado;
+
+                Label lblImagen = new Label("Imagen");
+                lblImagen.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+                Label lblOriginal = new Label(String.format("Original: %.0f × %.0f px",
+                        imagen.getOriginalWidth(), imagen.getOriginalHeight()));
+                lblOriginal.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                // Opacidad
+                Label lblOpacity = new Label(String.format("Opacidad: %.0f%%", imagen.getOpacity() * 100));
+                lblOpacity.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+
+                Slider sliderOpacity = new Slider(0, 100, imagen.getOpacity() * 100);
+                sliderOpacity.setShowTickLabels(false);
+                sliderOpacity.setShowTickMarks(false);
+                sliderOpacity.valueProperty().addListener((obs, old, newVal) -> {
+                    imagen.setOpacity(newVal.doubleValue() / 100.0);
+                    lblOpacity.setText(String.format("Opacidad: %.0f%%", newVal.doubleValue()));
+                    dibujarCanvas();
+                });
+
+                // Mantener proporción
+                CheckBox chkProporcion = new CheckBox("Mantener proporción");
+                chkProporcion.setSelected(imagen.isMantenerProporcion());
+                chkProporcion.setStyle("-fx-text-fill: #e8e6e7;");
+                chkProporcion.selectedProperty().addListener((obs, old, newVal) -> {
+                    imagen.setMantenerProporcion(newVal);
+                });
+
+                // Botón reemplazar
+                Button btnReemplazar = new Button("Reemplazar Imagen");
+                btnReemplazar.setMaxWidth(Double.MAX_VALUE);
+                btnReemplazar.getStyleClass().add("toolbox-btn");
+                btnReemplazar.setOnAction(e -> {
+                    FileChooser fileChooser = new FileChooser();
+                    fileChooser.setTitle("Reemplazar Imagen");
+                    fileChooser.getExtensionFilters().add(
+                            new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                    File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
+                    if (file != null) {
+                        try {
+                            Image img = new Image(file.toURI().toString());
+                            imagen.setImagen(img);
+                            imagen.setRutaArchivo(file.getAbsolutePath());
+                            buildPropertiesPanel();
+                            dibujarCanvas();
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                });
+
+                props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
+                        new Separator(), lblImagen, lblOriginal,
+                        lblOpacity, sliderOpacity,
+                        chkProporcion, btnReemplazar);
             } else {
                 props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH);
             }
+
         }
 
-        rightPanel.getChildren().add(props);
+        // Envolver en ScrollPane para que siempre sea visible
+        ScrollPane scrollPane = new ScrollPane(props);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c;");
+
+        rightPanel.getChildren().add(scrollPane);
     }
 
     // ========== BUILD EXPORT PANELS ==========
@@ -358,7 +571,15 @@ public class MainViewController {
 
         exportPanel.getChildren().addAll(lblExport, lblFormato, lblDPI, lblGuias, lblCara,
                 new Separator(), btnExportarGrande);
-        rightPanel.getChildren().add(exportPanel);
+
+        // Envolver en ScrollPane para consistencia
+        ScrollPane scrollPane = new ScrollPane(exportPanel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c;");
+
+        rightPanel.getChildren().add(scrollPane);
     }
 
     // ========== CANVAS DRAWING ==========
@@ -383,17 +604,17 @@ public class MainViewController {
 
         gc.save();
 
-        // Bleed zone
+        // 1. Bleed zone (sangrado: 2mm por lado)
         if (toggleGuias.isSelected()) {
             double bleedScaled = BLEED_MARGIN * zoomLevel;
-            gc.setStroke(Color.web("#d48a8a"));
+            gc.setStroke(Color.web("#d48a8a")); // Rojo claro
             gc.setLineWidth(1);
             gc.setLineDashes(5, 5);
             gc.strokeRect(cardX - bleedScaled, cardY - bleedScaled,
                     scaledWidth + (bleedScaled * 2), scaledHeight + (bleedScaled * 2));
         }
 
-        // Background (if exists)
+        // 2. Background (if exists)
         ImagenFondoElemento fondo = proyectoActual.getFondoActual();
         if (fondo != null && fondo.getImagen() != null) {
             double fx = cardX + (fondo.getX() * zoomLevel);
@@ -407,16 +628,16 @@ public class MainViewController {
             gc.fillRect(cardX, cardY, scaledWidth, scaledHeight);
         }
 
-        // Card border
+        // 3. Card border (CR80 final)
         gc.setStroke(Color.web("#c4c0c2"));
         gc.setLineWidth(1);
         gc.setLineDashes();
         gc.strokeRect(cardX, cardY, scaledWidth, scaledHeight);
 
-        // Safety guides
+        // 4. Safety guides (margen de seguridad: 2mm dentro del borde)
         if (toggleGuias.isSelected()) {
             double safetyScaled = SAFETY_MARGIN * zoomLevel;
-            gc.setStroke(Color.web("#4a6b7c"));
+            gc.setStroke(Color.web("#4a9b7c")); // Verde azulado
             gc.setLineDashes(3, 3);
             gc.strokeRect(cardX + safetyScaled, cardY + safetyScaled,
                     scaledWidth - (safetyScaled * 2), scaledHeight - (safetyScaled * 2));
@@ -435,12 +656,35 @@ public class MainViewController {
             if (elem instanceof TextoElemento) {
                 TextoElemento texto = (TextoElemento) elem;
                 gc.setFill(Color.web(texto.getColor()));
-                gc.setFont(Font.font(texto.getFontFamily(), texto.getFontSize() * zoomLevel));
-                gc.fillText(texto.getContenido(), ex, ey + (texto.getFontSize() * zoomLevel));
+
+                // Aplicar estilo de fuente (negrita/cursiva)
+                javafx.scene.text.FontWeight weight = texto.isNegrita() ? javafx.scene.text.FontWeight.BOLD
+                        : javafx.scene.text.FontWeight.NORMAL;
+                javafx.scene.text.FontPosture posture = texto.isCursiva() ? javafx.scene.text.FontPosture.ITALIC
+                        : javafx.scene.text.FontPosture.REGULAR;
+
+                gc.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * zoomLevel));
+
+                // Aplicar alineación
+                double textX = ex;
+                javafx.scene.text.Text tempText = new javafx.scene.text.Text(texto.getContenido());
+                tempText.setFont(gc.getFont());
+                double textWidth = tempText.getLayoutBounds().getWidth();
+
+                if (texto.getAlineacion().equals("CENTER")) {
+                    textX = ex + (ew - textWidth) / 2;
+                } else if (texto.getAlineacion().equals("RIGHT")) {
+                    textX = ex + ew - textWidth;
+                }
+
+                gc.fillText(texto.getContenido(), textX, ey + (texto.getFontSize() * zoomLevel));
             } else if (elem instanceof ImagenElemento) {
                 ImagenElemento img = (ImagenElemento) elem;
                 if (img.getImagen() != null) {
+                    // Aplicar opacidad
+                    gc.setGlobalAlpha(img.getOpacity());
                     gc.drawImage(img.getImagen(), ex, ey, ew, eh);
+                    gc.setGlobalAlpha(1.0); // Restaurar opacidad
                 }
             }
 
@@ -453,12 +697,23 @@ public class MainViewController {
             }
         }
 
-        // Info text
-        gc.setFill(Color.web("#9a9598"));
+        // Info text - reorganizado para mejor legibilidad
         gc.setLineDashes();
-        gc.setFont(Font.font("Arial", 12));
-        String lado = proyectoActual.isMostrandoFrente() ? "Frente" : "Dorso";
-        gc.fillText("CR80: 85.60 × 53.98 mm - " + lado, cardX, cardY - 10);
+
+        // 1. Lado (FRENTE/DORSO) - Arriba izquierda, en negrita, más separado
+        String lado = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
+        gc.setFill(Color.web("#e8e6e7")); // Más claro y visible
+        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 14));
+        gc.fillText(lado, cardX, cardY - 25); // Más separado (antes -15)
+
+        // 2. Dimensiones - Abajo derecha, texto normal, más abajo para no cortarse
+        gc.setFill(Color.web("#9a9598"));
+        gc.setFont(Font.font("Arial", 11));
+        String infoDimensiones = String.format("CR80: %.2f × %.2f mm | Con sangre: %.2f × %.2f mm",
+                CR80_WIDTH_MM, CR80_HEIGHT_MM, CARD_WITH_BLEED_WIDTH, CARD_WITH_BLEED_HEIGHT);
+        // Calcular posición con sangrado incluido para evitar solapamiento
+        double bleedScaled = BLEED_MARGIN * zoomLevel;
+        gc.fillText(infoDimensiones, cardX + scaledWidth - 380, cardY + scaledHeight + bleedScaled + 20);
 
         gc.restore();
     }
@@ -509,6 +764,175 @@ public class MainViewController {
 
     private void onCanvasMouseReleased(MouseEvent e) {
         // Nothing special for now
+    }
+
+    /**
+     * Muestra un diálogo para seleccionar el modo de ajuste del fondo
+     */
+    private FondoFitMode mostrarDialogoFitMode() {
+        Dialog<FondoFitMode> dialog = new Dialog<>();
+        dialog.setTitle("Modo de Ajuste del Fondo");
+        dialog.setHeaderText("¿Cómo desea ajustar el fondo a la tarjeta?");
+
+        // Botones
+        ButtonType btnBleed = new ButtonType("Con sangre", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnFinal = new ButtonType("Sin sangre", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(btnBleed, btnFinal, btnCancelar);
+
+        // Contenido
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+
+        Label lblExplicacion = new Label(
+                "El fondo puede ajustarse de dos formas:");
+        lblExplicacion.setStyle("-fx-font-size: 13px;");
+
+        VBox opcionBleed = new VBox(5);
+        Label lblBleedTitulo = new Label("✓ Con sangre (CR80 + 2mm por lado)");
+        lblBleedTitulo.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        Label lblBleedDesc = new Label("Cubre el área completa incluyendo 2mm de sangrado por lado (89.60 × 57.98 mm)");
+        lblBleedDesc.setStyle("-fx-font-size: 11px; -fx-text-fill: gray;");
+        Label lblBleedUso = new Label("Recomendado para fondos que se extienden hasta el borde");
+        lblBleedUso.setStyle("-fx-font-size: 11px; -fx-font-style: italic;");
+        opcionBleed.getChildren().addAll(lblBleedTitulo, lblBleedDesc, lblBleedUso);
+
+        VBox opcionFinal = new VBox(5);
+        Label lblFinalTitulo = new Label("✓ Sin sangre (CR80 final)");
+        lblFinalTitulo.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        Label lblFinalDesc = new Label("Cubre solo el área final de la tarjeta (85.60 × 53.98 mm)");
+        lblFinalDesc.setStyle("-fx-font-size: 11px; -fx-text-fill: gray;");
+        Label lblFinalUso = new Label("Útil para fondos que no deben llegar al borde");
+        lblFinalUso.setStyle("-fx-font-size: 11px; -fx-font-style: italic;");
+        opcionFinal.getChildren().addAll(lblFinalTitulo, lblFinalDesc, lblFinalUso);
+
+        CheckBox chkNoPreguntar = new CheckBox("No volver a preguntar en este proyecto");
+        chkNoPreguntar.setStyle("-fx-font-size: 11px;");
+
+        content.getChildren().addAll(lblExplicacion, new Separator(),
+                opcionBleed, new Separator(), opcionFinal, new Separator(), chkNoPreguntar);
+        dialog.getDialogPane().setContent(content);
+
+        // Convertir resultado
+        dialog.setResultConverter(buttonType -> {
+            if (chkNoPreguntar.isSelected() && proyectoActual != null) {
+                proyectoActual.setNoVolverAPreguntarFondo(true);
+                if (buttonType == btnBleed) {
+                    proyectoActual.setFondoFitModePreferido(FondoFitMode.BLEED);
+                } else if (buttonType == btnFinal) {
+                    proyectoActual.setFondoFitModePreferido(FondoFitMode.FINAL);
+                }
+            }
+
+            if (buttonType == btnBleed) {
+                return FondoFitMode.BLEED;
+            } else if (buttonType == btnFinal) {
+                return FondoFitMode.FINAL;
+            }
+            return null;
+        });
+
+        return dialog.showAndWait().orElse(null);
+    }
+
+    /**
+     * Abre la imagen del fondo en el editor externo del sistema
+     */
+    private void abrirEditorExterno(ImagenFondoElemento fondo) {
+        if (fondo == null || fondo.getRutaArchivo() == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Advertencia");
+            alert.setHeaderText("No se puede abrir el editor externo");
+            alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
+            alert.showAndWait();
+            return;
+        }
+
+        File file = new File(fondo.getRutaArchivo());
+        if (!file.exists()) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Archivo no encontrado");
+            alert.setContentText("El archivo " + file.getName() + " no existe en el disco.");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            // Mostrar aviso
+            Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+            aviso.setTitle("Editor Externo");
+            aviso.setHeaderText("Abriendo editor externo...");
+            aviso.setContentText(
+                    "Se abrirá la imagen en el editor predeterminado del sistema.\n" +
+                            "Después de editar, guarde los cambios y use 'Recargar' para aplicarlos.");
+            aviso.show();
+
+            // Abrir con la aplicación predeterminada
+            java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+            desktop.open(file);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("No se pudo abrir el editor externo");
+            alert.setContentText("Error: " + ex.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    /**
+     * Recarga la imagen del fondo desde el disco
+     */
+    private void recargarFondo(ImagenFondoElemento fondo) {
+        if (fondo == null || fondo.getRutaArchivo() == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Advertencia");
+            alert.setHeaderText("No se puede recargar");
+            alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
+            alert.showAndWait();
+            return;
+        }
+
+        File file = new File(fondo.getRutaArchivo());
+        if (!file.exists()) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Archivo no encontrado");
+            alert.setContentText(
+                    "El archivo " + file.getName() + " no existe en el disco.\n" +
+                            "Se mantendrá la versión anterior en memoria.");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            // Recargar imagen
+            Image nuevaImagen = new Image(file.toURI().toString());
+            fondo.setImagen(nuevaImagen);
+            fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+
+            // Redibujar
+            dibujarCanvas();
+
+            // Confirmación
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Éxito");
+            alert.setHeaderText("Fondo recargado");
+            alert.setContentText("La imagen se ha recargado correctamente desde el disco.");
+            alert.showAndWait();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("No se pudo recargar la imagen");
+            alert.setContentText(
+                    "Error al cargar el archivo: " + ex.getMessage() + "\n" +
+                            "Se mantendrá la versión anterior en memoria.");
+            alert.showAndWait();
+        }
     }
 
     // ========== TOOLBAR ACTIONS ==========
@@ -659,8 +1083,23 @@ public class MainViewController {
         if (file != null) {
             try {
                 Image img = new Image(file.toURI().toString());
+
+                // Determinar modo de ajuste
+                FondoFitMode fitMode;
+                if (proyectoActual.isNoVolverAPreguntarFondo() &&
+                        proyectoActual.getFondoFitModePreferido() != null) {
+                    // Usar preferencia guardada
+                    fitMode = proyectoActual.getFondoFitModePreferido();
+                } else {
+                    // Mostrar diálogo
+                    fitMode = mostrarDialogoFitMode();
+                    if (fitMode == null) {
+                        return; // Usuario canceló
+                    }
+                }
+
                 ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
-                        file.getAbsolutePath(), img, CARD_WIDTH, CARD_HEIGHT);
+                        file.getAbsolutePath(), img, CARD_WIDTH, CARD_HEIGHT, fitMode);
                 nuevoFondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
 
                 proyectoActual.setFondoActual(nuevoFondo);

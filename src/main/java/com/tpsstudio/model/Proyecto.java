@@ -21,6 +21,10 @@ public class Proyecto {
     private ImagenFondoElemento fondoFrente;
     private ImagenFondoElemento fondoDorso;
 
+    // Preferencia de modo de ajuste para fondos
+    private FondoFitMode fondoFitModePreferido;
+    private boolean noVolverAPreguntarFondo;
+
     private static int contadorId = 1;
 
     public Proyecto(String nombre) {
@@ -32,6 +36,8 @@ public class Proyecto {
         this.elementosDorso = FXCollections.observableArrayList();
         this.fondoFrente = null;
         this.fondoDorso = null;
+        this.fondoFitModePreferido = null;
+        this.noVolverAPreguntarFondo = false;
     }
 
     // Getters y setters
@@ -106,6 +112,22 @@ public class Proyecto {
 
     public void setFondoDorso(ImagenFondoElemento fondoDorso) {
         this.fondoDorso = fondoDorso;
+    }
+
+    public FondoFitMode getFondoFitModePreferido() {
+        return fondoFitModePreferido;
+    }
+
+    public void setFondoFitModePreferido(FondoFitMode fondoFitModePreferido) {
+        this.fondoFitModePreferido = fondoFitModePreferido;
+    }
+
+    public boolean isNoVolverAPreguntarFondo() {
+        return noVolverAPreguntarFondo;
+    }
+
+    public void setNoVolverAPreguntarFondo(boolean noVolverAPreguntarFondo) {
+        this.noVolverAPreguntarFondo = noVolverAPreguntarFondo;
     }
 
     @Override
