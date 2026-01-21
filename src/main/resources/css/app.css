@@ -259,3 +259,12 @@
     -fx-font-size: 20px;
     -fx-font-weight: bold;
 }
+
+/* =====================================================
+   EDITOR CR80 — Canvas Area
+   ===================================================== */
+.canvas-area {
+    -fx-background-color: #0a0809;
+    /* Fondo oscuro para contraste con tarjeta blanca */
+    -fx-padding: 20;
+}

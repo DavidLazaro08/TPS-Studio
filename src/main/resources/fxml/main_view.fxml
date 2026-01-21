@@ -14,7 +14,7 @@
     <top>
         <HBox alignment="CENTER_LEFT" styleClass="topbar">
             <Label text="TPS Studio" styleClass="title" />
-            <Button text="Probar binding" onAction="#onTestAction" styleClass="primary-btn" />
+            <Button text="Abrir Editor CR80" onAction="#onOpenEditor" styleClass="primary-btn" />
         </HBox>
     </top>
 
