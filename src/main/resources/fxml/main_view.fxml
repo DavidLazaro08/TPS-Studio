@@ -1,27 +1,112 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.tpsstudio.view.MainViewController"
-            prefWidth="1100" prefHeight="700" styleClass="root">
-
+            prefWidth="1400" prefHeight="800" styleClass="root">
+    
+    <!-- TOOLBAR SUPERIOR -->
     <top>
-        <HBox alignment="CENTER_LEFT" styleClass="topbar">
-            <Label text="TPS Studio" styleClass="title" />
-            <Button text="Abrir Editor CR80" onAction="#onOpenEditor" styleClass="primary-btn" />
-        </HBox>
+        <VBox>
+            <!-- Barra de herramientas principal -->
+            <HBox alignment="CENTER_LEFT" styleClass="toolbar" spacing="10">
+                <padding>
+                    <Insets top="8" bottom="8" left="12" right="12" />
+                </padding>
+                
+                <!-- Acciones de archivo -->
+                <Button text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
+                <Button text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
+                <Button text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
+                <Button text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
+                
+                <Separator orientation="VERTICAL" />
+                
+                <!-- Controles de zoom -->
+                <Button text="-" onAction="#onZoomOut" styleClass="toolbar-btn-small" />
+                <Label fx:id="lblZoom" text="100%" styleClass="toolbar-label" />
+                <Button text="+" onAction="#onZoomIn" styleClass="toolbar-btn-small" />
+                
+                <Separator orientation="VERTICAL" />
+                
+                <!-- Toggle Frente/Dorso -->
+                <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso" 
+                              styleClass="toolbar-toggle" selected="true" />
+                
+                <Separator orientation="VERTICAL" />
+                
+                <!-- Toggle Guías -->
+                <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias" 
+                              styleClass="toolbar-toggle" selected="true" />
+            </HBox>
+        </VBox>
     </top>
-
+    
+    <!-- ÁREA DE TRABAJO -->
     <center>
-        <StackPane styleClass="content-bg">
-            <Label fx:id="lblStatus" styleClass="status-label" />
-        </StackPane>
+        <BorderPane>
+            
+            <!-- PANEL IZQUIERDO: Lista de proyectos -->
+            <left>
+                <VBox styleClass="side-panel" prefWidth="220" spacing="8">
+                    <padding>
+                        <Insets top="12" bottom="12" left="12" right="12" />
+                    </padding>
+                    
+                    <Label text="Trabajos" styleClass="panel-title" />
+                    
+                    <ListView fx:id="listProyectos" styleClass="project-list" VBox.vgrow="ALWAYS" />
+                    
+                    <Button text="+ Nuevo CR80" onAction="#onNuevoCR80" 
+                            styleClass="primary-btn" maxWidth="Infinity" />
+                </VBox>
+            </left>
+            
+            <!-- CENTRO: Canvas de edición -->
+            <center>
+                <StackPane fx:id="canvasContainer" styleClass="canvas-area">
+                    <Canvas fx:id="canvas" width="900" height="600" />
+                </StackPane>
+            </center>
+            
+            <!-- PANEL DERECHO: Propiedades e inspector -->
+            <right>
+                <VBox styleClass="side-panel" prefWidth="280" spacing="12">
+                    <padding>
+                        <Insets top="12" bottom="12" left="12" right="12" />
+                    </padding>
+                    
+                    <!-- Sección Propiedades -->
+                    <VBox spacing="6">
+                        <Label text="Propiedades" styleClass="panel-title" />
+                        <Label text="(Seleccione un elemento)" styleClass="panel-placeholder" 
+                               wrapText="true" />
+                    </VBox>
+                    
+                    <Separator />
+                    
+                    <!-- Sección Campos Variables -->
+                    <VBox spacing="6">
+                        <Label text="Campos Variables" styleClass="panel-title" />
+                        <Label text="(Disponible próximamente)" styleClass="panel-placeholder" 
+                               wrapText="true" />
+                    </VBox>
+                </VBox>
+            </right>
+            
+        </BorderPane>
     </center>
-
+    
 </BorderPane>

@@ -23,7 +23,6 @@
 /* CAJA 1: Panel exterior — Casi negro con tinte berenjena */
 .login-outer {
     -fx-background-color: #141012;
-    /* Negro berenjena muy oscuro */
     -fx-padding: 20;
     -fx-background-radius: 18;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 25, 0, 0, 5);
@@ -33,7 +32,6 @@
 /* CAJA 2: Panel interior — Gris neutro-cálido (NO rosado) */
 .login-inner {
     -fx-background-color: #1e1a1c;
-    /* Gris oscuro neutro con tinte mínimo */
     -fx-padding: 35 40;
     -fx-background-radius: 14;
 }
@@ -44,14 +42,12 @@
    ----------------------------------------------------- */
 .login-title {
     -fx-text-fill: #e8e6e7;
-    /* Blanco neutro */
     -fx-font-size: 26px;
     -fx-font-weight: bold;
 }
 
 .login-subtitle {
     -fx-text-fill: #9a9598;
-    /* Gris neutro */
     -fx-font-size: 14px;
 }
 
@@ -61,7 +57,6 @@
    ----------------------------------------------------- */
 .field-label {
     -fx-text-fill: #c4c0c2;
-    /* Gris claro neutro */
     -fx-font-size: 13px;
     -fx-font-weight: 500;
 }
@@ -72,10 +67,8 @@
    ----------------------------------------------------- */
 .form-field {
     -fx-background-color: #2a2628;
-    /* Gris oscuro neutro-cálido */
     -fx-text-fill: #e8e6e7;
     -fx-prompt-text-fill: #6a6568;
-    /* Placeholder gris neutro */
 
     -fx-font-size: 14px;
     -fx-padding: 10 12;
@@ -84,15 +77,12 @@
     -fx-border-radius: 6;
     -fx-border-width: 1;
     -fx-border-color: #3d3739;
-    /* Borde gris oscuro sutil */
 }
 
 .form-field:focused {
     -fx-border-color: #4a6b7c;
-    /* Azul petróleo DISCRETO */
     -fx-border-width: 2;
     -fx-background-color: #322e30;
-    /* Ligeramente más claro */
 }
 
 
@@ -101,7 +91,6 @@
    ----------------------------------------------------- */
 .success-btn {
     -fx-background-color: #3d1f28;
-    /* Vino tinto oscuro, muy desaturado */
     -fx-text-fill: #e8e6e7;
 
     -fx-font-size: 15px;
@@ -115,12 +104,10 @@
 
 .success-btn:hover {
     -fx-background-color: #4d2a34;
-    /* Un paso más claro, NO más saturado */
 }
 
 .success-btn:pressed {
     -fx-background-color: #2d1620;
-    /* Más oscuro */
 }
 
 
@@ -136,7 +123,6 @@
 
 .eye-button:hover {
     -fx-background-color: rgba(74, 107, 124, 0.06);
-    /* Azul petróleo muy sutil */
 }
 
 .eye-button:pressed {
@@ -145,14 +131,12 @@
 
 .eye-icon {
     -fx-fill: #9a9598;
-    /* Gris neutro */
     -fx-scale-x: 0.7;
     -fx-scale-y: 0.7;
 }
 
 .eye-button:hover .eye-icon {
     -fx-fill: #c4c0c2;
-    /* Más claro al hover */
 }
 
 
@@ -175,12 +159,10 @@
 
 .remember-checkbox:hover .box {
     -fx-border-color: #4a6b7c;
-    /* Azul petróleo discreto */
 }
 
 .remember-checkbox:selected .box {
     -fx-background-color: #4a6b7c;
-    /* Azul petróleo discreto */
     -fx-border-color: #4a6b7c;
 }
 
@@ -198,7 +180,6 @@
    ----------------------------------------------------- */
 .error-text {
     -fx-text-fill: #d48a8a;
-    /* Rojo desaturado, neutro */
     -fx-font-size: 13px;
     -fx-alignment: center;
 }
@@ -209,7 +190,6 @@
    ----------------------------------------------------- */
 .link-text {
     -fx-text-fill: #5a8599;
-    /* Azul petróleo discreto */
     -fx-font-size: 13px;
     -fx-underline: false;
     -fx-cursor: hand;
@@ -217,7 +197,6 @@
 
 .link-text:hover {
     -fx-text-fill: #6a9bb0;
-    /* Ligeramente más claro */
     -fx-underline: true;
 }
 
@@ -227,7 +206,6 @@
    ===================================================== */
 .primary-btn {
     -fx-background-color: #4a6b7c;
-    /* Azul petróleo */
     -fx-text-fill: #e8e6e7;
     -fx-font-size: 14px;
     -fx-padding: 8 16;
@@ -260,11 +238,140 @@
     -fx-font-weight: bold;
 }
 
+
 /* =====================================================
-   EDITOR CR80 — Canvas Area
+   WORKSPACE — Toolbar, Paneles, Listas
    ===================================================== */
+
+/* Canvas area */
 .canvas-area {
     -fx-background-color: #0a0809;
-    /* Fondo oscuro para contraste con tarjeta blanca */
     -fx-padding: 20;
+}
+
+/* Toolbar principal */
+.toolbar {
+    -fx-background-color: #1a1618;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Botones de toolbar */
+.toolbar-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.toolbar-btn:hover {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+}
+
+.toolbar-btn:pressed {
+    -fx-background-color: #322e30;
+}
+
+/* Botones pequeños de toolbar (zoom) */
+.toolbar-btn-small {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 10;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.toolbar-btn-small:hover {
+    -fx-background-color: #2a2628;
+}
+
+/* Label de toolbar */
+.toolbar-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
+    -fx-min-width: 50;
+    -fx-alignment: center;
+}
+
+/* Toggle buttons de toolbar */
+.toolbar-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.toolbar-toggle:selected {
+    -fx-background-color: #4a6b7c;
+    -fx-text-fill: #e8e6e7;
+}
+
+.toolbar-toggle:hover {
+    -fx-background-color: #2a2628;
+}
+
+/* Paneles laterales */
+.side-panel {
+    -fx-background-color: #141012;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 1 0 0;
+}
+
+/* Títulos de panel */
+.panel-title {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+/* Placeholder text en paneles */
+.panel-placeholder {
+    -fx-text-fill: #6a6568;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+/* Lista de proyectos */
+.project-list {
+    -fx-background-color: #1e1a1c;
+    -fx-border-color: #2a2628;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.project-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-padding: 8;
+}
+
+.project-list .list-cell:hover {
+    -fx-background-color: #2a2628;
+}
+
+.project-list .list-cell:selected {
+    -fx-background-color: #4a6b7c;
+    -fx-text-fill: #e8e6e7;
+}
+
+/* Separadores */
+.separator {
+    -fx-background-color: #2a2628;
+}
+
+.separator:vertical .line {
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 1 0 0;
+}
+
+.separator:horizontal .line {
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1 0 0 0;
 }
