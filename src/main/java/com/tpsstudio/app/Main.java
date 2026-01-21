@@ -11,10 +11,11 @@ public class Main extends Application {
     public void start(Stage stage) throws Exception {
 
         FXMLLoader loader = new FXMLLoader(
-                Main.class.getResource("/fxml/main_view.fxml")
-        );
+                Main.class.getResource("/fxml/login_view.fxml"));
 
-        Scene scene = new Scene(loader.load(), 1100, 700);
+        Scene scene = new Scene(loader.load(), 500, 400);
+        scene.getStylesheets().add(
+                Main.class.getResource("/css/app.css").toExternalForm());
 
         stage.setTitle("TPS Studio");
         stage.setScene(scene);
