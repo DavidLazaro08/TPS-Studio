@@ -7,9 +7,9 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -20,17 +20,28 @@
     <!-- TOOLBAR SUPERIOR -->
     <top>
         <VBox>
-            <!-- Barra de herramientas principal -->
             <HBox alignment="CENTER_LEFT" styleClass="toolbar" spacing="10">
                 <padding>
                     <Insets top="8" bottom="8" left="12" right="12" />
                 </padding>
                 
-                <!-- Acciones de archivo -->
-                <Button text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
-                <Button text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
-                <Button text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
-                <Button text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
+                <!-- Toggle Edit/Export Mode -->
+                <fx:define>
+                    <ToggleGroup fx:id="modeToggleGroup" />
+                </fx:define>
+                
+                <ToggleButton fx:id="btnModeEdit" text="✏ Editar" toggleGroup="$modeToggleGroup" 
+                              onAction="#onModeEdit" styleClass="mode-toggle" selected="true" />
+                <ToggleButton fx:id="btnModeExport" text="🖨 Exportar" toggleGroup="$modeToggleGroup" 
+                              onAction="#onModeExport" styleClass="mode-toggle" />
+                
+                <Separator orientation="VERTICAL" />
+                
+                <!-- Acciones de archivo (solo en modo EXPORT) -->
+                <Button fx:id="btnNuevo" text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
+                <Button fx:id="btnAbrir" text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
+                <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
+                <Button fx:id="btnExportar" text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
                 
                 <Separator orientation="VERTICAL" />
                 
@@ -58,20 +69,9 @@
     <center>
         <BorderPane>
             
-            <!-- PANEL IZQUIERDO: Lista de proyectos -->
+            <!-- PANEL IZQUIERDO DINÁMICO -->
             <left>
-                <VBox styleClass="side-panel" prefWidth="220" spacing="8">
-                    <padding>
-                        <Insets top="12" bottom="12" left="12" right="12" />
-                    </padding>
-                    
-                    <Label text="Trabajos" styleClass="panel-title" />
-                    
-                    <ListView fx:id="listProyectos" styleClass="project-list" VBox.vgrow="ALWAYS" />
-                    
-                    <Button text="+ Nuevo CR80" onAction="#onNuevoCR80" 
-                            styleClass="primary-btn" maxWidth="Infinity" />
-                </VBox>
+                <VBox fx:id="leftPanel" styleClass="side-panel" prefWidth="220" />
             </left>
             
             <!-- CENTRO: Canvas de edición -->
@@ -81,29 +81,9 @@
                 </StackPane>
             </center>
             
-            <!-- PANEL DERECHO: Propiedades e inspector -->
+            <!-- PANEL DERECHO DINÁMICO -->
             <right>
-                <VBox styleClass="side-panel" prefWidth="280" spacing="12">
-                    <padding>
-                        <Insets top="12" bottom="12" left="12" right="12" />
-                    </padding>
-                    
-                    <!-- Sección Propiedades -->
-                    <VBox spacing="6">
-                        <Label text="Propiedades" styleClass="panel-title" />
-                        <Label text="(Seleccione un elemento)" styleClass="panel-placeholder" 
-                               wrapText="true" />
-                    </VBox>
-                    
-                    <Separator />
-                    
-                    <!-- Sección Campos Variables -->
-                    <VBox spacing="6">
-                        <Label text="Campos Variables" styleClass="panel-title" />
-                        <Label text="(Disponible próximamente)" styleClass="panel-placeholder" 
-                               wrapText="true" />
-                    </VBox>
-                </VBox>
+                <VBox fx:id="rightPanel" styleClass="side-panel" prefWidth="280" />
             </right>
             
         </BorderPane>
