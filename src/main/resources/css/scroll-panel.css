@@ -1,0 +1,34 @@
+/* ScrollPane para paneles laterales */
+.side-panel-scroll {
+    -fx-background-color: #141012;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 1 0 0;
+}
+
+.side-panel-scroll .viewport {
+    -fx-background-color: #141012;
+}
+
+.side-panel-scroll .scroll-bar:vertical {
+    -fx-background-color: #141012;
+}
+
+.side-panel-scroll .scroll-bar:vertical .track {
+    -fx-background-color: #1e1a1c;
+    -fx-border-color: transparent;
+}
+
+.side-panel-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #4a6b7c;
+    -fx-background-radius: 4;
+}
+
+.side-panel-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5a7b8c;
+}
+
+.side-panel-scroll .scroll-bar:vertical .increment-button,
+.side-panel-scroll .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
