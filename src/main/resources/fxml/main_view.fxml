@@ -14,88 +14,82 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.tpsstudio.view.MainViewController"
-            styleClass="root">
-    
-    <!-- TOOLBAR SUPERIOR -->
-    <top>
-        <VBox>
-            <HBox alignment="CENTER_LEFT" styleClass="toolbar" spacing="10">
-                <padding>
-                    <Insets top="8" bottom="8" left="12" right="12" />
-                </padding>
-                
-                <!-- Toggle Edit/Export Mode -->
-                <fx:define>
-                    <ToggleGroup fx:id="modeToggleGroup" />
-                </fx:define>
-                
-                <ToggleButton fx:id="btnModeExport" text="📦 Producción" toggleGroup="$modeToggleGroup" 
-                              onAction="#onModeExport" styleClass="mode-toggle" selected="true" />
-                <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup" 
-                              onAction="#onModeEdit" styleClass="mode-toggle" />
-                
-                <Separator orientation="VERTICAL" />
-                
-                <!-- Acciones de archivo (solo en modo EXPORT) -->
-                <Button fx:id="btnNuevo" text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
-                <Button fx:id="btnAbrir" text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
-                <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
-                <Button fx:id="btnExportar" text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
-                
-                <Separator orientation="VERTICAL" />
-                
-                <!-- Controles de zoom -->
-                <Button text="-" onAction="#onZoomOut" styleClass="toolbar-btn-small" />
-                <Label fx:id="lblZoom" text="100%" styleClass="toolbar-label" />
-                <Button text="+" onAction="#onZoomIn" styleClass="toolbar-btn-small" />
-                
-                <Separator orientation="VERTICAL" />
-                
-                <!-- Toggle Frente/Dorso -->
-                <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso" 
-                              styleClass="toolbar-toggle" selected="true" />
-                
-                <Separator orientation="VERTICAL" />
-                
-                <!-- Toggle Guías -->
-                <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias" 
-                              styleClass="toolbar-toggle" selected="true" />
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.tpsstudio.view.MainViewController"
+           styleClass="root" fx:id="rootStack">
 
-                <Separator orientation="VERTICAL" />
+    <!-- CAPA 0: CONTENIDO PRINCIPAL (Toolbar + Canvas) -->
+    <BorderPane fx:id="contentPane">
+        <top>
+            <VBox>
+                <HBox alignment="CENTER_LEFT" styleClass="toolbar" spacing="10">
+                    <padding>
+                        <Insets top="8" bottom="8" left="12" right="12" />
+                    </padding>
+                    
+                    <!-- Toggle Edit/Export Mode -->
+                    <fx:define>
+                        <ToggleGroup fx:id="modeToggleGroup" />
+                    </fx:define>
+                    
+                    <ToggleButton fx:id="btnModeExport" text="📦 Producción" toggleGroup="$modeToggleGroup" 
+                                  onAction="#onModeExport" styleClass="mode-toggle" selected="true" />
+                    <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup" 
+                                  onAction="#onModeEdit" styleClass="mode-toggle" />
+                    
+                    <Separator orientation="VERTICAL" />
+                    
+                    <!-- Acciones de archivo -->
+                    <Button fx:id="btnNuevo" text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
+                    <Button fx:id="btnAbrir" text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
+                    <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
+                    <Button fx:id="btnExportar" text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
+                    
+                    <Separator orientation="VERTICAL" />
+                    
+                    <!-- Controles de zoom -->
+                    <Button text="-" onAction="#onZoomOut" styleClass="toolbar-btn-small" />
+                    <Label fx:id="lblZoom" text="100%" styleClass="toolbar-label" />
+                    <Button text="+" onAction="#onZoomIn" styleClass="toolbar-btn-small" />
+                    
+                    <Separator orientation="VERTICAL" />
+                    
+                    <!-- Toggle Frente/Dorso -->
+                    <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso" 
+                                  styleClass="toolbar-toggle" selected="true" />
+                    
+                    <Separator orientation="VERTICAL" />
+                    
+                    <!-- Toggle Guías -->
+                    <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias" 
+                                  styleClass="toolbar-toggle" selected="true" />
 
-                <!-- Toggle Propiedades -->
-                <ToggleButton fx:id="togglePropiedades" text="Propiedades" onAction="#onTogglePropiedades" 
-                              styleClass="toolbar-toggle" selected="true" />
-            </HBox>
-        </VBox>
-    </top>
+                    <Separator orientation="VERTICAL" />
+                    
+                    <!-- Toggle Propiedades -->
+                    <ToggleButton fx:id="togglePropiedades" text="Propiedades" onAction="#onTogglePropiedades" 
+                                  styleClass="toolbar-toggle" selected="true" />
+                </HBox>
+            </VBox>
+        </top>
+        
+        <!-- PANEL IZQUIERDO FIJO -->
+        <left>
+            <VBox fx:id="leftPanel" styleClass="side-panel" 
+                  prefWidth="240" minWidth="200" maxWidth="300" />
+        </left>
+        
+        <!-- ÁREA DE TRABAJO (Canvas Centrado) -->
+        <center>
+            <StackPane fx:id="canvasContainer" styleClass="canvas-area">
+                <Canvas fx:id="canvas" width="750" height="600" />
+            </StackPane>
+        </center>
+    </BorderPane>
+
+    <!-- CAPA 1: PANEL DERECHO (Overlay) -->
+    <VBox fx:id="rightPanel" styleClass="side-panel" 
+          prefWidth="260" minWidth="260" maxWidth="260" 
+          StackPane.alignment="CENTER_RIGHT" />
     
-    <!-- ÁREA DE TRABAJO -->
-    <center>
-        <BorderPane>
-            
-            <!-- PANEL IZQUIERDO DINÁMICO -->
-            <left>
-                <VBox fx:id="leftPanel" styleClass="side-panel" 
-                      prefWidth="240" minWidth="200" maxWidth="300" />
-            </left>
-            
-            <!-- CENTRO: Canvas de edición -->
-            <center>
-                <StackPane fx:id="canvasContainer" styleClass="canvas-area">
-                    <Canvas fx:id="canvas" width="750" height="600" />
-                </StackPane>
-            </center>
-            
-            <!-- PANEL DERECHO DINÁMICO -->
-            <right>
-                <VBox fx:id="rightPanel" styleClass="side-panel" 
-                      prefWidth="300" minWidth="300" maxWidth="300" />
-            </right>
-            
-        </BorderPane>
-    </center>
-    
-</BorderPane>
+</StackPane>

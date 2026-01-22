@@ -246,7 +246,9 @@ public class LoginViewController {
             stage.setMinHeight(700);
 
             // MAXIMIZAR la ventana para aprovechar todo el espacio
-            stage.setMaximized(true);
+            javafx.application.Platform.runLater(() -> {
+                stage.setMaximized(true);
+            });
 
         } catch (Exception e) {
             lblError.setText("Error al cargar la aplicación");

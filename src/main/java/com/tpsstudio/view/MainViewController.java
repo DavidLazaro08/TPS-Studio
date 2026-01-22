@@ -17,6 +17,12 @@ import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
+import javafx.animation.ParallelTransition;
+import javafx.animation.TranslateTransition;
+import javafx.scene.effect.DropShadow;
+import javafx.util.Duration;
 
 public class MainViewController {
 
@@ -52,6 +58,18 @@ public class MainViewController {
     // Drag & drop state
     private double dragStartX, dragStartY;
     private double elementStartX, elementStartY;
+    private double elementStartW, elementStartH; // Para redimensionar
+
+    // Enum para controlar el modo de arrastre
+    private enum DragMode {
+        NONE, MOVE, RESIZE_NW, RESIZE_NE, RESIZE_SW, RESIZE_SE, RESIZE_E // E para solo ancho (texto)
+    }
+
+    private DragMode currentDragMode = DragMode.NONE;
+    private static final double HANDLE_SIZE = 8.0;
+
+    // Flag para evitar bucles en listeners de texto
+    private boolean isUpdatingTextFields = false;
 
     // CR80 dimensions (4px = 1mm)
     private static final double CR80_WIDTH_MM = 85.60;
@@ -76,6 +94,17 @@ public class MainViewController {
     private void initialize() {
         setupCanvas();
         switchMode(AppMode.PRODUCTION); // Start in PRODUCTION mode
+
+        // Initialize panel states and apply shadows
+        DropShadow shadow = new DropShadow();
+        shadow.setColor(Color.rgb(0, 0, 0, 0.5));
+        shadow.setRadius(15);
+        shadow.setSpread(0.1);
+
+        rightPanel.setEffect(shadow);
+
+        // Ensure initial state matches toggle buttons
+        togglePanel(rightPanel, togglePropiedades.isSelected(), false);
     }
 
     private void setupCanvas() {
@@ -83,6 +112,7 @@ public class MainViewController {
         canvas.setOnMousePressed(this::onCanvasMousePressed);
         canvas.setOnMouseDragged(this::onCanvasMouseDragged);
         canvas.setOnMouseReleased(this::onCanvasMouseReleased);
+        canvas.setOnMouseMoved(this::onCanvasMouseMoved); // Nuevo para cursores
 
         // Keyboard events
         canvas.setFocusTraversable(true);
@@ -229,6 +259,9 @@ public class MainViewController {
 
             listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
                 elementoSeleccionado = newVal;
+                if (newVal != null) {
+                    ensurePropertiesPanelVisible();
+                }
                 buildEditPanels(); // Refresh to update properties
                 dibujarCanvas();
             });
@@ -531,6 +564,8 @@ public class MainViewController {
 
             // Listeners for position/size
             txtX.textProperty().addListener((obs, old, newVal) -> {
+                if (isUpdatingTextFields)
+                    return;
                 try {
                     elementoSeleccionado.setX(Double.parseDouble(newVal));
                     dibujarCanvas();
@@ -538,22 +573,61 @@ public class MainViewController {
                 }
             });
             txtY.textProperty().addListener((obs, old, newVal) -> {
+                if (isUpdatingTextFields)
+                    return;
                 try {
                     elementoSeleccionado.setY(Double.parseDouble(newVal));
                     dibujarCanvas();
                 } catch (NumberFormatException ignored) {
                 }
             });
+
+            // Logic for proportional updates
             txtW.textProperty().addListener((obs, old, newVal) -> {
+                if (isUpdatingTextFields)
+                    return;
                 try {
-                    elementoSeleccionado.setWidth(Double.parseDouble(newVal));
+                    double newWidth = Double.parseDouble(newVal);
+                    elementoSeleccionado.setWidth(newWidth);
+
+                    if (elementoSeleccionado instanceof ImagenElemento
+                            && ((ImagenElemento) elementoSeleccionado).isMantenerProporcion()) {
+                        isUpdatingTextFields = true;
+                        double ratio = ((ImagenElemento) elementoSeleccionado).getOriginalWidth()
+                                / ((ImagenElemento) elementoSeleccionado).getOriginalHeight();
+                        // Fallback/Safety in case ratio is valid
+                        if (ratio > 0) {
+                            double newHeight = newWidth / ratio;
+                            elementoSeleccionado.setHeight(newHeight);
+                            txtH.setText(String.format("%.0f", newHeight));
+                        }
+                        isUpdatingTextFields = false;
+                    }
                     dibujarCanvas();
                 } catch (NumberFormatException ignored) {
                 }
             });
+
             txtH.textProperty().addListener((obs, old, newVal) -> {
+                if (isUpdatingTextFields)
+                    return;
                 try {
-                    elementoSeleccionado.setHeight(Double.parseDouble(newVal));
+                    double newHeight = Double.parseDouble(newVal);
+                    elementoSeleccionado.setHeight(newHeight);
+
+                    if (elementoSeleccionado instanceof ImagenElemento
+                            && ((ImagenElemento) elementoSeleccionado).isMantenerProporcion()) {
+                        isUpdatingTextFields = true;
+                        double ratio = ((ImagenElemento) elementoSeleccionado).getOriginalWidth()
+                                / ((ImagenElemento) elementoSeleccionado).getOriginalHeight();
+                        // Fallback/Safety
+                        if (ratio > 0) {
+                            double newWidth = newHeight * ratio;
+                            elementoSeleccionado.setWidth(newWidth);
+                            txtW.setText(String.format("%.0f", newWidth));
+                        }
+                        isUpdatingTextFields = false;
+                    }
                     dibujarCanvas();
                 } catch (NumberFormatException ignored) {
                 }
@@ -764,6 +838,34 @@ public class MainViewController {
                 gc.setLineWidth(2);
                 gc.setLineDashes();
                 gc.strokeRect(ex - 2, ey - 2, ew + 4, eh + 4);
+
+                // Dibujar Handles (Manijas) de redimensionamiento
+                gc.setFill(Color.WHITE);
+                gc.setStroke(Color.BLACK);
+                gc.setLineWidth(1);
+
+                double dim = HANDLE_SIZE;
+
+                if (elem instanceof TextoElemento) {
+                    // Texto: Solo ancho -> Handle a la derecha (Middle-East)
+                    gc.fillRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
+                    gc.strokeRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
+
+                } else {
+                    // Imagen: 4 esquinas
+                    // NW
+                    gc.fillRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
+                    gc.strokeRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
+                    // NE
+                    gc.fillRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
+                    gc.strokeRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
+                    // SW
+                    gc.fillRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
+                    gc.strokeRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
+                    // SE
+                    gc.fillRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
+                    gc.strokeRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
+                }
             }
         }
 
@@ -801,34 +903,275 @@ public class MainViewController {
         double cardX = centerX - (scaledWidth / 2);
         double cardY = centerY - (scaledHeight / 2);
 
+        // Ajustar coordenadas del mouse relativas al canvas/zoom
+        // Pero para detección de handles usamos coord de pantalla (canvas) si es
+        // posible
+        // O mejor, calculamos la pos de los handles y checkeamos distancias.
+
+        // Primero, chequear si clicamos en un handle del elemento seleccionado actual
+        if (elementoSeleccionado != null) {
+            DragMode mode = getDragModeForMouseEvent(e, elementoSeleccionado, cardX, cardY);
+            if (mode != DragMode.NONE) {
+                currentDragMode = mode;
+                dragStartX = e.getX(); // Screen coords
+                dragStartY = e.getY();
+                elementStartX = elementoSeleccionado.getX();
+                elementStartY = elementoSeleccionado.getY();
+                elementStartW = elementoSeleccionado.getWidth();
+                elementStartH = elementoSeleccionado.getHeight();
+                canvas.requestFocus();
+                return; // Consumido por resize
+            }
+        }
+
+        // Si no es resize, buscar selección
         double relX = (e.getX() - cardX) / zoomLevel;
         double relY = (e.getY() - cardY) / zoomLevel;
 
-        elementoSeleccionado = null;
+        Elemento nuevoSeleccionado = null;
         for (int i = proyectoActual.getElementosActuales().size() - 1; i >= 0; i--) {
             Elemento elem = proyectoActual.getElementosActuales().get(i);
             if (elem.contains(relX, relY)) {
-                elementoSeleccionado = elem;
-                dragStartX = e.getX();
-                dragStartY = e.getY();
-                elementStartX = elem.getX();
-                elementStartY = elem.getY();
+                nuevoSeleccionado = elem;
                 break;
             }
         }
 
-        buildEditPanels();
-        dibujarCanvas();
+        if (nuevoSeleccionado != null) {
+            elementoSeleccionado = nuevoSeleccionado;
+            // Auto-abrir propiedades si está cerrado
+            ensurePropertiesPanelVisible();
+
+            currentDragMode = DragMode.MOVE;
+            dragStartX = e.getX();
+            dragStartY = e.getY();
+            elementStartX = elementoSeleccionado.getX();
+            elementStartY = elementoSeleccionado.getY();
+            buildEditPanels();
+            dibujarCanvas();
+        } else {
+            // Deseleccionar si clicamos fuera
+            if (elementoSeleccionado != null) {
+                elementoSeleccionado = null;
+                buildEditPanels();
+                dibujarCanvas();
+            }
+            currentDragMode = DragMode.NONE;
+        }
+
         canvas.requestFocus();
     }
 
     private void onCanvasMouseDragged(MouseEvent e) {
-        if (elementoSeleccionado != null && !elementoSeleccionado.isLocked()) {
-            double dx = (e.getX() - dragStartX) / zoomLevel;
-            double dy = (e.getY() - dragStartY) / zoomLevel;
+        if (elementoSeleccionado == null || currentDragMode == DragMode.NONE || elementoSeleccionado.isLocked())
+            return;
+
+        double dx = (e.getX() - dragStartX) / zoomLevel;
+        double dy = (e.getY() - dragStartY) / zoomLevel;
+
+        if (currentDragMode == DragMode.MOVE) {
             elementoSeleccionado.setX(elementStartX + dx);
             elementoSeleccionado.setY(elementStartY + dy);
+        } else {
+            // Lógica de redimensionamiento
+            double newW = elementStartW;
+            double newH = elementStartH;
+            double newX = elementStartX;
+            double newY = elementStartY;
+
+            // Variables para cálculo proporcional
+            boolean keepProportion = false;
+            double ratio = 1.0;
+            if (elementoSeleccionado instanceof ImagenElemento
+                    && ((ImagenElemento) elementoSeleccionado).isMantenerProporcion()) {
+                keepProportion = true;
+                if (elementStartH > 0)
+                    ratio = elementStartW / elementStartH;
+            }
+
+            // Ajustar según el handle
+            // Nota: dx/dy ya están ajustados por el zoom level
+
+            switch (currentDragMode) {
+                case RESIZE_E: // Solo ancho (Texto)
+                    newW = elementStartW + dx;
+                    break;
+
+                case RESIZE_SE:
+                    newW = elementStartW + dx;
+                    newH = elementStartH + dy;
+                    if (keepProportion) {
+                        // Usamos el ancho como driver principal (comportamiento estándar)
+                        // o mejor, el que tenga mayor desplazamiento relativo?
+                        // Por simplicidad: newH = newW / ratio
+                        newH = newW / ratio;
+                    }
+                    break;
+
+                case RESIZE_SW:
+                    newW = elementStartW - dx; // Arrastrar a izquierda (dx neg) aumenta ancho
+                    newH = elementStartH + dy;
+                    if (keepProportion) {
+                        newH = newW / ratio;
+                    }
+                    // Al crecer a la izquierda, X debe moverse
+                    newX = elementStartX + (elementStartW - newW);
+                    break;
+
+                case RESIZE_NE:
+                    newW = elementStartW + dx;
+                    newH = elementStartH - dy; // Arrastrar arriba (dy neg) aumenta alto
+                    if (keepProportion) {
+                        // En este caso, si arrastro arriba, espero que cambie alto.
+                        // Pero si arrastro derecha, cambia ancho.
+                        // Usemos Width como driver consistente
+                        newH = newW / ratio;
+                    }
+                    // Al crecer arriba, Y debe moverse
+                    newY = elementStartY + (elementStartH - newH);
+                    break;
+
+                case RESIZE_NW:
+                    newW = elementStartW - dx;
+                    newH = elementStartH - dy;
+                    if (keepProportion) {
+                        newH = newW / ratio;
+                    }
+                    newX = elementStartX + (elementStartW - newW);
+                    newY = elementStartY + (elementStartH - newH);
+                    break;
+
+                default:
+                    break;
+            }
+
+            // Aplicar restricciones mínimas (ej. 10px)
+            if (newW < 10) {
+                newW = 10;
+                // Si limitamos W, recalcular X si es un handle izquierdo
+                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) {
+                    newX = elementStartX + (elementStartW - newW);
+                }
+                // Si prop, recalcular H
+                if (keepProportion)
+                    newH = newW / ratio;
+            }
+            if (newH < 10) {
+                newH = 10;
+                // Si limitamos H y es prop, recalcular W (y X si aplica)
+                if (keepProportion) {
+                    newW = newH * ratio;
+                    if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) {
+                        newX = elementStartX + (elementStartW - newW);
+                    }
+                }
+                // Si limitamos H, recalcular Y si es un handle superior
+                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE) {
+                    newY = elementStartY + (elementStartH - newH);
+                }
+            }
+
+            elementoSeleccionado.setWidth(newW);
+            elementoSeleccionado.setHeight(newH);
+
+            // Actualizar posición solo si es necesario (handles izquierdos/superiores)
+            if (currentDragMode == DragMode.RESIZE_SW ||
+                    currentDragMode == DragMode.RESIZE_NW ||
+                    currentDragMode == DragMode.RESIZE_NE) {
+
+                // Solo si el handle implica movimiento de origen
+                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW)
+                    elementoSeleccionado.setX(newX);
+                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE)
+                    elementoSeleccionado.setY(newY);
+            }
+
+            // Re-render en tiempo real
+            buildEditPanels(); // Actualizar valores en panel
             dibujarCanvas();
+        }
+
+        dibujarCanvas();
+    }
+
+    private void onCanvasMouseMoved(MouseEvent e) {
+        if (proyectoActual == null || elementoSeleccionado == null) {
+            canvas.setCursor(javafx.scene.Cursor.DEFAULT);
+            return;
+        }
+
+        double centerX = canvas.getWidth() / 2;
+        double centerY = canvas.getHeight() / 2;
+        double scaledWidth = CARD_WIDTH * zoomLevel;
+        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double cardX = centerX - (scaledWidth / 2);
+        double cardY = centerY - (scaledHeight / 2);
+
+        DragMode mode = getDragModeForMouseEvent(e, elementoSeleccionado, cardX, cardY);
+
+        switch (mode) {
+            case RESIZE_NW:
+                canvas.setCursor(javafx.scene.Cursor.NW_RESIZE);
+                break;
+            case RESIZE_NE:
+                canvas.setCursor(javafx.scene.Cursor.NE_RESIZE);
+                break;
+            case RESIZE_SW:
+                canvas.setCursor(javafx.scene.Cursor.SW_RESIZE);
+                break;
+            case RESIZE_SE:
+                canvas.setCursor(javafx.scene.Cursor.SE_RESIZE);
+                break;
+            case RESIZE_E:
+                canvas.setCursor(javafx.scene.Cursor.E_RESIZE);
+                break;
+            default:
+                canvas.setCursor(javafx.scene.Cursor.DEFAULT);
+                break;
+        }
+    }
+
+    private DragMode getDragModeForMouseEvent(MouseEvent e, Elemento elem, double cardX, double cardY) {
+        double mx = e.getX();
+        double my = e.getY();
+
+        double ex = cardX + (elem.getX() * zoomLevel);
+        double ey = cardY + (elem.getY() * zoomLevel);
+        double ew = elem.getWidth() * zoomLevel;
+        double eh = elem.getHeight() * zoomLevel;
+
+        // Hitbox un poco más grande para facilitar clic
+        double hit = HANDLE_SIZE + 4;
+
+        if (elem instanceof TextoElemento) {
+            // Solo handle derecho/centro
+            double hx = ex + ew;
+            double hy = ey + (eh / 2);
+            if (Math.abs(mx - hx) <= hit && Math.abs(my - hy) <= hit) {
+                return DragMode.RESIZE_E;
+            }
+        } else {
+            // Esquinas
+            // NW
+            if (Math.abs(mx - ex) <= hit && Math.abs(my - ey) <= hit)
+                return DragMode.RESIZE_NW;
+            // NE
+            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - ey) <= hit)
+                return DragMode.RESIZE_NE;
+            // SW
+            if (Math.abs(mx - ex) <= hit && Math.abs(my - (ey + eh)) <= hit)
+                return DragMode.RESIZE_SW;
+            // SE
+            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - (ey + eh)) <= hit)
+                return DragMode.RESIZE_SE;
+        }
+        return DragMode.NONE;
+    }
+
+    private void ensurePropertiesPanelVisible() {
+        if (togglePropiedades != null && !togglePropiedades.isSelected()) {
+            togglePropiedades.setSelected(true);
+            onTogglePropiedades();
         }
     }
 
@@ -1085,9 +1428,15 @@ public class MainViewController {
             return;
 
         int num = proyectoActual.getElementosActuales().size() + 1;
+        // Ancho por defecto aumentado a 150 (antes 50 o 100) para facilitar edición de
+        // nombres
         TextoElemento texto = new TextoElemento("Texto " + num, 50, 50);
+        texto.setWidth(150); // Forzar ancho inicial más amplio
         proyectoActual.getElementosActuales().add(texto);
         elementoSeleccionado = texto;
+
+        ensurePropertiesPanelVisible(); // Auto-mostrar propiedades al crear new element
+
         buildEditPanels();
         dibujarCanvas();
     }
@@ -1189,10 +1538,56 @@ public class MainViewController {
 
     @FXML
     private void onTogglePropiedades() {
-        if (rightPanel != null && togglePropiedades != null) {
-            boolean visible = togglePropiedades.isSelected();
-            rightPanel.setVisible(visible);
-            rightPanel.setManaged(visible);
+        togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+    }
+
+    /**
+     * Anima la visibilidad de un panel lateral (Overlay mode)
+     */
+    private void togglePanel(javafx.scene.layout.Region panel, boolean show, boolean isLeft) {
+        // Asegurar que es visible e interactuable al empezar animación de mostrado
+        if (show) {
+            panel.setVisible(true);
+            panel.setMouseTransparent(false);
+        } else {
+            panel.setMouseTransparent(true); // Bloquear interacción mientras se oculta
         }
+
+        // Configurar sombra si no tiene
+        if (panel.getEffect() == null) {
+            javafx.scene.effect.DropShadow shadow = new javafx.scene.effect.DropShadow();
+            shadow.setColor(Color.rgb(0, 0, 0, 0.5));
+            shadow.setRadius(15);
+            shadow.setSpread(0.1);
+            panel.setEffect(shadow);
+        }
+
+        // Calcular desplazamiento
+        double width = panel.getWidth() > 0 ? panel.getWidth() : panel.getPrefWidth();
+        double startX = show ? (isLeft ? -width : width) : 0;
+        double endX = show ? 0 : (isLeft ? -width : width);
+
+        // Translate Transition
+        TranslateTransition tt = new TranslateTransition(Duration.millis(300), panel);
+        tt.setFromX(startX);
+        tt.setToX(endX);
+        tt.setInterpolator(Interpolator.EASE_BOTH);
+
+        // Fade Transition
+        FadeTransition ft = new FadeTransition(Duration.millis(300), panel);
+        ft.setFromValue(show ? 0.0 : 1.0);
+        ft.setToValue(show ? 1.0 : 0.0);
+        ft.setInterpolator(Interpolator.EASE_BOTH);
+
+        // Parallel Transition
+        ParallelTransition pt = new ParallelTransition(tt, ft);
+
+        pt.setOnFinished(e -> {
+            if (!show) {
+                panel.setVisible(false);
+            }
+        });
+
+        pt.play();
     }
 }
