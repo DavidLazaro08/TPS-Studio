@@ -222,32 +222,101 @@ public class LoginViewController {
 
     private void openMainView() {
         try {
-            // Obtener el Stage actual desde cualquier nodo de la escena
+            // Obtener el Stage actual y la escena
             Stage stage = (Stage) txtUser.getScene().getWindow();
+            Scene scene = txtUser.getScene();
 
-            // Cargar el FXML de la vista principal
+            // Capturar la raíz actual (Login)
+            javafx.scene.Parent loginView = scene.getRoot();
+
+            // Cargar la nueva vista (Main)
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/main_view.fxml"));
+            javafx.scene.Parent mainView = loader.load();
 
-            // Crear nueva escena SIN tamaño fijo para que se adapte
-            Scene scene = new Scene(loader.load());
+            // Preparar la nueva vista (invisible al inicio)
+            mainView.setOpacity(0);
 
-            // Aplicar la hoja de estilos CSS
-            scene.getStylesheets().add(
-                    getClass().getResource("/css/app.css").toExternalForm());
+            // Crear contenedor de transición (StackPane)
+            // Importante: Desvincular loginView de la escena primero para añadirlo al
+            // StackPane
+            // Al hacer setRoot(stack), loginView queda huérfano y se puede añadir?
+            // JavaFX reparenting: si añades un nodo a otro padre, se quita del anterior.
+            // Pero primero creamos el StackPane vacío.
+            javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
+            transitionContainer.setStyle("-fx-background-color: #0e1217;"); // Fondo oscuro para evitar flashes blancos
 
-            // Cambiar la escena en el Stage
-            stage.setScene(scene);
+            // Añadir vistas: Primero Login (fondo), luego Main (frente)
+            // Nota: Al cambiar setRoot, la escena libera el root anterior.
+            // Así que hacemos el cambio de root y luego añadimos los hijos.
+            scene.setRoot(transitionContainer);
+            transitionContainer.getChildren().addAll(loginView, mainView);
+
+            // Asegurar estilos
+            if (!scene.getStylesheets().contains(getClass().getResource("/css/app.css").toExternalForm())) {
+                scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            }
+
+            // Configurar Stage
             stage.setTitle("TPS Studio");
 
-            // Establecer tamaños mínimos
-            // Panel izq (240) + Canvas mínimo (500) + Panel der (380) + márgenes = 1150px
-            stage.setMinWidth(1150);
-            stage.setMinHeight(700);
+            // SECUENCIA DE TRANSICIÓN MEJORADA:
+            // 1. Salida del Login (en ventana pequeña)
+            // 2. Maximizar ventana (pantalla oscura)
+            // 3. Entrada del Main (en ventana grande)
 
-            // MAXIMIZAR la ventana para aprovechar todo el espacio
             javafx.application.Platform.runLater(() -> {
-                stage.setMaximized(true);
+                Duration durationExit = Duration.millis(250);
+                Duration durationEnter = Duration.millis(350);
+                javafx.animation.Interpolator interpolator = javafx.animation.Interpolator.EASE_BOTH;
+
+                // --- 1. Animación de Salida (Login) ---
+                FadeTransition fadeOut = new FadeTransition(durationExit, loginView);
+                fadeOut.setFromValue(1.0);
+                fadeOut.setToValue(0.0);
+                fadeOut.setInterpolator(interpolator);
+
+                javafx.animation.ScaleTransition scaleOut = new javafx.animation.ScaleTransition(durationExit,
+                        loginView);
+                scaleOut.setFromX(1.0);
+                scaleOut.setFromY(1.0);
+                scaleOut.setToX(0.9);
+                scaleOut.setToY(0.9);
+                scaleOut.setInterpolator(interpolator);
+
+                javafx.animation.ParallelTransition exitTransition = new javafx.animation.ParallelTransition(fadeOut,
+                        scaleOut);
+
+                // --- 2. Animación de Entrada (Main) ---
+                FadeTransition fadeIn = new FadeTransition(durationEnter, mainView);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.setInterpolator(interpolator);
+                // Retraso inicial para dar tiempo al motor gráfico tras maximizar
+                fadeIn.setDelay(Duration.millis(50));
+
+                // --- Lógica de Encadenamiento ---
+                exitTransition.setOnFinished(e -> {
+                    // Una vez oculto el login, maximizamos
+                    stage.setMaximized(true);
+
+                    // AHORA aplicamos restricciones de tamaño (ya estamos maximizados)
+                    // Esto evita el salto visual de redimensionado previo
+                    stage.setMinWidth(1150);
+                    stage.setMinHeight(700);
+
+                    // Y lanzamos la entrada del main
+                    fadeIn.play();
+                });
+
+                fadeIn.setOnFinished(e -> {
+                    // Limpieza final
+                    transitionContainer.getChildren().clear();
+                    scene.setRoot(mainView);
+                });
+
+                // Iniciar secuencia
+                exitTransition.play();
             });
 
         } catch (Exception e) {
