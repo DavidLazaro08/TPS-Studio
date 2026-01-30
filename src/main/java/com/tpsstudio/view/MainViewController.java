@@ -6,14 +6,11 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -55,40 +52,11 @@ public class MainViewController {
     private Elemento elementoSeleccionado;
     private double zoomLevel = 1.3; // 130% zoom inicial
 
-    // Drag & drop state
-    private double dragStartX, dragStartY;
-    private double elementStartX, elementStartY;
-    private double elementStartW, elementStartH; // Para redimensionar
-
-    // Enum para controlar el modo de arrastre
-    private enum DragMode {
-        NONE, MOVE, RESIZE_NW, RESIZE_NE, RESIZE_SW, RESIZE_SE, RESIZE_E // E para solo ancho (texto)
-    }
-
-    private DragMode currentDragMode = DragMode.NONE;
-    private static final double HANDLE_SIZE = 8.0;
-
     // Flag para evitar bucles en listeners de texto
     private boolean isUpdatingTextFields = false;
 
-    // CR80 dimensions (4px = 1mm)
-    private static final double CR80_WIDTH_MM = 85.60;
-    private static final double CR80_HEIGHT_MM = 53.98;
-    private static final double SCALE = 4.0; // 4 píxeles = 1 mm
-    private static final double CARD_WIDTH = CR80_WIDTH_MM * SCALE; // 342.4 px
-    private static final double CARD_HEIGHT = CR80_HEIGHT_MM * SCALE; // 215.92 px
-
-    // Bleed: 2mm por lado (estándar de preimpresión)
-    private static final double BLEED_MM = 2.0;
-    private static final double BLEED_MARGIN = BLEED_MM * SCALE; // 8 px
-
-    // Safety margin: 2mm dentro del borde final
-    private static final double SAFETY_MM = 2.0;
-    private static final double SAFETY_MARGIN = SAFETY_MM * SCALE; // 8 px
-
-    // Dimensiones totales con sangrado
-    private static final double CARD_WITH_BLEED_WIDTH = CR80_WIDTH_MM + (BLEED_MM * 2); // 89.60 mm
-    private static final double CARD_WITH_BLEED_HEIGHT = CR80_HEIGHT_MM + (BLEED_MM * 2); // 57.98 mm
+    // EditorCanvasManager - maneja renderizado y eventos de mouse
+    private EditorCanvasManager canvasManager;
 
     @FXML
     private void initialize() {
@@ -108,11 +76,23 @@ public class MainViewController {
     }
 
     private void setupCanvas() {
-        // Mouse events for selection and drag
-        canvas.setOnMousePressed(this::onCanvasMousePressed);
-        canvas.setOnMouseDragged(this::onCanvasMouseDragged);
-        canvas.setOnMouseReleased(this::onCanvasMouseReleased);
-        canvas.setOnMouseMoved(this::onCanvasMouseMoved); // Nuevo para cursores
+        // Inicializar EditorCanvasManager
+        canvasManager = new EditorCanvasManager(canvas);
+        canvasManager.setProyectoActual(proyectoActual);
+        canvasManager.setZoomLevel(zoomLevel);
+        canvasManager.setCurrentMode(currentMode);
+
+        // Callbacks para sincronizar estado
+        canvasManager.setOnElementSelected(() -> {
+            elementoSeleccionado = canvasManager.getElementoSeleccionado();
+            ensurePropertiesPanelVisible();
+        });
+
+        canvasManager.setOnCanvasChanged(() -> {
+            elementoSeleccionado = canvasManager.getElementoSeleccionado();
+            buildEditPanels();
+            canvasManager.dibujarCanvas();
+        });
 
         // Keyboard events
         canvas.setFocusTraversable(true);
@@ -331,7 +311,8 @@ public class MainViewController {
                 } else {
                     fondo.setFitMode(FondoFitMode.FINAL);
                 }
-                fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+                fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                        EditorCanvasManager.BLEED_MARGIN);
                 buildEditPanels();
                 dibujarCanvas();
             });
@@ -350,7 +331,8 @@ public class MainViewController {
                         Image img = new Image(file.toURI().toString());
                         fondo.setImagen(img);
                         fondo.setRutaArchivo(file.getAbsolutePath());
-                        fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+                        fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                                EditorCanvasManager.BLEED_MARGIN);
                         dibujarCanvas();
                     } catch (Exception ex) {
                         ex.printStackTrace();
@@ -729,454 +711,23 @@ public class MainViewController {
     // ========== CANVAS DRAWING ==========
 
     private void dibujarCanvas() {
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-        if (proyectoActual == null) {
-            gc.setFill(Color.web("#9a9598"));
-            gc.fillText("Seleccione un proyecto o cree uno nuevo",
-                    canvas.getWidth() / 2 - 120, canvas.getHeight() / 2);
-            return;
-        }
-
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
-        double centerX = canvas.getWidth() / 2;
-        double centerY = canvas.getHeight() / 2;
-        double cardX = centerX - (scaledWidth / 2);
-        double cardY = centerY - (scaledHeight / 2);
-
-        gc.save();
-
-        // 1. Bleed zone (sangrado: 2mm por lado)
-        if (toggleGuias.isSelected()) {
-            double bleedScaled = BLEED_MARGIN * zoomLevel;
-            gc.setStroke(Color.web("#d48a8a")); // Rojo claro
-            gc.setLineWidth(1);
-            gc.setLineDashes(5, 5);
-            gc.strokeRect(cardX - bleedScaled, cardY - bleedScaled,
-                    scaledWidth + (bleedScaled * 2), scaledHeight + (bleedScaled * 2));
-        }
-
-        // 2. Background (if exists)
-        ImagenFondoElemento fondo = proyectoActual.getFondoActual();
-        if (fondo != null && fondo.getImagen() != null) {
-            double fx = cardX + (fondo.getX() * zoomLevel);
-            double fy = cardY + (fondo.getY() * zoomLevel);
-            double fw = fondo.getWidth() * zoomLevel;
-            double fh = fondo.getHeight() * zoomLevel;
-            gc.drawImage(fondo.getImagen(), fx, fy, fw, fh);
-        } else {
-            // Card (white background only if no background image)
-            gc.setFill(Color.WHITE);
-            gc.fillRect(cardX, cardY, scaledWidth, scaledHeight);
-        }
-
-        // 3. Card border (CR80 final)
-        gc.setStroke(Color.web("#c4c0c2"));
-        gc.setLineWidth(1);
-        gc.setLineDashes();
-        gc.strokeRect(cardX, cardY, scaledWidth, scaledHeight);
-
-        // 4. Safety guides (margen de seguridad: 2mm dentro del borde)
-        if (toggleGuias.isSelected()) {
-            double safetyScaled = SAFETY_MARGIN * zoomLevel;
-            gc.setStroke(Color.web("#4a9b7c")); // Verde azulado
-            gc.setLineDashes(3, 3);
-            gc.strokeRect(cardX + safetyScaled, cardY + safetyScaled,
-                    scaledWidth - (safetyScaled * 2), scaledHeight - (safetyScaled * 2));
-        }
-
-        // Draw elements
-        for (Elemento elem : proyectoActual.getElementosActuales()) {
-            if (!elem.isVisible())
-                continue;
-
-            double ex = cardX + (elem.getX() * zoomLevel);
-            double ey = cardY + (elem.getY() * zoomLevel);
-            double ew = elem.getWidth() * zoomLevel;
-            double eh = elem.getHeight() * zoomLevel;
-
-            if (elem instanceof TextoElemento) {
-                TextoElemento texto = (TextoElemento) elem;
-                gc.setFill(Color.web(texto.getColor()));
-
-                // Aplicar estilo de fuente (negrita/cursiva)
-                javafx.scene.text.FontWeight weight = texto.isNegrita() ? javafx.scene.text.FontWeight.BOLD
-                        : javafx.scene.text.FontWeight.NORMAL;
-                javafx.scene.text.FontPosture posture = texto.isCursiva() ? javafx.scene.text.FontPosture.ITALIC
-                        : javafx.scene.text.FontPosture.REGULAR;
-
-                gc.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * zoomLevel));
-
-                // Aplicar alineación
-                double textX = ex;
-                javafx.scene.text.Text tempText = new javafx.scene.text.Text(texto.getContenido());
-                tempText.setFont(gc.getFont());
-                double textWidth = tempText.getLayoutBounds().getWidth();
-
-                if (texto.getAlineacion().equals("CENTER")) {
-                    textX = ex + (ew - textWidth) / 2;
-                } else if (texto.getAlineacion().equals("RIGHT")) {
-                    textX = ex + ew - textWidth;
-                }
-
-                gc.fillText(texto.getContenido(), textX, ey + (texto.getFontSize() * zoomLevel));
-            } else if (elem instanceof ImagenElemento) {
-                ImagenElemento img = (ImagenElemento) elem;
-                if (img.getImagen() != null) {
-                    // Aplicar opacidad
-                    gc.setGlobalAlpha(img.getOpacity());
-                    gc.drawImage(img.getImagen(), ex, ey, ew, eh);
-                    gc.setGlobalAlpha(1.0); // Restaurar opacidad
-                }
-            }
-
-            // Selection box
-            if (elem == elementoSeleccionado) {
-                gc.setStroke(Color.web("#4a6b7c"));
-                gc.setLineWidth(2);
-                gc.setLineDashes();
-                gc.strokeRect(ex - 2, ey - 2, ew + 4, eh + 4);
-
-                // Dibujar Handles (Manijas) de redimensionamiento
-                gc.setFill(Color.WHITE);
-                gc.setStroke(Color.BLACK);
-                gc.setLineWidth(1);
-
-                double dim = HANDLE_SIZE;
-
-                if (elem instanceof TextoElemento) {
-                    // Texto: Solo ancho -> Handle a la derecha (Middle-East)
-                    gc.fillRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
-                    gc.strokeRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
-
-                } else {
-                    // Imagen: 4 esquinas
-                    // NW
-                    gc.fillRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
-                    gc.strokeRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
-                    // NE
-                    gc.fillRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
-                    gc.strokeRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
-                    // SW
-                    gc.fillRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
-                    gc.strokeRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
-                    // SE
-                    gc.fillRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
-                    gc.strokeRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
-                }
-            }
-        }
-
-        // Info text - reorganizado para mejor legibilidad
-        gc.setLineDashes();
-
-        // 1. Lado (FRENTE/DORSO) - Arriba izquierda, en negrita, más separado
-        String lado = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
-        gc.setFill(Color.web("#e8e6e7")); // Más claro y visible
-        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 14));
-        gc.fillText(lado, cardX, cardY - 25); // Más separado (antes -15)
-
-        // 2. Dimensiones - Abajo derecha, texto normal, más abajo para no cortarse
-        gc.setFill(Color.web("#9a9598"));
-        gc.setFont(Font.font("Arial", 11));
-        String infoDimensiones = String.format("CR80: %.2f × %.2f mm | Con sangre: %.2f × %.2f mm",
-                CR80_WIDTH_MM, CR80_HEIGHT_MM, CARD_WITH_BLEED_WIDTH, CARD_WITH_BLEED_HEIGHT);
-        // Calcular posición con sangrado incluido para evitar solapamiento
-        double bleedScaled = BLEED_MARGIN * zoomLevel;
-        gc.fillText(infoDimensiones, cardX + scaledWidth - 380, cardY + scaledHeight + bleedScaled + 20);
-
-        gc.restore();
-    }
-
-    // ========== MOUSE EVENTS ==========
-
-    private void onCanvasMousePressed(MouseEvent e) {
-        if (proyectoActual == null || currentMode != AppMode.DESIGN)
-            return;
-
-        double centerX = canvas.getWidth() / 2;
-        double centerY = canvas.getHeight() / 2;
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
-        double cardX = centerX - (scaledWidth / 2);
-        double cardY = centerY - (scaledHeight / 2);
-
-        // Ajustar coordenadas del mouse relativas al canvas/zoom
-        // Pero para detección de handles usamos coord de pantalla (canvas) si es
-        // posible
-        // O mejor, calculamos la pos de los handles y checkeamos distancias.
-
-        // Primero, chequear si clicamos en un handle del elemento seleccionado actual
-        if (elementoSeleccionado != null) {
-            DragMode mode = getDragModeForMouseEvent(e, elementoSeleccionado, cardX, cardY);
-            if (mode != DragMode.NONE) {
-                currentDragMode = mode;
-                dragStartX = e.getX(); // Screen coords
-                dragStartY = e.getY();
-                elementStartX = elementoSeleccionado.getX();
-                elementStartY = elementoSeleccionado.getY();
-                elementStartW = elementoSeleccionado.getWidth();
-                elementStartH = elementoSeleccionado.getHeight();
-                canvas.requestFocus();
-                return; // Consumido por resize
-            }
-        }
-
-        // Si no es resize, buscar selección
-        double relX = (e.getX() - cardX) / zoomLevel;
-        double relY = (e.getY() - cardY) / zoomLevel;
-
-        Elemento nuevoSeleccionado = null;
-        for (int i = proyectoActual.getElementosActuales().size() - 1; i >= 0; i--) {
-            Elemento elem = proyectoActual.getElementosActuales().get(i);
-            if (elem.contains(relX, relY)) {
-                nuevoSeleccionado = elem;
-                break;
-            }
-        }
-
-        if (nuevoSeleccionado != null) {
-            elementoSeleccionado = nuevoSeleccionado;
-            // Auto-abrir propiedades si está cerrado
-            ensurePropertiesPanelVisible();
-
-            currentDragMode = DragMode.MOVE;
-            dragStartX = e.getX();
-            dragStartY = e.getY();
-            elementStartX = elementoSeleccionado.getX();
-            elementStartY = elementoSeleccionado.getY();
-            buildEditPanels();
-            dibujarCanvas();
-        } else {
-            // Deseleccionar si clicamos fuera
-            if (elementoSeleccionado != null) {
-                elementoSeleccionado = null;
-                buildEditPanels();
-                dibujarCanvas();
-            }
-            currentDragMode = DragMode.NONE;
-        }
-
-        canvas.requestFocus();
-    }
-
-    private void onCanvasMouseDragged(MouseEvent e) {
-        if (elementoSeleccionado == null || currentDragMode == DragMode.NONE || elementoSeleccionado.isLocked())
-            return;
-
-        double dx = (e.getX() - dragStartX) / zoomLevel;
-        double dy = (e.getY() - dragStartY) / zoomLevel;
-
-        if (currentDragMode == DragMode.MOVE) {
-            elementoSeleccionado.setX(elementStartX + dx);
-            elementoSeleccionado.setY(elementStartY + dy);
-        } else {
-            // Lógica de redimensionamiento
-            double newW = elementStartW;
-            double newH = elementStartH;
-            double newX = elementStartX;
-            double newY = elementStartY;
-
-            // Variables para cálculo proporcional
-            boolean keepProportion = false;
-            double ratio = 1.0;
-            if (elementoSeleccionado instanceof ImagenElemento
-                    && ((ImagenElemento) elementoSeleccionado).isMantenerProporcion()) {
-                keepProportion = true;
-                if (elementStartH > 0)
-                    ratio = elementStartW / elementStartH;
-            }
-
-            // Ajustar según el handle
-            // Nota: dx/dy ya están ajustados por el zoom level
-
-            switch (currentDragMode) {
-                case RESIZE_E: // Solo ancho (Texto)
-                    newW = elementStartW + dx;
-                    break;
-
-                case RESIZE_SE:
-                    newW = elementStartW + dx;
-                    newH = elementStartH + dy;
-                    if (keepProportion) {
-                        // Usamos el ancho como driver principal (comportamiento estándar)
-                        // o mejor, el que tenga mayor desplazamiento relativo?
-                        // Por simplicidad: newH = newW / ratio
-                        newH = newW / ratio;
-                    }
-                    break;
-
-                case RESIZE_SW:
-                    newW = elementStartW - dx; // Arrastrar a izquierda (dx neg) aumenta ancho
-                    newH = elementStartH + dy;
-                    if (keepProportion) {
-                        newH = newW / ratio;
-                    }
-                    // Al crecer a la izquierda, X debe moverse
-                    newX = elementStartX + (elementStartW - newW);
-                    break;
-
-                case RESIZE_NE:
-                    newW = elementStartW + dx;
-                    newH = elementStartH - dy; // Arrastrar arriba (dy neg) aumenta alto
-                    if (keepProportion) {
-                        // En este caso, si arrastro arriba, espero que cambie alto.
-                        // Pero si arrastro derecha, cambia ancho.
-                        // Usemos Width como driver consistente
-                        newH = newW / ratio;
-                    }
-                    // Al crecer arriba, Y debe moverse
-                    newY = elementStartY + (elementStartH - newH);
-                    break;
-
-                case RESIZE_NW:
-                    newW = elementStartW - dx;
-                    newH = elementStartH - dy;
-                    if (keepProportion) {
-                        newH = newW / ratio;
-                    }
-                    newX = elementStartX + (elementStartW - newW);
-                    newY = elementStartY + (elementStartH - newH);
-                    break;
-
-                default:
-                    break;
-            }
-
-            // Aplicar restricciones mínimas (ej. 10px)
-            if (newW < 10) {
-                newW = 10;
-                // Si limitamos W, recalcular X si es un handle izquierdo
-                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) {
-                    newX = elementStartX + (elementStartW - newW);
-                }
-                // Si prop, recalcular H
-                if (keepProportion)
-                    newH = newW / ratio;
-            }
-            if (newH < 10) {
-                newH = 10;
-                // Si limitamos H y es prop, recalcular W (y X si aplica)
-                if (keepProportion) {
-                    newW = newH * ratio;
-                    if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) {
-                        newX = elementStartX + (elementStartW - newW);
-                    }
-                }
-                // Si limitamos H, recalcular Y si es un handle superior
-                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE) {
-                    newY = elementStartY + (elementStartH - newH);
-                }
-            }
-
-            elementoSeleccionado.setWidth(newW);
-            elementoSeleccionado.setHeight(newH);
-
-            // Actualizar posición solo si es necesario (handles izquierdos/superiores)
-            if (currentDragMode == DragMode.RESIZE_SW ||
-                    currentDragMode == DragMode.RESIZE_NW ||
-                    currentDragMode == DragMode.RESIZE_NE) {
-
-                // Solo si el handle implica movimiento de origen
-                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW)
-                    elementoSeleccionado.setX(newX);
-                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE)
-                    elementoSeleccionado.setY(newY);
-            }
-
-            // Re-render en tiempo real
-            buildEditPanels(); // Actualizar valores en panel
-            dibujarCanvas();
-        }
-
-        dibujarCanvas();
-    }
-
-    private void onCanvasMouseMoved(MouseEvent e) {
-        if (proyectoActual == null || elementoSeleccionado == null) {
-            canvas.setCursor(javafx.scene.Cursor.DEFAULT);
-            return;
-        }
-
-        double centerX = canvas.getWidth() / 2;
-        double centerY = canvas.getHeight() / 2;
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
-        double cardX = centerX - (scaledWidth / 2);
-        double cardY = centerY - (scaledHeight / 2);
-
-        DragMode mode = getDragModeForMouseEvent(e, elementoSeleccionado, cardX, cardY);
-
-        switch (mode) {
-            case RESIZE_NW:
-                canvas.setCursor(javafx.scene.Cursor.NW_RESIZE);
-                break;
-            case RESIZE_NE:
-                canvas.setCursor(javafx.scene.Cursor.NE_RESIZE);
-                break;
-            case RESIZE_SW:
-                canvas.setCursor(javafx.scene.Cursor.SW_RESIZE);
-                break;
-            case RESIZE_SE:
-                canvas.setCursor(javafx.scene.Cursor.SE_RESIZE);
-                break;
-            case RESIZE_E:
-                canvas.setCursor(javafx.scene.Cursor.E_RESIZE);
-                break;
-            default:
-                canvas.setCursor(javafx.scene.Cursor.DEFAULT);
-                break;
+        if (canvasManager != null) {
+            canvasManager.setProyectoActual(proyectoActual);
+            canvasManager.setElementoSeleccionado(elementoSeleccionado);
+            canvasManager.setZoomLevel(zoomLevel);
+            canvasManager.setMostrarGuias(toggleGuias.isSelected());
+            canvasManager.setCurrentMode(currentMode);
+            canvasManager.dibujarCanvas();
         }
     }
 
-    private DragMode getDragModeForMouseEvent(MouseEvent e, Elemento elem, double cardX, double cardY) {
-        double mx = e.getX();
-        double my = e.getY();
-
-        double ex = cardX + (elem.getX() * zoomLevel);
-        double ey = cardY + (elem.getY() * zoomLevel);
-        double ew = elem.getWidth() * zoomLevel;
-        double eh = elem.getHeight() * zoomLevel;
-
-        // Hitbox un poco más grande para facilitar clic
-        double hit = HANDLE_SIZE + 4;
-
-        if (elem instanceof TextoElemento) {
-            // Solo handle derecho/centro
-            double hx = ex + ew;
-            double hy = ey + (eh / 2);
-            if (Math.abs(mx - hx) <= hit && Math.abs(my - hy) <= hit) {
-                return DragMode.RESIZE_E;
-            }
-        } else {
-            // Esquinas
-            // NW
-            if (Math.abs(mx - ex) <= hit && Math.abs(my - ey) <= hit)
-                return DragMode.RESIZE_NW;
-            // NE
-            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - ey) <= hit)
-                return DragMode.RESIZE_NE;
-            // SW
-            if (Math.abs(mx - ex) <= hit && Math.abs(my - (ey + eh)) <= hit)
-                return DragMode.RESIZE_SW;
-            // SE
-            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - (ey + eh)) <= hit)
-                return DragMode.RESIZE_SE;
-        }
-        return DragMode.NONE;
-    }
+    // ========== HELPER METHODS ==========
 
     private void ensurePropertiesPanelVisible() {
         if (togglePropiedades != null && !togglePropiedades.isSelected()) {
             togglePropiedades.setSelected(true);
             onTogglePropiedades();
         }
-    }
-
-    private void onCanvasMouseReleased(MouseEvent e) {
-        // Nothing special for now
     }
 
     /**
@@ -1324,7 +875,8 @@ public class MainViewController {
             // Recargar imagen
             Image nuevaImagen = new Image(file.toURI().toString());
             fondo.setImagen(nuevaImagen);
-            fondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+            fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                    EditorCanvasManager.BLEED_MARGIN);
 
             // Redibujar
             dibujarCanvas();
@@ -1518,8 +1070,10 @@ public class MainViewController {
                 }
 
                 ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
-                        file.getAbsolutePath(), img, CARD_WIDTH, CARD_HEIGHT, fitMode);
-                nuevoFondo.ajustarATamaño(CARD_WIDTH, CARD_HEIGHT, BLEED_MARGIN);
+                        file.getAbsolutePath(), img, EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                        fitMode);
+                nuevoFondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                        EditorCanvasManager.BLEED_MARGIN);
 
                 proyectoActual.setFondoActual(nuevoFondo);
                 elementoSeleccionado = nuevoFondo;

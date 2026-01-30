@@ -24,7 +24,7 @@ import javafx.animation.TranslateTransition;
 import javafx.scene.effect.DropShadow;
 import javafx.util.Duration;
 
-public class MainViewController {
+public class MainViewController_BACKUP {
 
     // ========== FXML Components ==========
     @FXML
