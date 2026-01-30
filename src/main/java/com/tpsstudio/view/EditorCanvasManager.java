@@ -32,10 +32,10 @@ public class EditorCanvasManager {
     public static final double SCALE = 4.0; // 4 píxeles por milímetro
     public static final double CARD_WIDTH = CR80_WIDTH_MM * SCALE; // 342.4 px
     public static final double CARD_HEIGHT = CR80_HEIGHT_MM * SCALE; // 215.92 px
-    public static final double SAFETY_MARGIN = 3.0 * SCALE; // 12 px
-    public static final double BLEED_MARGIN = 3.0 * SCALE; // 12 px
-    public static final double CARD_WITH_BLEED_WIDTH = (CR80_WIDTH_MM + 4.0) * SCALE;
-    public static final double CARD_WITH_BLEED_HEIGHT = (CR80_HEIGHT_MM + 4.0) * SCALE;
+    public static final double SAFETY_MARGIN = 3.0 * SCALE; // 12 px (3mm margen de seguridad)
+    public static final double BLEED_MARGIN = 2.0 * SCALE; // 8 px (2mm sangrado estándar)
+    public static final double CARD_WITH_BLEED_WIDTH = (CR80_WIDTH_MM + 4.0) * SCALE; // +2mm por lado
+    public static final double CARD_WITH_BLEED_HEIGHT = (CR80_HEIGHT_MM + 4.0) * SCALE; // +2mm por lado
     public static final double HANDLE_SIZE = 8.0;
 
     // Estado que necesita del exterior (referencias)
@@ -99,7 +99,7 @@ public class EditorCanvasManager {
 
     // ========== MOUSE HANDLERS SETUP ==========
 
-    private void setupMouseHandlers() {
+    public void setupMouseHandlers() {
         canvas.setOnMousePressed(this::onCanvasMousePressed);
         canvas.setOnMouseDragged(this::onCanvasMouseDragged);
         canvas.setOnMouseMoved(this::onCanvasMouseMoved);
@@ -213,20 +213,31 @@ public class EditorCanvasManager {
 
             // Selección + handles (si está seleccionado)
             if (elementoSeleccionado != null && elem == elementoSeleccionado) {
-                gc.setStroke(Color.web("#d45c7a"));
+                // Cuadro de selección - verde azulado vibrante con línea discontinua
+                gc.setStroke(Color.web("#4a9b7c"));
                 gc.setLineWidth(2);
-                gc.setLineDashes(4, 4);
-                gc.strokeRect(ex, ey, ew, eh);
+                gc.setLineDashes(3, 3);
+                gc.strokeRect(ex - 1, ey - 1, ew + 2, eh + 2); // Padding de 1px
 
+                // Handles - blancos semi-transparentes con borde del color del cuadro
                 double dim = HANDLE_SIZE;
-                gc.setFill(Color.web("#d45c7a"));
-                gc.setLineDashes();
+                gc.setLineDashes(); // Sin discontinuidad para handles
 
                 if (elem instanceof TextoElemento) {
                     // Texto: Solo handle derecho (Middle-East)
+                    gc.setGlobalAlpha(0.8); // 80% opacidad para no tapar fondo
+                    gc.setFill(Color.WHITE);
                     gc.fillRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
+                    gc.setGlobalAlpha(1.0); // Restaurar opacidad
+
+                    gc.setStroke(Color.web("#4a9b7c"));
+                    gc.setLineWidth(2);
+                    gc.strokeRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
                 } else {
                     // Imagen: 4 esquinas
+                    gc.setGlobalAlpha(0.8); // 80% opacidad
+                    gc.setFill(Color.WHITE);
+
                     // NW
                     gc.fillRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
                     // NE
@@ -235,6 +246,16 @@ public class EditorCanvasManager {
                     gc.fillRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
                     // SE
                     gc.fillRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
+
+                    gc.setGlobalAlpha(1.0); // Restaurar opacidad
+
+                    // Bordes de los handles
+                    gc.setStroke(Color.web("#4a9b7c"));
+                    gc.setLineWidth(2);
+                    gc.strokeRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
+                    gc.strokeRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
+                    gc.strokeRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
+                    gc.strokeRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
                 }
             }
         }

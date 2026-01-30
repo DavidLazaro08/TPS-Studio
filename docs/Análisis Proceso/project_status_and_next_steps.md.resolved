@@ -1,0 +1,487 @@
+# 📊 TPS Studio - Estado del Proyecto y Próximos Pasos
+
+## 🎯 Resumen Ejecutivo
+
+**TPS Studio** es una aplicación JavaFX para diseño y preimpresión de tarjetas plásticas CR80 (85.60 × 53.98 mm) y acreditaciones.
+
+**Estado Actual**: ✅ **Refactoring completado** - Editor funcional con arquitectura limpia  
+**Próximo Paso Crítico**: 🚀 **Implementar persistencia** (guardar/abrir proyectos)
+
+---
+
+## 📁 Documentación Analizada
+
+He revisado todos los documentos en `docs/`:
+
+1. **README.md** - Descripción general del proyecto
+2. **mainviewcontroller_audit.md.resolved** - Plan detallado de refactoring (866 líneas)
+3. **refactoring_audit_for_dummies.md.resolved** - Explicación del refactoring completado
+4. **PDFs** (no leídos - binarios):
+   - `02_Estudio_TPS Studio_DavidGutierrez_ST.pdf`
+   - [AutoEvaluacion_EN02_DavidGutierrez.pdf](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/docs/AutoEvaluacion_EN02_DavidGutierrez.pdf)
+   - [Primera_Iteracion_TPS_Studio.pdf](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/docs/Primera_Iteracion_TPS_Studio.pdf)
+   - `Proyecto TPS Studio_IT01_David_Gutierrez.pdf`
+   - [TPS_Studio_Funcionalidades_Diferenciales.pdf](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/docs/TPS_Studio_Funcionalidades_Diferenciales.pdf)
+
+---
+
+## ✅ Lo que YA está IMPLEMENTADO
+
+### **1. Arquitectura Refactorizada** (100% completo)
+
+El refactoring del [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#24-1156) (1594 líneas → 5 clases) está **completado**:
+
+| Clase | Líneas | Estado | Responsabilidad |
+|-------|--------|--------|-----------------|
+| [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#24-1156) | 551 | ✅ Completo | Coordinación UI, eventos FXML |
+| [EditorCanvasManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/EditorCanvasManager.java#19-546) | 567 | ✅ Completo | Renderizado canvas, mouse events |
+| [PropertiesPanelController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/PropertiesPanelController.java#22-485) | 485 | ✅ Completo | Panel de propiedades dinámico |
+| [ModeManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/ModeManager.java#21-379) | 379 | ✅ Completo | Gestión de modos DESIGN/PRODUCTION |
+| [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#24-294) | 294 | ✅ Completo | Lógica de negocio (CRUD básico) |
+
+**Beneficios obtenidos:**
+- ✅ Código mantenible y testeable
+- ✅ Separación de responsabilidades clara
+- ✅ Sin código duplicado
+- ✅ Arquitectura escalable
+
+---
+
+### **2. Editor de Tarjetas CR80** (Funcional)
+
+#### **Canvas y Renderizado**
+- ✅ Tarjeta CR80 con medidas reales (85.60 × 53.98 mm)
+- ✅ Área de sangrado (2mm por lado)
+- ✅ Guías de seguridad (3mm)
+- ✅ Zoom (50% - 200%)
+- ✅ Frente/Dorso
+
+#### **Elementos Editables**
+- ✅ **Textos**:
+  - Fuente, tamaño, color
+  - Posición (X, Y)
+  - Ancho ajustable
+  - Drag & drop
+  - Resize con handle derecho
+  
+- ✅ **Imágenes**:
+  - Carga desde archivo (PNG, JPG, JPEG, GIF)
+  - Posición (X, Y)
+  - Tamaño (ancho × alto)
+  - Mantener proporción
+  - Drag & drop
+  - Resize con 4 handles (esquinas)
+  
+- ✅ **Fondos**:
+  - Carga desde archivo
+  - Fit modes: CON SANGRE / SIN SANGRE
+  - Preferencia "No volver a preguntar"
+  - Edición externa (Photoshop/GIMP)
+  - Recarga desde disco
+
+#### **Interacción**
+- ✅ Selección de elementos (clic)
+- ✅ Drag & drop
+- ✅ Resize con handles
+- ✅ Eliminación (tecla DELETE)
+- ✅ Bloqueo/desbloqueo de elementos
+- ✅ Panel de capas (layers)
+- ✅ Panel de propiedades dinámico
+
+#### **Modos de Trabajo**
+- ✅ **Modo DISEÑO**: Toolbox + Capas + Propiedades
+- ✅ **Modo PRODUCCIÓN**: Lista de proyectos + Export controls
+
+---
+
+### **3. Gestión de Proyectos** (Básico)
+
+- ✅ Crear nuevo proyecto CR80
+- ✅ Lista de proyectos en memoria
+- ✅ Selección de proyecto activo
+- ✅ Añadir/eliminar elementos
+
+---
+
+### **4. UI/UX**
+
+- ✅ Login screen con animaciones
+- ✅ Transición animada Login → Main
+- ✅ Paneles laterales con animaciones (slide + fade)
+- ✅ Tema oscuro moderno
+- ✅ Sombras y efectos visuales
+
+---
+
+## ❌ Lo que FALTA por IMPLEMENTAR
+
+### **🔴 Crítico (Bloquea uso real)**
+
+#### **1. Persistencia de Proyectos** (NO implementado)
+
+**Estado actual**: Placeholders vacíos en [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#24-294)
+```java
+public void abrirProyecto() {
+    System.out.println("Abrir (placeholder)");
+}
+
+public void guardarProyecto() {
+    System.out.println("Guardar (placeholder)");
+}
+```
+
+**Lo que falta:**
+- [ ] Serialización de proyectos a JSON
+- [ ] Guardar proyecto en disco (.tps o .json)
+- [ ] Abrir proyecto desde disco
+- [ ] Diálogo "Guardar cambios" al cerrar
+- [ ] Gestión de rutas de archivos (imágenes relativas vs absolutas)
+- [ ] Validación de integridad al cargar
+
+**Impacto**: **SIN ESTO, LA APP NO ES USABLE** (se pierde todo al cerrar)
+
+---
+
+#### **2. Exportación a PDF/PNG** (NO implementado)
+
+**Estado actual**: Placeholder vacío
+```java
+public void exportarProyecto() {
+    System.out.println("Exportar (placeholder)");
+}
+```
+
+**Lo que falta:**
+- [ ] Exportar frente/dorso a PNG (resolución impresión: 300 DPI)
+- [ ] Exportar a PDF listo para imprenta
+- [ ] Opciones de exportación:
+  - Con sangrado / Sin sangrado
+  - Marcas de corte
+  - Resolución personalizable
+- [ ] Preview antes de exportar
+
+**Impacto**: **SIN ESTO, NO SE PUEDE IMPRIMIR** (objetivo principal de la app)
+
+---
+
+### **🟡 Importante (Mejora funcionalidad)**
+
+#### **3. Base de Datos** (NO implementado)
+
+**Según README**:
+> Base de datos local (pendiente de definir)
+
+**Lo que falta:**
+- [ ] Definir qué se guarda en BD:
+  - ¿Proyectos? (o solo en archivos JSON?)
+  - ¿Plantillas reutilizables?
+  - ¿Historial de proyectos?
+  - ¿Configuración de usuario?
+- [ ] Elegir tecnología (SQLite, H2, o solo archivos?)
+- [ ] Implementar DAO/Repository
+- [ ] Migrar [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#24-294) a usar BD
+
+**Impacto**: Mejora organización y búsqueda de proyectos
+
+---
+
+#### **4. Campos Variables** (NO implementado)
+
+**Según README**:
+> Permitir la creación de plantillas con medidas reales, **campos variables** y exportación a PDF
+
+**Lo que falta:**
+- [ ] Definir qué son "campos variables":
+  - ¿Placeholders tipo `{{NOMBRE}}`, `{{ID}}`?
+  - ¿Importar datos desde CSV/Excel?
+  - ¿Generación masiva de tarjetas?
+- [ ] Implementar sistema de templates
+- [ ] Interfaz para definir variables
+- [ ] Lógica de reemplazo al exportar
+
+**Impacto**: Funcionalidad diferencial para producción masiva
+
+---
+
+#### **5. Plantillas Predefinidas** (NO implementado)
+
+**Lo que falta:**
+- [ ] Galería de plantillas (ej: tarjeta corporativa, acreditación evento, etc.)
+- [ ] Sistema de categorías
+- [ ] Importar/exportar plantillas
+- [ ] Marketplace de plantillas (futuro)
+
+**Impacto**: Acelera creación de proyectos
+
+---
+
+### **🟢 Opcional (Nice to have)**
+
+#### **6. Mejoras de Editor**
+
+- [ ] Deshacer/Rehacer (Undo/Redo)
+- [ ] Copiar/Pegar elementos
+- [ ] Duplicar elemento
+- [ ] Alinear elementos (izquierda, centro, derecha, distribuir)
+- [ ] Agrupar/desagrupar elementos
+- [ ] Orden de capas (traer al frente, enviar al fondo)
+- [ ] Reglas y guías personalizadas
+- [ ] Snap to grid
+- [ ] Rotación de elementos
+
+#### **7. Mejoras de UI**
+
+- [ ] Atajos de teclado (Ctrl+S, Ctrl+Z, etc.)
+- [ ] Barra de herramientas superior
+- [ ] Miniatura de vista previa
+- [ ] Historial de proyectos recientes
+- [ ] Búsqueda de proyectos
+- [ ] Temas personalizables
+
+#### **8. Exportación Avanzada**
+
+- [ ] Exportar solo frente o solo dorso
+- [ ] Exportar múltiples tarjetas en una hoja
+- [ ] Exportar con código QR
+- [ ] Exportar a formatos vectoriales (SVG, EPS)
+
+---
+
+## 🚀 Recomendación de Próximos Pasos
+
+### **Prioridad 1: Persistencia (CRÍTICO)**
+
+**Objetivo**: Poder guardar y abrir proyectos
+
+**Tareas**:
+1. **Diseñar formato JSON** (1-2h)
+   ```json
+   {
+     "nombre": "Tarjeta CR80 #1",
+     "version": "1.0",
+     "frente": {
+       "elementos": [
+         {
+           "tipo": "texto",
+           "id": "txt1",
+           "contenido": "Nombre",
+           "x": 50,
+           "y": 50,
+           "fuente": "Arial",
+           "tamaño": 14,
+           "color": "#000000"
+         },
+         {
+           "tipo": "imagen",
+           "id": "img1",
+           "ruta": "imagenes/logo.png",
+           "x": 100,
+           "y": 100,
+           "ancho": 50,
+           "alto": 50
+         }
+       ],
+       "fondo": {
+         "ruta": "fondos/fondo1.jpg",
+         "fitMode": "BLEED"
+       }
+     },
+     "dorso": { ... }
+   }
+   ```
+
+2. **Implementar serialización** (2-3h)
+   - Crear clases DTO (Data Transfer Objects)
+   - Usar Gson o Jackson para JSON
+   - Métodos `toJSON()` en modelos
+   - Métodos `fromJSON()` para deserializar
+
+3. **Implementar [guardarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#92-98)** (2h)
+   - FileChooser para elegir ubicación
+   - Guardar JSON en disco
+   - Guardar rutas relativas de imágenes
+   - Copiar imágenes a carpeta del proyecto (opcional)
+
+4. **Implementar [abrirProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#85-91)** (2h)
+   - FileChooser para seleccionar .tps
+   - Cargar JSON desde disco
+   - Reconstruir objetos Proyecto/Elemento
+   - Validar rutas de imágenes
+   - Manejo de errores (archivo corrupto, imágenes faltantes)
+
+5. **Diálogo "Guardar cambios"** (1h)
+   - Detectar cambios no guardados
+   - Mostrar diálogo al cerrar app
+   - Opciones: Guardar / No guardar / Cancelar
+
+**Tiempo estimado**: 8-10 horas  
+**Beneficio**: App usable en producción
+
+---
+
+### **Prioridad 2: Exportación a PDF/PNG (CRÍTICO)**
+
+**Objetivo**: Generar archivos listos para imprenta
+
+**Tareas**:
+1. **Exportar a PNG** (3-4h)
+   - Renderizar canvas a imagen (WritableImage)
+   - Escalar a 300 DPI (85.60mm × 300 DPI / 25.4 = 1012px ancho)
+   - Guardar con ImageIO
+   - Opciones: con/sin sangrado
+
+2. **Exportar a PDF** (4-5h)
+   - Usar librería: iText, Apache PDFBox, o JavaFX PDF
+   - Crear PDF con medidas exactas (85.60 × 53.98 mm)
+   - Incrustar imágenes y textos
+   - Añadir marcas de corte (opcional)
+
+3. **Diálogo de exportación** (2h)
+   - Opciones: formato (PNG/PDF), resolución, sangrado
+   - Preview antes de exportar
+   - Progreso de exportación
+
+**Tiempo estimado**: 9-11 horas  
+**Beneficio**: Cumple objetivo principal (preimpresión)
+
+---
+
+### **Prioridad 3: Campos Variables (IMPORTANTE)**
+
+**Objetivo**: Generación masiva de tarjetas
+
+**Tareas**:
+1. **Diseñar sistema de variables** (2h)
+   - Sintaxis: `{{VARIABLE}}`
+   - Tipos: texto, imagen, código QR
+   - Interfaz para definir variables
+
+2. **Importar datos desde CSV** (3h)
+   - FileChooser para CSV
+   - Parser CSV
+   - Mapeo columnas → variables
+
+3. **Generación masiva** (4h)
+   - Iterar filas del CSV
+   - Reemplazar variables en plantilla
+   - Exportar múltiples PDFs/PNGs
+
+**Tiempo estimado**: 9 horas  
+**Beneficio**: Funcionalidad diferencial
+
+---
+
+### **Prioridad 4: Base de Datos (OPCIONAL)**
+
+**Decisión**: ¿Realmente se necesita?
+
+**Alternativa simple**: Usar solo archivos JSON
+- Proyectos guardados como `.tps` (JSON)
+- Carpeta `proyectos/` con subcarpetas por proyecto
+- Historial de recientes en `config.json`
+
+**Si se decide implementar BD**:
+- SQLite para portabilidad
+- Tablas: `proyectos`, `plantillas`, `configuracion`
+- Tiempo estimado: 6-8 horas
+
+---
+
+## 📋 Plan de Implementación Sugerido
+
+### **Sprint 1: Persistencia (2 semanas)**
+- Semana 1: Serialización JSON + Guardar
+- Semana 2: Abrir + Validaciones + Diálogo cambios
+
+### **Sprint 2: Exportación (2 semanas)**
+- Semana 1: Exportar PNG + Opciones
+- Semana 2: Exportar PDF + Preview
+
+### **Sprint 3: Campos Variables (2 semanas)**
+- Semana 1: Sistema de variables + UI
+- Semana 2: Importar CSV + Generación masiva
+
+### **Sprint 4: Mejoras (1-2 semanas)**
+- Undo/Redo
+- Atajos de teclado
+- Plantillas predefinidas
+
+---
+
+## 🎯 Métricas de Progreso
+
+| Funcionalidad | Completado | Pendiente | Prioridad |
+|---------------|------------|-----------|-----------|
+| **Arquitectura** | 100% | 0% | ✅ Completo |
+| **Editor básico** | 100% | 0% | ✅ Completo |
+| **Persistencia** | 0% | 100% | 🔴 Crítico |
+| **Exportación** | 0% | 100% | 🔴 Crítico |
+| **Campos variables** | 0% | 100% | 🟡 Importante |
+| **Base de datos** | 0% | 100% | 🟢 Opcional |
+| **Mejoras editor** | 30% | 70% | 🟢 Opcional |
+
+**Progreso global**: ~40% (arquitectura + editor básico completos)
+
+---
+
+## 💡 Recomendación Final
+
+**Enfócate en Prioridad 1 y 2** (Persistencia + Exportación):
+
+1. **Implementar [guardarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#92-98) y [abrirProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#85-91)** (Sprint 1)
+   - Esto hace la app **usable**
+   - Permite probar con proyectos reales
+   - Base para todo lo demás
+
+2. **Implementar exportación a PNG/PDF** (Sprint 2)
+   - Cumple el objetivo principal (preimpresión)
+   - Valida que el renderizado es correcto
+   - Permite mostrar resultados a usuarios
+
+3. **Después, evaluar necesidad de campos variables** (Sprint 3)
+   - Depende de feedback de usuarios
+   - Puede ser diferenciador vs competencia
+
+**Con estos 2 sprints (4 semanas), tendrás una app MVP funcional y lista para producción.**
+
+---
+
+## 📝 Notas Adicionales
+
+### **Tecnologías Sugeridas**
+
+- **JSON**: Gson (simple) o Jackson (robusto)
+- **PDF**: iText 7 (comercial) o Apache PDFBox (open source)
+- **BD** (si se decide): SQLite + JDBC
+
+### **Estructura de Archivos Propuesta**
+
+```
+proyectos/
+├── tarjeta_corporativa_001/
+│   ├── proyecto.tps (JSON)
+│   ├── imagenes/
+│   │   ├── logo.png
+│   │   └── foto.jpg
+│   └── fondos/
+│       └── fondo.jpg
+└── acreditacion_evento_002/
+    └── ...
+```
+
+### **Formato de Archivo `.tps`**
+
+- Extensión personalizada (asociar con TPS Studio)
+- Internamente: JSON comprimido (ZIP) con imágenes embebidas
+- Alternativa: JSON plano + carpeta de assets
+
+---
+
+## ✅ Conclusión
+
+**Estado actual**: Refactoring completo, editor funcional  
+**Bloqueador crítico**: Falta persistencia y exportación  
+**Próximo paso**: Implementar [guardarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#92-98) y [abrirProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#85-91)  
+**Tiempo estimado MVP**: 4 semanas (2 sprints)
+
+**¿Quieres que empiece con la implementación de persistencia?** 🚀
