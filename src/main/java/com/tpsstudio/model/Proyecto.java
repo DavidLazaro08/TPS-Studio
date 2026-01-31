@@ -25,6 +25,9 @@ public class Proyecto {
     private FondoFitMode fondoFitModePreferido;
     private boolean noVolverAPreguntarFondo;
 
+    // Metadatos del proyecto (ubicación, cliente, etc.)
+    private ProyectoMetadata metadata;
+
     private static int contadorId = 1;
 
     public Proyecto(String nombre) {
@@ -128,6 +131,14 @@ public class Proyecto {
 
     public void setNoVolverAPreguntarFondo(boolean noVolverAPreguntarFondo) {
         this.noVolverAPreguntarFondo = noVolverAPreguntarFondo;
+    }
+
+    public ProyectoMetadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(ProyectoMetadata metadata) {
+        this.metadata = metadata;
     }
 
     @Override

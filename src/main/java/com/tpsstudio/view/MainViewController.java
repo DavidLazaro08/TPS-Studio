@@ -76,6 +76,9 @@ public class MainViewController {
 
         // Ensure initial state matches toggle buttons
         togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+
+        // Cargar últimos 8 proyectos recientes automáticamente
+        projectManager.cargarProyectosRecientes(8);
     }
 
     private void setupCanvas() {
@@ -417,17 +420,26 @@ public class MainViewController {
 
     @FXML
     private void onNuevoProyecto() {
-        System.out.println("Nuevo (placeholder)");
+        // Crear proyecto con diálogo completo y estructura de carpetas
+        Proyecto nuevoProyecto = projectManager.nuevoProyecto(canvas.getScene().getWindow());
+        if (nuevoProyecto != null && listProyectos != null) {
+            listProyectos.getSelectionModel().select(nuevoProyecto);
+        }
     }
 
     @FXML
     private void onAbrirProyecto() {
-        System.out.println("Abrir (placeholder)");
+        // Abrir proyecto desde archivo .tps
+        Proyecto proyectoCargado = projectManager.abrirProyecto(canvas.getScene().getWindow());
+        if (proyectoCargado != null && listProyectos != null) {
+            listProyectos.getSelectionModel().select(proyectoCargado);
+        }
     }
 
     @FXML
     private void onGuardarProyecto() {
-        System.out.println("Guardar (placeholder)");
+        // Guardar proyecto actual en JSON
+        projectManager.guardarProyecto();
     }
 
     @FXML
@@ -450,8 +462,9 @@ public class MainViewController {
 
     @FXML
     private void onNuevoCR80() {
-        Proyecto nuevoProyecto = projectManager.crearNuevoCR80();
-        if (listProyectos != null) {
+        // Crear proyecto con diálogo completo (mismo que onNuevoProyecto)
+        Proyecto nuevoProyecto = projectManager.nuevoProyecto(canvas.getScene().getWindow());
+        if (nuevoProyecto != null && listProyectos != null) {
             listProyectos.getSelectionModel().select(nuevoProyecto);
         }
     }
