@@ -157,15 +157,37 @@ public class ModeManager {
     /**
      * Builds all panels for DESIGN mode (toolbox, layers, properties)
      */
+    private VBox layersPanel; // Referencia para actualizar
+
+    /**
+     * Builds all panels for DESIGN mode (toolbox, layers, properties)
+     */
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
         // LEFT: Toolbox + Layers
         VBox toolbox = buildToolboxPanel();
-        VBox layers = buildLayersPanel(proyecto, selectedElement);
-        leftPanel.getChildren().addAll(toolbox, new Separator(), layers);
+        layersPanel = buildLayersPanel(proyecto, selectedElement);
+        leftPanel.getChildren().addAll(toolbox, new Separator(), layersPanel);
 
         // RIGHT: Properties
         VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
         rightPanel.getChildren().setAll(properties);
+    }
+
+    /**
+     * Actualiza solo el panel de capas (útil para cambios de nombre/etiqueta)
+     */
+    public void refreshLayersPanel(Proyecto proyecto, Elemento selectedElement) {
+        if (leftPanel.getChildren().size() >= 3) {
+            // Asumiendo que el orden es Toolbox, Separator, Layers
+            // Reconstruir solo el panel de capas
+            VBox newLayers = buildLayersPanel(proyecto, selectedElement);
+            // Reemplazar el nodo antiguo
+            int index = leftPanel.getChildren().indexOf(layersPanel);
+            if (index != -1) {
+                leftPanel.getChildren().set(index, newLayers);
+                layersPanel = newLayers; // Actualizar referencia
+            }
+        }
     }
 
     /**
@@ -251,7 +273,7 @@ public class ModeManager {
                         setContextMenu(null);
                     } else {
                         String lockIcon = item.isLocked() ? "🔒 " : "";
-                        setText(lockIcon + item.getNombre());
+                        setText(lockIcon + item.toString()); // Usar toString() para incluir etiqueta
 
                         // Context menu for all elements
                         ContextMenu contextMenu = new ContextMenu();

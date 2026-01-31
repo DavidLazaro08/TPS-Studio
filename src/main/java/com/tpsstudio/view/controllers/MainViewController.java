@@ -8,14 +8,13 @@ import com.tpsstudio.view.managers.EditorCanvasManager;
 import com.tpsstudio.view.managers.ModeManager;
 import com.tpsstudio.view.managers.PropertiesPanelController;
 import com.tpsstudio.view.dialogs.EditarProyectoDialog;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -38,6 +37,8 @@ public class MainViewController {
     private VBox rightPanel;
     @FXML
     private Canvas canvas;
+    @FXML
+    private StackPane canvasContainer;
     @FXML
     private ListView<Proyecto> listProyectos;
     @FXML
@@ -92,6 +93,9 @@ public class MainViewController {
         // NO seleccionar ningún proyecto por defecto - canvas vacío hasta que usuario
         // seleccione
 
+        // Centrar canvas inicialmente (panel de propiedades abierto por defecto)
+        Platform.runLater(() -> adjustCanvasCentering(true));
+
         // Añadir listener de doble clic para editar proyecto
         if (listProyectos != null) {
             listProyectos.setOnMouseClicked(event -> {
@@ -130,7 +134,14 @@ public class MainViewController {
         propertiesPanelController.setOnPropertyChanged(
                 () -> modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado,
                         projectManager.getProyectos()));
-        propertiesPanelController.setOnCanvasRedrawNeeded(() -> dibujarCanvas());
+        propertiesPanelController.setOnCanvasRedrawNeeded(() -> {
+            // SOLO refrescar lista de capas y redibujar canvas (evita perder foco en
+            // propiedades)
+            if (currentMode == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(proyectoActual, elementoSeleccionado);
+            }
+            dibujarCanvas();
+        });
         propertiesPanelController.setOnEditExternal(this::abrirEditorExterno);
         propertiesPanelController.setOnReload(this::recargarFondo);
 
@@ -194,6 +205,20 @@ public class MainViewController {
         // Inicializar label de zoom con el valor correcto
         actualizarZoom();
 
+        // Initialize width listener for responsive centering
+        canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
+            adjustCanvasCentering(togglePropiedades.isSelected());
+            // Actualizar clip si es necesario (el binding suele ser suficiente)
+        });
+
+        // CRÍTICO: Aplicar máscara de recorte (Clip) al contenedor del canvas
+        // Esto asegura que si el canvas se mueve a la izquierda, se "meta por debajo"
+        // del panel izquierdo (desaparezca) en lugar de montarse encima.
+        javafx.scene.shape.Rectangle clipRect = new javafx.scene.shape.Rectangle();
+        clipRect.widthProperty().bind(canvasContainer.widthProperty());
+        clipRect.heightProperty().bind(canvasContainer.heightProperty());
+        canvasContainer.setClip(clipRect);
+
         dibujarCanvas();
     }
 
@@ -231,6 +256,9 @@ public class MainViewController {
         lblZoom.setText(String.format("%.0f%%", zoomLevel * 100));
         canvasManager.setZoomLevel(zoomLevel);
         dibujarCanvas();
+
+        // Re-ajustar centrado porque el ancho visual del canvas ha cambiado
+        adjustCanvasCentering(togglePropiedades.isSelected());
     }
 
     // ========== TOGGLE CONTROLS ==========
@@ -535,6 +563,8 @@ public class MainViewController {
     @FXML
     private void onTogglePropiedades() {
         togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+        // Centrar canvas: moverlo a la izquierda cuando el panel está abierto
+        adjustCanvasCentering(togglePropiedades.isSelected());
     }
 
     /**
@@ -579,6 +609,40 @@ public class MainViewController {
             });
             parallel.play();
         }
+    }
+
+    /**
+     * Ajusta el centrado del canvas cuando se abre/cierra el panel de propiedades
+     */
+    private void adjustCanvasCentering(boolean propertiesPanelVisible) {
+        // Necesitamos el layout actual, si no está listo, esperamos
+        if (canvasContainer.getWidth() <= 0) {
+            // Reintentar un poco más tarde cuando el layout esté listo
+            Platform.runLater(() -> adjustCanvasCentering(propertiesPanelVisible));
+            return;
+        }
+
+        // CRÍTICO: Animamos el CANVAS, no el contenedor.
+        // El contenedor debe quedarse quieto para no invadir el panel izquierdo.
+        TranslateTransition transition = new TranslateTransition(Duration.millis(200), canvas);
+
+        if (propertiesPanelVisible) {
+            // Queremos centrar visualmente en el espacio restante (mover mitad del panel
+            // derecho)
+            double idealShift = -rightPanel.getPrefWidth() / 2;
+
+            // A diferencia de antes, ahora PERMITIMOS que se mueva más allá del margen
+            // seguro
+            // porque el CLIP se encargará de que no manche el panel izquierdo.
+            transition.setToX(idealShift);
+
+        } else {
+            // Panel cerrado: centrar canvas (volver a 0)
+            transition.setToX(0);
+        }
+
+        transition.setInterpolator(Interpolator.EASE_OUT);
+        transition.play();
     }
 
     /**
