@@ -8,6 +8,10 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
@@ -79,6 +83,18 @@ public class MainViewController {
 
         // Cargar últimos 8 proyectos recientes automáticamente
         projectManager.cargarProyectosRecientes(8);
+
+        // Añadir listener de doble clic para editar proyecto
+        if (listProyectos != null) {
+            listProyectos.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    Proyecto proyectoSeleccionado = listProyectos.getSelectionModel().getSelectedItem();
+                    if (proyectoSeleccionado != null && proyectoSeleccionado.getMetadata() != null) {
+                        abrirDialogoEditarProyecto(proyectoSeleccionado);
+                    }
+                }
+            });
+        }
     }
 
     private void setupCanvas() {
@@ -139,6 +155,8 @@ public class MainViewController {
             dibujarCanvas();
         });
         modeManager.setOnCanvasRedraw(this::dibujarCanvas);
+        modeManager.setOnEditProject(this::abrirDialogoEditarProyecto);
+        modeManager.setProjectManager(projectManager);
 
         // Callbacks para sincronizar estado
         canvasManager.setOnElementSelected(() -> {
@@ -513,50 +531,61 @@ public class MainViewController {
     /**
      * Anima la visibilidad de un panel lateral (Overlay mode)
      */
-    private void togglePanel(javafx.scene.layout.Region panel, boolean show, boolean isLeft) {
-        // Asegurar que es visible e interactuable al empezar animación de mostrado
+    private void togglePanel(Region panel, boolean show, boolean isLeft) {
         if (show) {
             panel.setVisible(true);
-            panel.setMouseTransparent(false);
+            panel.setManaged(true);
+
+            // Fade in
+            FadeTransition fade = new FadeTransition(Duration.millis(200), panel);
+            fade.setFromValue(0.0);
+            fade.setToValue(1.0);
+
+            // Slide in
+            TranslateTransition slide = new TranslateTransition(Duration.millis(200), panel);
+            double distance = 50;
+            slide.setFromX(isLeft ? -distance : distance);
+            slide.setToX(0);
+            slide.setInterpolator(Interpolator.EASE_OUT);
+
+            ParallelTransition parallel = new ParallelTransition(fade, slide);
+            parallel.play();
         } else {
-            panel.setMouseTransparent(true); // Bloquear interacción mientras se oculta
-        }
+            // Fade out
+            FadeTransition fade = new FadeTransition(Duration.millis(150), panel);
+            fade.setFromValue(1.0);
+            fade.setToValue(0.0);
 
-        // Configurar sombra si no tiene
-        if (panel.getEffect() == null) {
-            javafx.scene.effect.DropShadow shadow = new javafx.scene.effect.DropShadow();
-            shadow.setColor(Color.rgb(0, 0, 0, 0.5));
-            shadow.setRadius(15);
-            shadow.setSpread(0.1);
-            panel.setEffect(shadow);
-        }
+            // Slide out
+            TranslateTransition slide = new TranslateTransition(Duration.millis(150), panel);
+            double distance = 50;
+            slide.setFromX(0);
+            slide.setToX(isLeft ? -distance : distance);
+            slide.setInterpolator(Interpolator.EASE_IN);
 
-        // Calcular desplazamiento
-        double width = panel.getWidth() > 0 ? panel.getWidth() : panel.getPrefWidth();
-        double startX = show ? (isLeft ? -width : width) : 0;
-        double endX = show ? 0 : (isLeft ? -width : width);
-
-        // Translate Transition
-        TranslateTransition tt = new TranslateTransition(Duration.millis(300), panel);
-        tt.setFromX(startX);
-        tt.setToX(endX);
-        tt.setInterpolator(Interpolator.EASE_BOTH);
-
-        // Fade Transition
-        FadeTransition ft = new FadeTransition(Duration.millis(300), panel);
-        ft.setFromValue(show ? 0.0 : 1.0);
-        ft.setToValue(show ? 1.0 : 0.0);
-        ft.setInterpolator(Interpolator.EASE_BOTH);
-
-        // Parallel Transition
-        ParallelTransition pt = new ParallelTransition(tt, ft);
-
-        pt.setOnFinished(e -> {
-            if (!show) {
+            ParallelTransition parallel = new ParallelTransition(fade, slide);
+            parallel.setOnFinished(e -> {
                 panel.setVisible(false);
-            }
-        });
+                panel.setManaged(false);
+            });
+            parallel.play();
+        }
+    }
 
-        pt.play();
+    /**
+     * Abre el diálogo para editar un proyecto existente
+     */
+    private void abrirDialogoEditarProyecto(Proyecto proyecto) {
+        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
+        java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
+
+        if (dialog.isEliminarProyecto()) {
+            // Usuario quiere eliminar el proyecto
+            projectManager.eliminarProyecto(proyecto);
+        } else if (resultado.isPresent()) {
+            // Usuario guardó cambios
+            ProyectoMetadata nuevaMetadata = resultado.get();
+            projectManager.editarProyecto(proyecto, nuevaMetadata);
+        }
     }
 }

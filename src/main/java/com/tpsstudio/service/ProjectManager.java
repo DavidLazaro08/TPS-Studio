@@ -243,6 +243,67 @@ public class ProjectManager {
     }
 
     /**
+     * Edita un proyecto existente
+     * 
+     * @param proyecto      Proyecto a editar
+     * @param nuevaMetadata Nueva metadata con cambios
+     * @return true si se actualizó correctamente
+     */
+    public boolean editarProyecto(Proyecto proyecto, ProyectoMetadata nuevaMetadata) {
+        if (proyecto == null || nuevaMetadata == null) {
+            return false;
+        }
+
+        // Actualizar nombre del proyecto
+        proyecto.setNombre(nuevaMetadata.getNombre());
+        proyecto.setMetadata(nuevaMetadata);
+
+        // Guardar cambios
+        boolean guardado = fileManager.guardarProyecto(proyecto, nuevaMetadata);
+
+        if (guardado) {
+            // Reordenar por si cambió el nombre
+            ordenarProyectos();
+
+            if (onProjectChanged != null) {
+                onProjectChanged.run();
+            }
+
+            mostrarInfo("Proyecto actualizado correctamente");
+        } else {
+            mostrarError("No se pudo actualizar el proyecto");
+        }
+
+        return guardado;
+    }
+
+    /**
+     * Elimina un proyecto de la lista (no del disco)
+     */
+    public void eliminarProyecto(Proyecto proyecto) {
+        if (proyecto == null) {
+            return;
+        }
+
+        // Eliminar de recientes
+        eliminarDeRecientes(proyecto);
+
+        // Eliminar de lista
+        proyectos.remove(proyecto);
+
+        // Si era el proyecto actual, limpiar selección
+        if (proyectoActual == proyecto) {
+            proyectoActual = null;
+        }
+
+        if (onProjectChanged != null) {
+            onProjectChanged.run();
+        }
+
+        mostrarInfo("Proyecto eliminado de la lista");
+    }
+
+    /**
      * Guarda el proyecto actual
      * 
      * @return true si se guardó correctamente

@@ -30,6 +30,9 @@ public class ModeManager {
     // Reference to PropertiesPanelController for properties panel
     private final PropertiesPanelController propertiesPanelController;
 
+    // Reference to ProjectManager for project operations
+    private com.tpsstudio.service.ProjectManager projectManager;
+
     // Callbacks for actions
     private Runnable onAddText;
     private Runnable onAddImage;
@@ -38,6 +41,7 @@ public class ModeManager {
     private Runnable onExport;
     private Consumer<Elemento> onElementSelected;
     private Consumer<Proyecto> onProjectSelected;
+    private Consumer<Proyecto> onEditProject;
     private Consumer<ImagenFondoElemento> onEditExternal;
     private Consumer<ImagenFondoElemento> onReload;
     private Consumer<Elemento> onToggleLock;
@@ -101,6 +105,14 @@ public class ModeManager {
 
     public void setOnCanvasRedraw(Runnable callback) {
         this.onCanvasRedraw = callback;
+    }
+
+    public void setOnEditProject(Consumer<Proyecto> callback) {
+        this.onEditProject = callback;
+    }
+
+    public void setProjectManager(com.tpsstudio.service.ProjectManager projectManager) {
+        this.projectManager = projectManager;
     }
 
     // ========== MODE MANAGEMENT ==========
@@ -328,6 +340,24 @@ public class ModeManager {
             }
         });
 
+        // Añadir listener de doble clic para editar proyecto
+        listProyectos.setOnMouseClicked(event -> {
+            System.out.println("[DEBUG] Mouse clicked, count: " + event.getClickCount());
+            if (event.getClickCount() == 2) {
+                Proyecto proyectoSeleccionado = listProyectos.getSelectionModel().getSelectedItem();
+                System.out.println("[DEBUG] Doble clic detectado, proyecto: "
+                        + (proyectoSeleccionado != null ? proyectoSeleccionado.getNombre() : "null"));
+                if (proyectoSeleccionado != null && proyectoSeleccionado.getMetadata() != null) {
+                    System.out.println("[DEBUG] Llamando a onEditProject callback");
+                    if (onEditProject != null) {
+                        onEditProject.accept(proyectoSeleccionado);
+                    } else {
+                        System.out.println("[DEBUG] ERROR: onEditProject callback es null!");
+                    }
+                }
+            }
+        });
+
         Button btnNuevoCR80 = new Button("+ Nuevo CR80");
         btnNuevoCR80.setOnAction(e -> {
             if (onNewCR80 != null)
@@ -338,6 +368,23 @@ public class ModeManager {
 
         projectPanel.getChildren().addAll(lblTrabajos, listProyectos, btnNuevoCR80);
         return projectPanel;
+    }
+
+    /**
+     * Abre el diálogo para editar un proyecto existente
+     */
+    private void abrirDialogoEditarProyecto(Proyecto proyecto) {
+        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
+        java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
+
+        if (dialog.isEliminarProyecto()) {
+            // Usuario quiere eliminar el proyecto
+            projectManager.eliminarProyecto(proyecto);
+        } else if (resultado.isPresent()) {
+            // Usuario guardó cambios
+            ProyectoMetadata nuevaMetadata = resultado.get();
+            projectManager.editarProyecto(proyecto, nuevaMetadata);
+        }
     }
 
     /**
