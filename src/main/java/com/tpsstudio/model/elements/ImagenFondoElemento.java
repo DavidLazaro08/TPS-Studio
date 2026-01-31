@@ -1,5 +1,6 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.elements;
 
+import com.tpsstudio.model.enums.FondoFitMode;
 import javafx.scene.image.Image;
 
 /**

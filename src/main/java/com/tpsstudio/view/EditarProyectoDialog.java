@@ -1,8 +1,8 @@
 package com.tpsstudio.view;
 
-import com.tpsstudio.model.ClienteInfo;
-import com.tpsstudio.model.Proyecto;
-import com.tpsstudio.model.ProyectoMetadata;
+import com.tpsstudio.model.project.ClienteInfo;
+import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.model.project.ProyectoMetadata;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;

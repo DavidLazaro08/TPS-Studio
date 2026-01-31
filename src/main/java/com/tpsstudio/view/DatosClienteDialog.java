@@ -1,6 +1,6 @@
 package com.tpsstudio.view;
 
-import com.tpsstudio.model.ClienteInfo;
+import com.tpsstudio.model.project.ClienteInfo;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;

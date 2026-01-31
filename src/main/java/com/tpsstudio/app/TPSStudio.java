@@ -5,17 +5,20 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-public class Main extends Application {
+/**
+ * Clase principal de la aplicación TPS Studio
+ */
+public class TPSStudio extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
 
         FXMLLoader loader = new FXMLLoader(
-                Main.class.getResource("/fxml/login_view.fxml"));
+                TPSStudio.class.getResource("/fxml/login_view.fxml"));
 
         Scene scene = new Scene(loader.load(), 760, 580);
         scene.getStylesheets().add(
-                Main.class.getResource("/css/app.css").toExternalForm());
+                TPSStudio.class.getResource("/css/app.css").toExternalForm());
 
         stage.setTitle("TPS Studio");
         stage.setScene(scene);

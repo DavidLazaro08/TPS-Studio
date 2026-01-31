@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.enums;
 
 /**
  * Modo de ajuste para el fondo de la tarjeta CR80

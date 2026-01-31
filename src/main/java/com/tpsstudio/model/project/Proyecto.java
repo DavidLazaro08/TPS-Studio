@@ -1,5 +1,8 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.project;
 
+import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ImagenFondoElemento;
+import com.tpsstudio.model.enums.FondoFitMode;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 

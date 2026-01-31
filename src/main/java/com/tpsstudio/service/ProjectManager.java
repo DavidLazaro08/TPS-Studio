@@ -1,6 +1,8 @@
 package com.tpsstudio.service;
 
-import com.tpsstudio.model.*;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
+import com.tpsstudio.model.project.*;
 import com.tpsstudio.view.EditorCanvasManager;
 import com.tpsstudio.view.NuevoProyectoDialog;
 import javafx.collections.FXCollections;

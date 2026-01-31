@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.elements;
 
 /**
  * Clase base abstracta para elementos gráficos en la tarjeta CR80

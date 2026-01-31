@@ -1,6 +1,8 @@
 package com.tpsstudio.view;
 
-import com.tpsstudio.model.*;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
+import com.tpsstudio.model.project.*;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;

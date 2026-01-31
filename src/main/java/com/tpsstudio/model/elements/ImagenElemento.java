@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.elements;
 
 import javafx.scene.image.Image;
 

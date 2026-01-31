@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.project;
 
 import java.time.LocalDateTime;
 

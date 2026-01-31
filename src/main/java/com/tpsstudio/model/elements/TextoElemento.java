@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.elements;
 
 /**
  * Elemento de texto en la tarjeta CR80

@@ -5,7 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.tpsstudio.model.*;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
+import com.tpsstudio.model.project.*;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 
@@ -234,7 +236,7 @@ public class ProyectoFileManager {
             // Reconstruir proyecto
             Proyecto proyecto = new Proyecto(dto.getNombre());
             proyecto.setMetadata(dto.getMetadata());
-            proyecto.setMostrandoFrente(dto.isMostrandoFrente());
+            proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
 

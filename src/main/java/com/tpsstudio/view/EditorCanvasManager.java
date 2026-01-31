@@ -1,6 +1,8 @@
 package com.tpsstudio.view;
 
-import com.tpsstudio.model.*;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
+import com.tpsstudio.model.project.*;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -272,7 +274,7 @@ public class EditorCanvasManager {
         gc.setFont(Font.font("Arial", 11));
         String infoDimensiones = String.format(
                 "CR80: %.2f × %.2f mm | Con sangre: %.2f × %.2f mm",
-                CR80_WIDTH_MM, CR80_HEIGHT_MM, CARD_WITH_BLEED_WIDTH, CARD_WITH_BLEED_HEIGHT);
+                CR80_WIDTH_MM, CR80_HEIGHT_MM, CR80_WIDTH_MM + 4.0, CR80_HEIGHT_MM + 4.0); // +2mm por lado
 
         double bleedScaled = BLEED_MARGIN * zoomLevel;
         gc.fillText(infoDimensiones, cardX + scaledWidth - 380, cardY + scaledHeight + bleedScaled + 20);

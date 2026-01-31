@@ -1,4 +1,4 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.enums;
 
 /**
  * Enum para representar los modos de la aplicación
