@@ -1,0 +1,584 @@
+# Plan de Implementación: Sistema de Proyectos Profesional
+
+## 🎯 Objetivo
+
+Crear un flujo de trabajo profesional para gestión de proyectos con estructura de carpetas automática y persistencia.
+
+---
+
+## 📋 Flujo de Usuario Deseado
+
+### **1. Crear Nuevo Proyecto**
+
+```
+Usuario hace clic en "Nuevo Proyecto"
+    ↓
+Se abre diálogo "Nuevo Proyecto TPS"
+    ├─ Campo: Nombre del proyecto (ej: "Tarjetas Corporativas 2024")
+    ├─ Botón: Seleccionar ubicación (DirectoryChooser)
+    └─ Checkbox: "Vincular base de datos" (opcional)
+        └─ Si marcado: FileChooser para .xlsx o .accdb
+    ↓
+Usuario hace clic en "Crear"
+    ↓
+Sistema crea estructura:
+    TPS_Tarjetas_Corporativas_2024/
+    ├── proyecto.tps (archivo JSON)
+    ├── Fotos/
+    ├── Fondos/
+    └── BBDD/ (si se vinculó BD)
+        └── datos.xlsx (copia)
+    ↓
+Proyecto se abre automáticamente en modo DISEÑO
+```
+
+### **2. Añadir Imágenes/Fondos**
+
+```
+Usuario añade imagen desde cualquier ubicación
+    ↓
+Sistema copia automáticamente a:
+    - Imágenes → TPS_NombreProyecto/Fotos/
+    - Fondos → TPS_NombreProyecto/Fondos/
+    ↓
+.tps guarda ruta RELATIVA: "Fotos/logo.png"
+```
+
+### **3. Guardar Proyecto**
+
+```
+Usuario hace clic en "Guardar" (Ctrl+S)
+    ↓
+Sistema actualiza proyecto.tps
+    ↓
+Confirmación: "Proyecto guardado"
+```
+
+### **4. Abrir Proyecto**
+
+```
+Usuario hace clic en "Abrir Proyecto"
+    ↓
+FileChooser filtra solo .tps
+    ↓
+Usuario selecciona proyecto.tps
+    ↓
+Sistema carga proyecto y verifica imágenes
+    ↓
+Si falta alguna imagen: Diálogo de advertencia
+```
+
+---
+
+## 🏗️ Arquitectura de Implementación
+
+### **Nuevas Clases**
+
+```
+com.tpsstudio.model/
+├── ProyectoMetadata.java (nuevo)
+│   - String nombre
+│   - String ubicacion (path absoluto)
+│   - String rutaTPS
+│   - String rutaFotos
+│   - String rutaFondos
+│   - String rutaBBDD (opcional)
+│   - LocalDateTime fechaCreacion
+│   - LocalDateTime fechaModificacion
+
+com.tpsstudio.service/
+├── ProyectoFileManager.java (nuevo)
+│   - crearEstructuraCarpetas()
+│   - copiarImagenAProyecto()
+│   - guardarProyecto()
+│   - cargarProyecto()
+│   - validarIntegridad()
+
+com.tpsstudio.view/
+├── NuevoProyectoDialog.java (nuevo)
+│   - Diálogo personalizado JavaFX
+│   - Campos: nombre, ubicación, BD
+```
+
+---
+
+## 📝 Especificación Detallada
+
+### **1. Diálogo "Nuevo Proyecto"**
+
+**Archivo**: `NuevoProyectoDialog.java`
+
+```java
+public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
+    
+    private TextField txtNombre;
+    private TextField txtUbicacion;
+    private CheckBox chkVincularBD;
+    private TextField txtRutaBD;
+    private Button btnSeleccionarUbicacion;
+    private Button btnSeleccionarBD;
+    
+    public NuevoProyectoDialog() {
+        setTitle("Nuevo Proyecto TPS");
+        setHeaderText("Crear nuevo proyecto de diseño");
+        
+        // Construir UI
+        GridPane grid = new GridPane();
+        
+        // Nombre del proyecto
+        Label lblNombre = new Label("Nombre del proyecto:");
+        txtNombre = new TextField();
+        txtNombre.setPromptText("Ej: Tarjetas Corporativas 2024");
+        
+        // Ubicación
+        Label lblUbicacion = new Label("Ubicación:");
+        HBox hboxUbicacion = new HBox(5);
+        txtUbicacion = new TextField();
+        txtUbicacion.setEditable(false);
+        txtUbicacion.setPromptText("Seleccione una carpeta...");
+        btnSeleccionarUbicacion = new Button("Examinar...");
+        btnSeleccionarUbicacion.setOnAction(e -> seleccionarUbicacion());
+        hboxUbicacion.getChildren().addAll(txtUbicacion, btnSeleccionarUbicacion);
+        
+        // Vincular BD (opcional)
+        chkVincularBD = new CheckBox("Vincular base de datos (opcional)");
+        HBox hboxBD = new HBox(5);
+        txtRutaBD = new TextField();
+        txtRutaBD.setEditable(false);
+        txtRutaBD.setDisable(true);
+        btnSeleccionarBD = new Button("Examinar...");
+        btnSeleccionarBD.setDisable(true);
+        btnSeleccionarBD.setOnAction(e -> seleccionarBD());
+        hboxBD.getChildren().addAll(txtRutaBD, btnSeleccionarBD);
+        
+        chkVincularBD.selectedProperty().addListener((obs, old, newVal) -> {
+            txtRutaBD.setDisable(!newVal);
+            btnSeleccionarBD.setDisable(!newVal);
+        });
+        
+        // Layout
+        grid.add(lblNombre, 0, 0);
+        grid.add(txtNombre, 1, 0);
+        grid.add(lblUbicacion, 0, 1);
+        grid.add(hboxUbicacion, 1, 1);
+        grid.add(chkVincularBD, 0, 2, 2, 1);
+        grid.add(hboxBD, 1, 3);
+        
+        getDialogPane().setContent(grid);
+        
+        // Botones
+        ButtonType btnCrear = new ButtonType("Crear", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        getDialogPane().getButtonTypes().addAll(btnCrear, btnCancelar);
+        
+        // Validación
+        Node btnCrearNode = getDialogPane().lookupButton(btnCrear);
+        btnCrearNode.setDisable(true);
+        
+        txtNombre.textProperty().addListener((obs, old, newVal) -> {
+            btnCrearNode.setDisable(newVal.trim().isEmpty() || txtUbicacion.getText().isEmpty());
+        });
+        
+        txtUbicacion.textProperty().addListener((obs, old, newVal) -> {
+            btnCrearNode.setDisable(txtNombre.getText().trim().isEmpty() || newVal.isEmpty());
+        });
+        
+        // Convertir resultado
+        setResultConverter(buttonType -> {
+            if (buttonType == btnCrear) {
+                return crearMetadata();
+            }
+            return null;
+        });
+    }
+    
+    private void seleccionarUbicacion() {
+        DirectoryChooser dirChooser = new DirectoryChooser();
+        dirChooser.setTitle("Seleccionar ubicación del proyecto");
+        File dir = dirChooser.showDialog(getDialogPane().getScene().getWindow());
+        if (dir != null) {
+            txtUbicacion.setText(dir.getAbsolutePath());
+        }
+    }
+    
+    private void seleccionarBD() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Seleccionar Base de Datos");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"),
+            new FileChooser.ExtensionFilter("Access", "*.accdb", "*.mdb"),
+            new FileChooser.ExtensionFilter("Todos", "*.*")
+        );
+        File file = fileChooser.showOpenDialog(getDialogPane().getScene().getWindow());
+        if (file != null) {
+            txtRutaBD.setText(file.getAbsolutePath());
+        }
+    }
+    
+    private ProyectoMetadata crearMetadata() {
+        ProyectoMetadata metadata = new ProyectoMetadata();
+        metadata.setNombre(txtNombre.getText().trim());
+        metadata.setUbicacion(txtUbicacion.getText());
+        
+        if (chkVincularBD.isSelected() && !txtRutaBD.getText().isEmpty()) {
+            metadata.setRutaBBDD(txtRutaBD.getText());
+        }
+        
+        return metadata;
+    }
+}
+```
+
+---
+
+### **2. Gestor de Archivos del Proyecto**
+
+**Archivo**: `ProyectoFileManager.java`
+
+```java
+public class ProyectoFileManager {
+    
+    /**
+     * Crea la estructura de carpetas del proyecto
+     * 
+     * @param metadata Metadatos del proyecto
+     * @return true si se creó correctamente
+     */
+    public boolean crearEstructuraCarpetas(ProyectoMetadata metadata) {
+        try {
+            // Normalizar nombre (quitar caracteres especiales)
+            String nombreCarpeta = "TPS_" + normalizarNombre(metadata.getNombre());
+            
+            // Crear carpeta principal
+            Path carpetaProyecto = Paths.get(metadata.getUbicacion(), nombreCarpeta);
+            Files.createDirectories(carpetaProyecto);
+            
+            // Crear subcarpetas
+            Path carpetaFotos = carpetaProyecto.resolve("Fotos");
+            Path carpetaFondos = carpetaProyecto.resolve("Fondos");
+            Path carpetaBBDD = carpetaProyecto.resolve("BBDD");
+            
+            Files.createDirectories(carpetaFotos);
+            Files.createDirectories(carpetaFondos);
+            Files.createDirectories(carpetaBBDD);
+            
+            // Actualizar metadata con rutas
+            metadata.setRutaTPS(carpetaProyecto.resolve("proyecto.tps").toString());
+            metadata.setRutaFotos(carpetaFotos.toString());
+            metadata.setRutaFondos(carpetaFondos.toString());
+            
+            // Si hay BD, copiarla
+            if (metadata.getRutaBBDD() != null) {
+                Path bdOrigen = Paths.get(metadata.getRutaBBDD());
+                Path bdDestino = carpetaBBDD.resolve(bdOrigen.getFileName());
+                Files.copy(bdOrigen, bdDestino, StandardCopyOption.REPLACE_EXISTING);
+                metadata.setRutaBBDD(bdDestino.toString());
+            }
+            
+            return true;
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Copia una imagen al proyecto y devuelve la ruta relativa
+     */
+    public String copiarImagenAProyecto(File imagenOrigen, ProyectoMetadata metadata, boolean esFondo) {
+        try {
+            String carpetaDestino = esFondo ? metadata.getRutaFondos() : metadata.getRutaFotos();
+            Path destino = Paths.get(carpetaDestino, imagenOrigen.getName());
+            
+            // Copiar archivo
+            Files.copy(imagenOrigen.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
+            
+            // Devolver ruta relativa
+            String subcarpeta = esFondo ? "Fondos" : "Fotos";
+            return subcarpeta + "/" + imagenOrigen.getName();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Guarda el proyecto en formato JSON
+     */
+    public boolean guardarProyecto(Proyecto proyecto, ProyectoMetadata metadata) {
+        try {
+            // Crear objeto JSON
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            
+            // Crear DTO para serialización
+            ProyectoDTO dto = new ProyectoDTO();
+            dto.setNombre(proyecto.getNombre());
+            dto.setMetadata(metadata);
+            dto.setFrente(convertirCaraADTO(proyecto.getFrente()));
+            dto.setDorso(convertirCaraADTO(proyecto.getDorso()));
+            
+            // Escribir a archivo
+            String json = gson.toJson(dto);
+            Files.writeString(Paths.get(metadata.getRutaTPS()), json);
+            
+            // Actualizar fecha de modificación
+            metadata.setFechaModificacion(LocalDateTime.now());
+            
+            return true;
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Carga un proyecto desde archivo .tps
+     */
+    public Proyecto cargarProyecto(File archivoTPS) {
+        try {
+            // Leer JSON
+            String json = Files.readString(archivoTPS.toPath());
+            Gson gson = new Gson();
+            ProyectoDTO dto = gson.fromJson(json, ProyectoDTO.class);
+            
+            // Reconstruir proyecto
+            Proyecto proyecto = new Proyecto(dto.getNombre());
+            proyecto.setFrente(convertirDTOACara(dto.getFrente(), dto.getMetadata()));
+            proyecto.setDorso(convertirDTOACara(dto.getDorso(), dto.getMetadata()));
+            
+            // Validar integridad de imágenes
+            validarIntegridad(proyecto, dto.getMetadata());
+            
+            return proyecto;
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Valida que todas las imágenes existan
+     */
+    private void validarIntegridad(Proyecto proyecto, ProyectoMetadata metadata) {
+        List<String> imagenesFaltantes = new ArrayList<>();
+        
+        // Verificar frente
+        verificarImagenesCara(proyecto.getFrente(), metadata, imagenesFaltantes);
+        
+        // Verificar dorso
+        verificarImagenesCara(proyecto.getDorso(), metadata, imagenesFaltantes);
+        
+        // Mostrar advertencia si faltan imágenes
+        if (!imagenesFaltantes.isEmpty()) {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Imágenes faltantes");
+                alert.setHeaderText("Algunas imágenes no se encontraron");
+                alert.setContentText("Archivos faltantes:\n" + String.join("\n", imagenesFaltantes));
+                alert.showAndWait();
+            });
+        }
+    }
+    
+    private String normalizarNombre(String nombre) {
+        return nombre.replaceAll("[^a-zA-Z0-9_\\-]", "_");
+    }
+}
+```
+
+---
+
+### **3. Integración en ProjectManager**
+
+**Modificar**: [ProjectManager.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java)
+
+```java
+public class ProjectManager {
+    
+    private ProyectoFileManager fileManager;
+    
+    public ProjectManager() {
+        this.fileManager = new ProyectoFileManager();
+    }
+    
+    /**
+     * Crea un nuevo proyecto con diálogo y estructura de carpetas
+     */
+    public Proyecto nuevoProyecto(Window owner) {
+        // Mostrar diálogo
+        NuevoProyectoDialog dialog = new NuevoProyectoDialog();
+        Optional<ProyectoMetadata> result = dialog.showAndWait();
+        
+        if (result.isEmpty()) {
+            return null; // Usuario canceló
+        }
+        
+        ProyectoMetadata metadata = result.get();
+        
+        // Crear estructura de carpetas
+        if (!fileManager.crearEstructuraCarpetas(metadata)) {
+            mostrarError("No se pudo crear la estructura de carpetas");
+            return null;
+        }
+        
+        // Crear proyecto
+        Proyecto nuevoProyecto = new Proyecto(metadata.getNombre());
+        nuevoProyecto.setMetadata(metadata);
+        
+        // Guardar proyecto inicial
+        if (!fileManager.guardarProyecto(nuevoProyecto, metadata)) {
+            mostrarError("No se pudo guardar el proyecto");
+            return null;
+        }
+        
+        // Añadir a lista
+        proyectos.add(nuevoProyecto);
+        setProyectoActual(nuevoProyecto);
+        
+        // Notificar
+        if (onProjectChanged != null) {
+            onProjectChanged.run();
+        }
+        
+        return nuevoProyecto;
+    }
+    
+    /**
+     * Añade imagen y la copia al proyecto
+     */
+    @Override
+    public ImagenElemento añadirImagen(Window window) {
+        if (proyectoActual == null) return null;
+        
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Seleccionar Imagen");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+        
+        File file = fileChooser.showOpenDialog(window);
+        if (file == null) return null;
+        
+        try {
+            // Copiar imagen al proyecto
+            ProyectoMetadata metadata = proyectoActual.getMetadata();
+            String rutaRelativa = fileManager.copiarImagenAProyecto(file, metadata, false);
+            
+            if (rutaRelativa == null) {
+                mostrarErrorCargaImagen("No se pudo copiar la imagen al proyecto");
+                return null;
+            }
+            
+            // Cargar imagen
+            Path rutaAbsoluta = Paths.get(metadata.getRutaTPS()).getParent().resolve(rutaRelativa);
+            Image img = new Image(rutaAbsoluta.toUri().toString());
+            
+            // Crear elemento
+            int num = proyectoActual.getElementosActuales().size() + 1;
+            ImagenElemento imgElem = new ImagenElemento(
+                "Imagen " + num, 
+                50, 50,
+                rutaRelativa, // Guardar ruta RELATIVA
+                img
+            );
+            
+            proyectoActual.getElementosActuales().add(imgElem);
+            
+            // Auto-guardar
+            fileManager.guardarProyecto(proyectoActual, metadata);
+            
+            if (onElementAdded != null) {
+                onElementAdded.run();
+            }
+            
+            return imgElem;
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            mostrarErrorCargaImagen(ex.getMessage());
+            return null;
+        }
+    }
+}
+```
+
+---
+
+## 📋 Checklist de Implementación
+
+### **Fase 1: Modelo y Utilidades** (2-3h)
+- [ ] Crear `ProyectoMetadata.java`
+- [ ] Crear `ProyectoDTO.java` (para JSON)
+- [ ] Añadir campo `metadata` a `Proyecto.java`
+- [ ] Crear `ProyectoFileManager.java`
+- [ ] Implementar `crearEstructuraCarpetas()`
+- [ ] Implementar `normalizarNombre()`
+
+### **Fase 2: Diálogo de Nuevo Proyecto** (3-4h)
+- [ ] Crear `NuevoProyectoDialog.java`
+- [ ] Diseñar UI (GridPane con campos)
+- [ ] Implementar `seleccionarUbicacion()` (DirectoryChooser)
+- [ ] Implementar `seleccionarBD()` (FileChooser)
+- [ ] Validación de campos
+- [ ] Convertir resultado a `ProyectoMetadata`
+
+### **Fase 3: Integración en ProjectManager** (2-3h)
+- [ ] Modificar `nuevoProyecto()` para usar diálogo
+- [ ] Modificar [añadirImagen()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#130-169) para copiar a carpeta Fotos
+- [ ] Modificar [añadirFondo()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#170-240) para copiar a carpeta Fondos
+- [ ] Implementar auto-guardado después de cada cambio
+
+### **Fase 4: Serialización JSON** (3-4h)
+- [ ] Añadir dependencia Gson al [pom.xml](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/pom.xml)
+- [ ] Crear DTOs para serialización
+- [ ] Implementar [guardarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#92-98)
+- [ ] Implementar `cargarProyecto()`
+- [ ] Implementar `validarIntegridad()`
+
+### **Fase 5: Abrir Proyecto** (2h)
+- [ ] Modificar [abrirProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#85-91) en [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#24-294)
+- [ ] FileChooser con filtro `.tps`
+- [ ] Cargar proyecto y reconstruir objetos
+- [ ] Validar imágenes faltantes
+
+### **Fase 6: Testing** (2h)
+- [ ] Crear proyecto nuevo
+- [ ] Añadir imágenes/fondos
+- [ ] Verificar que se copian a carpetas correctas
+- [ ] Guardar proyecto
+- [ ] Cerrar app
+- [ ] Abrir proyecto
+- [ ] Verificar que todo se carga correctamente
+
+---
+
+## ⏱️ Tiempo Estimado Total
+
+**14-18 horas** (2-3 días de trabajo)
+
+---
+
+## 🎯 Resultado Final
+
+Al completar, tendrás:
+
+✅ Diálogo profesional para crear proyectos  
+✅ Estructura de carpetas automática  
+✅ Imágenes organizadas en subcarpetas  
+✅ Archivo `.tps` con rutas relativas  
+✅ Guardar/Abrir proyectos funcional  
+✅ Validación de integridad  
+✅ Base para vincular BD (futuro)
+
+---
+
+## 💡 Próximos Pasos Después
+
+1. **Auto-guardado** cada X minutos
+2. **Historial de proyectos recientes**
+3. **Exportación a PDF/PNG** (usando rutas del proyecto)
+4. **Campos variables** (usando BD vinculada)

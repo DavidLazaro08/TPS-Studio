@@ -1,6 +1,8 @@
 package com.tpsstudio.view;
 
-import com.tpsstudio.model.*;
+import com.tpsstudio.model.project.*;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -24,7 +26,7 @@ import javafx.animation.TranslateTransition;
 import javafx.scene.effect.DropShadow;
 import javafx.util.Duration;
 
-public class MainViewController {
+public class MainViewController_BACKUP {
 
     // ========== FXML Components ==========
     @FXML

@@ -1,5 +1,8 @@
-package com.tpsstudio.model;
+package com.tpsstudio.model.project;
 
+import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ImagenFondoElemento;
+import com.tpsstudio.model.enums.FondoFitMode;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -24,6 +27,9 @@ public class Proyecto {
     // Preferencia de modo de ajuste para fondos
     private FondoFitMode fondoFitModePreferido;
     private boolean noVolverAPreguntarFondo;
+
+    // Metadatos del proyecto (ubicación, cliente, etc.)
+    private ProyectoMetadata metadata;
 
     private static int contadorId = 1;
 
@@ -128,6 +134,14 @@ public class Proyecto {
 
     public void setNoVolverAPreguntarFondo(boolean noVolverAPreguntarFondo) {
         this.noVolverAPreguntarFondo = noVolverAPreguntarFondo;
+    }
+
+    public ProyectoMetadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(ProyectoMetadata metadata) {
+        this.metadata = metadata;
     }
 
     @Override

@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.tpsstudio.view.MainViewController"
+           fx:controller="com.tpsstudio.view.controllers.MainViewController"
            styleClass="root" fx:id="rootStack">
 
     <!-- CAPA 0: CONTENIDO PRINCIPAL (Toolbar + Canvas) -->

@@ -13,7 +13,7 @@
 <?import javafx.scene.shape.SVGPath?>
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.tpsstudio.view.LoginViewController"
+           fx:controller="com.tpsstudio.view.controllers.LoginViewController"
            prefHeight="500.0" prefWidth="600.0" styleClass="root" alignment="CENTER">
 
     <!-- Card Exterior (panel oscuro con sombra) - PRIMERA CAJA -->

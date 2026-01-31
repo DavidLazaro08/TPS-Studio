@@ -1,0 +1,865 @@
+# MainViewController Refactoring Audit
+
+## 📊 ESTADO ACTUAL
+
+**Archivo:** [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java)  
+**Líneas:** 1594  
+**Métodos:** 37  
+**Estado:** ⚠️ **God Controller** con múltiples responsabilidades mezcladas
+
+---
+
+## 1️⃣ ANÁLISIS DE RESPONSABILIDADES
+
+### Bloques Funcionales Identificados
+
+#### 🎨 **A. UI Wiring & Lifecycle** (DEBE quedarse en Controller)
+- **Líneas:** 29-108, 1539-1592
+- **Métodos:** [initialize()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#93-109), [setupCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#110-130), [onTogglePropiedades()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1539-1543), [togglePanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1544-1593)
+- **Responsabilidad:** Inicialización FXML, bindings, animaciones de paneles
+- **Veredicto:** ✅ **PURA UI** → Se queda en [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594)
+
+#### 🖼️ **B. Canvas Rendering & Interaction** (DEBE extraerse)
+- **Líneas:** 731-891, 895-1180
+- **Métodos:** 
+  - [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892) (160 líneas)
+  - [onCanvasMousePressed()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#895-964), [onCanvasMouseDragged()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#965-1096), [onCanvasMouseMoved()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1097-1133), [onCanvasMouseReleased()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1178-1181)
+  - [getDragModeForMouseEvent()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1134-1170), [ensurePropertiesPanelVisible()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1171-1177)
+- **Responsabilidad:** 
+  - Renderizado de tarjeta CR80, elementos, guías, sangrado
+  - Detección de selección, drag & drop, resize con handles
+  - Gestión de zoom, coordenadas, cursores
+- **Veredicto:** ⚠️ **LÓGICA + RENDER** → Extraer a `EditorCanvasManager`
+- **Estado que necesita:**
+  - `zoomLevel`, `elementoSeleccionado`, `proyectoActual`
+  - `currentDragMode`, `dragStartX/Y`, `elementStartX/Y/W/H`
+  - Constantes: `CARD_WIDTH`, `CARD_HEIGHT`, `BLEED_MARGIN`, `SAFETY_MARGIN`, `HANDLE_SIZE`
+
+#### 🎛️ **C. Properties Panel Construction** (DEBE extraerse)
+- **Líneas:** 278-649
+- **Métodos:** [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650) (370 líneas!)
+- **Responsabilidad:** 
+  - Construcción dinámica del panel de propiedades según tipo de elemento
+  - Bindings bidireccionales: TextFields ↔ Elemento properties
+  - Validaciones UI (mantener proporción, límites de tamaño)
+  - Listeners para cambios en tiempo real
+- **Veredicto:** ⚠️ **UI + LÓGICA MEZCLADA** → Extraer a `PropertiesPanelController`
+- **Problemas detectados:**
+  - Flag `isUpdatingTextFields` para evitar bucles → indica acoplamiento frágil
+  - Lógica de proporción de imágenes mezclada con UI
+  - Validaciones inline sin separación de concerns
+
+#### 🔄 **D. Mode Management** (DEBE extraerse)
+- **Líneas:** 133-157, 161-276, 653-727
+- **Métodos:** 
+  - [switchMode()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#143-158), [onModeEdit()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#133-137), [onModeExport()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#138-142)
+  - [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277) (115 líneas)
+  - [buildExportPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#653-728) (75 líneas)
+- **Responsabilidad:** 
+  - Cambio entre modos DESIGN/PRODUCTION
+  - Construcción de paneles laterales según modo
+  - Gestión de toolbox, layers, export controls
+- **Veredicto:** ⚠️ **LÓGICA DE ESTADO** → Extraer a `ModeManager`
+- **Estado que maneja:**
+  - `currentMode` (AppMode enum)
+  - Paneles dinámicos: `leftPanel`, `rightPanel`
+
+#### 📁 **E. Project Management** (DEBE extraerse)
+- **Líneas:** 1353-1422, 1426-1537
+- **Métodos:** 
+  - [onNuevoProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1353-1357), [onAbrirProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1358-1362), [onGuardarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1363-1367), [onExportarProyecto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1368-1372)
+  - [onNuevoCR80()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1412-1423)
+  - [onAñadirTexto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1426-1443), [onAñadirImagen()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1444-1469), [onAñadirFondo()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1479-1538), [onEliminarElemento()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1470-1478)
+  - [mostrarDialogoFitMode()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1182-1250), [abrirEditorExterno()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1251-1297), [recargarFondo()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1298-1350)
+- **Responsabilidad:** 
+  - CRUD de proyectos y elementos
+  - Gestión de lista de proyectos (`proyectos` ObservableList)
+  - Diálogos de selección de archivos
+  - Lógica de fondo (fit modes, edición externa, recarga)
+- **Veredicto:** ⚠️ **LÓGICA DE NEGOCIO** → Extraer a `ProjectManager` (Service)
+- **Estado que maneja:**
+  - `proyectos` (ObservableList<Proyecto>)
+  - `proyectoActual` (Proyecto)
+
+#### 🔍 **F. Zoom & View Controls** (PUEDE quedarse o extraerse)
+- **Líneas:** 1373-1410
+- **Métodos:** [onZoomIn()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1373-1380), [onZoomOut()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1381-1388), [actualizarZoom()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1389-1393), [onToggleFrenteDorso()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1394-1406), [onToggleGuias()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1407-1411)
+- **Responsabilidad:** Control de zoom, toggles de vista
+- **Veredicto:** 🤔 **HÍBRIDO** → Podría ir a ViewModel o quedarse en Controller
+- **Estado:**
+  - `zoomLevel` (double)
+  - `toggleFrenteDorso`, `toggleGuias` (ToggleButtons)
+
+---
+
+## 2️⃣ VIOLACIONES MVVM DETECTADAS
+
+### 🚨 Críticas
+
+1. **Lógica de negocio en Controller**
+   - [onAñadirTexto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1426-1443), [onAñadirImagen()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1444-1469), [onAñadirFondo()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1479-1538) → Deberían delegar a Service
+   - [mostrarDialogoFitMode()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1182-1250) → Lógica de decisión mezclada con UI
+
+2. **Estado no observable**
+   - `zoomLevel`, `currentMode`, `elementoSeleccionado`, `proyectoActual` → Deberían ser Properties en ViewModel
+   - Cambios de estado no notifican automáticamente → Llamadas manuales a [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892), [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277)
+
+3. **Acoplamiento a nodos UI**
+   - [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650) construye UI directamente → Dificulta testing
+   - [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892) accede directamente a `canvas` → No se puede testear sin JavaFX
+
+4. **Listeners frágiles**
+   - Flag `isUpdatingTextFields` para evitar bucles → Indica diseño frágil
+   - Listeners inline en [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650) → Dificulta mantenimiento
+
+### ⚠️ Moderadas
+
+5. **Responsabilidad única violada**
+   - Controller hace: UI wiring + rendering + gestión de estado + lógica de negocio + persistencia
+
+6. **Testabilidad**
+   - Imposible testear lógica sin inicializar JavaFX
+   - No hay separación entre "qué mostrar" (ViewModel) y "cómo mostrarlo" (View)
+
+---
+
+## 3️⃣ AGRUPACIÓN POR MÓDULOS PROPUESTOS
+
+### 📦 **Arquitectura Objetivo**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MainViewController                        │
+│  - initialize()                                              │
+│  - setupCanvas() [delegación]                                │
+│  - Bindings FXML ↔ ViewModel                                 │
+│  - Orquestación de managers                                  │
+│  - Animaciones de paneles (togglePanel)                      │
+└────────┬────────────────────────────────────────────────────┘
+         │
+         ├──► EditorCanvasManager (Canvas rendering + interaction)
+         │    - dibujarCanvas()
+         │    - Mouse events (pressed, dragged, moved, released)
+         │    - getDragModeForMouseEvent()
+         │    - Gestión de zoom visual
+         │    - Constantes CR80
+         │
+         ├──► PropertiesPanelController (Panel derecho)
+         │    - buildPropertiesPanel()
+         │    - Bindings bidireccionales UI ↔ ViewModel
+         │    - Validaciones UI (proporción, límites)
+         │
+         ├──► ModeManager (Diseño/Producción)
+         │    - switchMode()
+         │    - buildEditPanels()
+         │    - buildExportPanels()
+         │    - Gestión de paneles dinámicos
+         │
+         ├──► ProjectManager (Service - lógica de negocio)
+         │    - CRUD proyectos
+         │    - CRUD elementos
+         │    - Gestión de fondos (fit modes, edición externa)
+         │    - Diálogos de archivos
+         │
+         ├──► MainViewModel (Estado global)
+         │    - currentModeProperty (ObjectProperty<AppMode>)
+         │    - proyectoActualProperty (ObjectProperty<Proyecto>)
+         │    - proyectosProperty (ObservableList<Proyecto>)
+         │    - zoomLevelProperty (DoubleProperty)
+         │
+         └──► EditorViewModel (Estado del editor)
+              - elementoSeleccionadoProperty (ObjectProperty<Elemento>)
+              - mostrandoFrenteProperty (BooleanProperty)
+              - mostrarGuiasProperty (BooleanProperty)
+              - Propiedades editables del elemento seleccionado
+```
+
+---
+
+## 4️⃣ DEPENDENCIAS PELIGROSAS
+
+### 🔴 **Acoplamiento Crítico**
+
+1. **[buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277) ↔ [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650)**
+   - [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277) llama a [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650) al final
+   - Ambos acceden a `elementoSeleccionado`, `proyectoActual`
+   - **Riesgo:** Extraer uno sin el otro rompe el flujo
+
+2. **[dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892) ↔ Estado global**
+   - Accede a: `proyectoActual`, `elementoSeleccionado`, `zoomLevel`, `toggleGuias`, `toggleFrenteDorso`
+   - **Riesgo:** Mover estado a ViewModel requiere cambiar todas las referencias
+
+3. **Listeners en [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650)**
+   - Listeners inline llaman a [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892), [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277)
+   - **Riesgo:** Extraer panel requiere exponer callbacks o eventos
+
+4. **Mouse events ↔ Selección**
+   - [onCanvasMousePressed()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#895-964) modifica `elementoSeleccionado`
+   - Esto dispara [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277) → [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650)
+   - **Riesgo:** Ciclo de dependencias frágil
+
+### 🟡 **Acoplamiento Moderado**
+
+5. **[ensurePropertiesPanelVisible()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1171-1177)**
+   - Accede a `togglePropiedades` (nodo FXML)
+   - Llamado desde múltiples lugares
+   - **Riesgo:** Extraer lógica requiere callback al Controller
+
+6. **Constantes compartidas**
+   - `CARD_WIDTH`, `CARD_HEIGHT`, `BLEED_MARGIN`, etc.
+   - Usadas en: [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892), [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650), [onAñadirFondo()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1479-1538)
+   - **Solución:** Mover a clase `CR80Constants` o `EditorConfig`
+
+---
+
+## 5️⃣ PLAN INCREMENTAL DE REFACTORING
+
+### 🎯 **Principios**
+
+- ✅ Refactor quirúrgico, no reescritura
+- ✅ Comportamiento idéntico en cada paso
+- ✅ Commits pequeños y verificables
+- ✅ No tocar FXML salvo imprescindible
+
+---
+
+### **PASO 1: Crear ViewModels y migrar estado** (⏱️ ~2h)
+
+#### Acciones
+
+1. **Crear `EditorViewModel`**
+   ```java
+   public class EditorViewModel {
+       private final ObjectProperty<Elemento> elementoSeleccionado = new SimpleObjectProperty<>();
+       private final BooleanProperty mostrandoFrente = new SimpleBooleanProperty(true);
+       private final BooleanProperty mostrarGuias = new SimpleBooleanProperty(false);
+       
+       // Getters/setters + property methods
+   }
+   ```
+
+2. **Crear [MainViewModel](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/viewmodel/MainViewModel.java#6-29) (expandir el existente)**
+   ```java
+   public class MainViewModel {
+       private final ObjectProperty<AppMode> currentMode = new SimpleObjectProperty<>(AppMode.PRODUCTION);
+       private final ObjectProperty<Proyecto> proyectoActual = new SimpleObjectProperty<>();
+       private final ObservableList<Proyecto> proyectos = FXCollections.observableArrayList();
+       private final DoubleProperty zoomLevel = new SimpleDoubleProperty(1.3);
+       
+       // Getters/setters + property methods
+   }
+   ```
+
+3. **En [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594):**
+   - Instanciar ViewModels en [initialize()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#93-109)
+   - Reemplazar campos primitivos por llamadas a ViewModel:
+     ```java
+     // Antes:
+     private double zoomLevel = 1.3;
+     
+     // Después:
+     private MainViewModel mainViewModel;
+     private EditorViewModel editorViewModel;
+     
+     // En initialize():
+     mainViewModel = new MainViewModel();
+     editorViewModel = new EditorViewModel();
+     
+     // En métodos:
+     mainViewModel.getZoomLevel() // en lugar de zoomLevel
+     ```
+
+4. **Añadir listeners para sincronizar UI:**
+   ```java
+   mainViewModel.proyectoActualProperty().addListener((obs, old, newVal) -> {
+       dibujarCanvas();
+   });
+   
+   editorViewModel.elementoSeleccionadoProperty().addListener((obs, old, newVal) -> {
+       buildEditPanels();
+       dibujarCanvas();
+   });
+   ```
+
+#### Validación
+
+- [ ] App arranca sin errores
+- [ ] Zoom funciona igual
+- [ ] Selección de elementos funciona
+- [ ] Cambio frente/dorso funciona
+- [ ] Toggles de guías funcionan
+
+#### Archivos modificados
+
+- [MainViewModel.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/viewmodel/MainViewModel.java) (expandir)
+- `EditorViewModel.java` (nuevo)
+- [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java) (reemplazar campos por ViewModel)
+
+---
+
+### **PASO 2: Extraer `EditorCanvasManager`** (⏱️ ~3h)
+
+#### Acciones
+
+1. **Crear clase `EditorCanvasManager`**
+   ```java
+   public class EditorCanvasManager {
+       private final Canvas canvas;
+       private final MainViewModel mainViewModel;
+       private final EditorViewModel editorViewModel;
+       
+       // Drag state
+       private DragMode currentDragMode = DragMode.NONE;
+       private double dragStartX, dragStartY;
+       private double elementStartX, elementStartY, elementStartW, elementStartH;
+       
+       // Constantes CR80
+       public static final double CARD_WIDTH = 342.4;
+       public static final double CARD_HEIGHT = 215.92;
+       // ... resto de constantes
+       
+       public EditorCanvasManager(Canvas canvas, MainViewModel mainVM, EditorViewModel editorVM) {
+           this.canvas = canvas;
+           this.mainViewModel = mainVM;
+           this.editorViewModel = editorVM;
+           setupMouseHandlers();
+       }
+       
+       private void setupMouseHandlers() {
+           canvas.setOnMousePressed(this::onCanvasMousePressed);
+           canvas.setOnMouseDragged(this::onCanvasMouseDragged);
+           canvas.setOnMouseMoved(this::onCanvasMouseMoved);
+           canvas.setOnMouseReleased(this::onCanvasMouseReleased);
+       }
+       
+       public void dibujarCanvas() { /* mover lógica */ }
+       private void onCanvasMousePressed(MouseEvent e) { /* mover lógica */ }
+       // ... resto de métodos
+   }
+   ```
+
+2. **En [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594):**
+   - Eliminar métodos de canvas (dibujarCanvas, mouse events, getDragModeForMouseEvent)
+   - Eliminar constantes CR80
+   - Eliminar estado de drag
+   - Instanciar manager:
+     ```java
+     private EditorCanvasManager canvasManager;
+     
+     // En initialize():
+     canvasManager = new EditorCanvasManager(canvas, mainViewModel, editorViewModel);
+     ```
+   - Reemplazar llamadas:
+     ```java
+     // Antes:
+     dibujarCanvas();
+     
+     // Después:
+     canvasManager.dibujarCanvas();
+     ```
+
+3. **Problema: [ensurePropertiesPanelVisible()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1171-1177)**
+   - Canvas manager necesita abrir panel de propiedades
+   - **Solución:** Callback funcional
+     ```java
+     public class EditorCanvasManager {
+         private Runnable onElementSelected;
+         
+         public void setOnElementSelected(Runnable callback) {
+             this.onElementSelected = callback;
+         }
+         
+         private void onCanvasMousePressed(MouseEvent e) {
+             // ... lógica de selección
+             if (nuevoSeleccionado != null) {
+                 editorViewModel.setElementoSeleccionado(nuevoSeleccionado);
+                 if (onElementSelected != null) {
+                     onElementSelected.run();
+                 }
+             }
+         }
+     }
+     
+     // En MainViewController:
+     canvasManager.setOnElementSelected(this::ensurePropertiesPanelVisible);
+     ```
+
+#### Validación
+
+- [ ] Selección de elementos funciona
+- [ ] Drag & drop funciona
+- [ ] Resize con handles funciona
+- [ ] Cursores cambian correctamente
+- [ ] Panel de propiedades se abre al seleccionar
+- [ ] Renderizado idéntico (guías, sangrado, elementos)
+
+#### Archivos
+
+- `EditorCanvasManager.java` (nuevo, ~400 líneas)
+- [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java) (eliminar ~450 líneas)
+
+---
+
+### **PASO 3: Extraer `PropertiesPanelController`** (⏱️ ~4h)
+
+#### Acciones
+
+1. **Crear clase `PropertiesPanelController`**
+   ```java
+   public class PropertiesPanelController {
+       private final EditorViewModel editorViewModel;
+       private boolean isUpdatingTextFields = false;
+       
+       public PropertiesPanelController(EditorViewModel editorVM) {
+           this.editorViewModel = editorVM;
+       }
+       
+       public VBox buildPropertiesPanel(Runnable onPropertyChanged) {
+           VBox props = new VBox(8);
+           props.setPadding(new Insets(30));
+           // ... lógica de construcción
+           
+           // En listeners:
+           txtX.textProperty().addListener((obs, old, newVal) -> {
+               if (!isUpdatingTextFields) {
+                   try {
+                       editorViewModel.getElementoSeleccionado().setX(Double.parseDouble(newVal));
+                       onPropertyChanged.run(); // Callback para redibujar canvas
+                   } catch (NumberFormatException ignored) {}
+               }
+           });
+           
+           return props;
+       }
+   }
+   ```
+
+2. **En [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594):**
+   - Eliminar [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650)
+   - Eliminar flag `isUpdatingTextFields`
+   - Instanciar controller:
+     ```java
+     private PropertiesPanelController propertiesController;
+     
+     // En initialize():
+     propertiesController = new PropertiesPanelController(editorViewModel);
+     ```
+   - Reemplazar en [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277):
+     ```java
+     // Antes:
+     buildPropertiesPanel();
+     
+     // Después:
+     VBox propsContent = propertiesController.buildPropertiesPanel(() -> {
+         canvasManager.dibujarCanvas();
+     });
+     
+     ScrollPane scrollPane = new ScrollPane(propsContent);
+     // ... configuración scrollPane
+     rightPanel.getChildren().add(scrollPane);
+     ```
+
+3. **Problema: Acceso a constantes CR80**
+   - [buildPropertiesPanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#278-650) usa `CARD_WIDTH`, `CARD_HEIGHT`, `BLEED_MARGIN`
+   - **Solución:** Usar constantes de `EditorCanvasManager` o crear clase `CR80Constants`
+
+#### Validación
+
+- [ ] Panel de propiedades se construye correctamente
+- [ ] Cambios en TextFields actualizan elemento
+- [ ] Cambios en elemento actualizan TextFields (sin bucles)
+- [ ] Proporción de imágenes funciona
+- [ ] ColorPicker, ComboBox, Spinner funcionan
+- [ ] Botones de reemplazo funcionan
+
+#### Archivos
+
+- `PropertiesPanelController.java` (nuevo, ~370 líneas)
+- [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java) (eliminar ~370 líneas)
+
+---
+
+### **PASO 4: Extraer `ModeManager`** (⏱️ ~2h)
+
+#### Acciones
+
+1. **Crear clase `ModeManager`**
+   ```java
+   public class ModeManager {
+       private final VBox leftPanel;
+       private final VBox rightPanel;
+       private final MainViewModel mainViewModel;
+       private final EditorViewModel editorViewModel;
+       private final PropertiesPanelController propertiesController;
+       private final Runnable onCanvasRedraw;
+       
+       public ModeManager(VBox leftPanel, VBox rightPanel, 
+                          MainViewModel mainVM, EditorViewModel editorVM,
+                          PropertiesPanelController propsCtrl, Runnable onCanvasRedraw) {
+           // ...
+       }
+       
+       public void switchMode(AppMode newMode) {
+           mainViewModel.setCurrentMode(newMode);
+           leftPanel.getChildren().clear();
+           rightPanel.getChildren().clear();
+           
+           if (newMode == AppMode.DESIGN) {
+               buildEditPanels();
+           } else {
+               buildExportPanels();
+           }
+           
+           onCanvasRedraw.run();
+       }
+       
+       private void buildEditPanels() { /* mover lógica */ }
+       private void buildExportPanels() { /* mover lógica */ }
+   }
+   ```
+
+2. **En [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594):**
+   - Eliminar [switchMode()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#143-158), [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277), [buildExportPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#653-728)
+   - Instanciar manager:
+     ```java
+     private ModeManager modeManager;
+     
+     // En initialize():
+     modeManager = new ModeManager(leftPanel, rightPanel, mainViewModel, editorViewModel,
+                                    propertiesController, () -> canvasManager.dibujarCanvas());
+     ```
+   - Reemplazar en [onModeEdit()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#133-137), [onModeExport()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#138-142):
+     ```java
+     @FXML
+     private void onModeEdit() {
+         modeManager.switchMode(AppMode.DESIGN);
+     }
+     ```
+
+3. **Problema: [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277) necesita callbacks**
+   - Botones de toolbox llaman a [onAñadirTexto()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1426-1443), etc.
+   - **Solución:** Pasar callbacks en constructor
+     ```java
+     public ModeManager(..., Runnable onAddText, Runnable onAddImage, Runnable onAddBackground) {
+         // ...
+     }
+     
+     // En buildEditPanels():
+     btnTexto.setOnAction(e -> onAddText.run());
+     ```
+
+#### Validación
+
+- [ ] Cambio de modo funciona
+- [ ] Paneles se reconstruyen correctamente
+- [ ] Toolbox funciona (botones activos)
+- [ ] Lista de capas funciona
+- [ ] Panel de exportación funciona
+
+#### Archivos
+
+- `ModeManager.java` (nuevo, ~200 líneas)
+- [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java) (eliminar ~200 líneas)
+
+---
+
+### **PASO 5: Extraer `ProjectManager` (Service)** (⏱️ ~3h)
+
+#### Acciones
+
+1. **Crear clase `ProjectManager`**
+   ```java
+   public class ProjectManager {
+       private final MainViewModel mainViewModel;
+       private final EditorViewModel editorViewModel;
+       
+       public ProjectManager(MainViewModel mainVM, EditorViewModel editorVM) {
+           // ...
+       }
+       
+       public void crearNuevoCR80() {
+           int numero = mainViewModel.getProyectos().size() + 1;
+           Proyecto nuevoProyecto = new Proyecto("Tarjeta CR80 #" + numero);
+           mainViewModel.getProyectos().add(nuevoProyecto);
+           mainViewModel.setProyectoActual(nuevoProyecto);
+       }
+       
+       public void añadirTexto() {
+           Proyecto proyecto = mainViewModel.getProyectoActual();
+           if (proyecto == null) return;
+           
+           int num = proyecto.getElementosActuales().size() + 1;
+           TextoElemento texto = new TextoElemento("Texto " + num, 50, 50);
+           texto.setWidth(150);
+           proyecto.getElementosActuales().add(texto);
+           editorViewModel.setElementoSeleccionado(texto);
+       }
+       
+       public void añadirImagen(Window ownerWindow) {
+           // ... lógica con FileChooser
+       }
+       
+       public void añadirFondo(Window ownerWindow) {
+           // ... lógica con FileChooser + diálogo fit mode
+       }
+       
+       public void eliminarElemento() {
+           // ...
+       }
+       
+       public FondoFitMode mostrarDialogoFitMode() {
+           // ... mover lógica de diálogo
+       }
+       
+       public void abrirEditorExterno(ImagenFondoElemento fondo) {
+           // ...
+       }
+       
+       public void recargarFondo(ImagenFondoElemento fondo) {
+           // ...
+       }
+       
+       // Placeholders para futuro
+       public void nuevoProyecto() { /* TODO */ }
+       public void abrirProyecto() { /* TODO */ }
+       public void guardarProyecto() { /* TODO */ }
+       public void exportarProyecto() { /* TODO */ }
+   }
+   ```
+
+2. **En [MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#27-1594):**
+   - Eliminar métodos de proyecto/elementos
+   - Instanciar manager:
+     ```java
+     private ProjectManager projectManager;
+     
+     // En initialize():
+     projectManager = new ProjectManager(mainViewModel, editorViewModel);
+     ```
+   - Reemplazar en métodos FXML:
+     ```java
+     @FXML
+     private void onNuevoCR80() {
+         projectManager.crearNuevoCR80();
+         canvasManager.dibujarCanvas();
+     }
+     
+     private void onAñadirTexto() {
+         projectManager.añadirTexto();
+         ensurePropertiesPanelVisible();
+         modeManager.refreshPanels(); // Nuevo método para rebuild
+         canvasManager.dibujarCanvas();
+     }
+     ```
+
+3. **Problema: Diálogos necesitan Window owner**
+   - FileChooser, Alerts necesitan `canvas.getScene().getWindow()`
+   - **Solución:** Pasar Window en métodos que lo necesiten
+
+#### Validación
+
+- [ ] Crear nuevo CR80 funciona
+- [ ] Añadir texto funciona
+- [ ] Añadir imagen funciona (FileChooser)
+- [ ] Añadir fondo funciona (FileChooser + diálogo)
+- [ ] Eliminar elemento funciona
+- [ ] Edición externa funciona
+- [ ] Recarga de fondo funciona
+
+#### Archivos
+
+- `ProjectManager.java` (nuevo, ~350 líneas)
+- [MainViewController.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java) (eliminar ~350 líneas)
+
+---
+
+## 6️⃣ IMPACTO ESTIMADO
+
+### 📊 **Distribución de Código**
+
+| Clase | Líneas Aprox. | Responsabilidad |
+|-------|---------------|-----------------|
+| **MainViewController** | ~250 | Orquestación, FXML bindings, animaciones |
+| **EditorCanvasManager** | ~400 | Rendering, mouse events, drag & drop |
+| **PropertiesPanelController** | ~370 | Panel de propiedades, bindings UI |
+| **ModeManager** | ~200 | Cambio de modos, construcción de paneles |
+| **ProjectManager** | ~350 | CRUD proyectos/elementos, diálogos |
+| **MainViewModel** | ~50 | Estado global (modo, proyecto, zoom) |
+| **EditorViewModel** | ~50 | Estado del editor (selección, toggles) |
+| **TOTAL** | ~1670 | (Original: 1594 + overhead de separación) |
+
+### ✅ **Qué queda en MainViewController**
+
+- [initialize()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#93-109) → Instanciar managers y ViewModels
+- [setupCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#110-130) → Delegar a `canvasManager`
+- Métodos FXML (`@FXML`) → Delegar a managers
+- [togglePanel()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1544-1593) → Animaciones de paneles (pura UI)
+- [ensurePropertiesPanelVisible()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#1171-1177) → Lógica de toggle
+- Listeners de ViewModel → Sincronizar UI con estado
+- **~250 líneas** de código limpio y enfocado
+
+### 🔄 **Qué se mueve a ViewModel**
+
+- `currentMode` → `MainViewModel.currentModeProperty()`
+- `proyectoActual` → `MainViewModel.proyectoActualProperty()`
+- `proyectos` → `MainViewModel.proyectosProperty()`
+- `zoomLevel` → `MainViewModel.zoomLevelProperty()`
+- `elementoSeleccionado` → `EditorViewModel.elementoSeleccionadoProperty()`
+- `mostrandoFrente` → `EditorViewModel.mostrandoFrenteProperty()` (desde Proyecto)
+- `mostrarGuias` → `EditorViewModel.mostrarGuiasProperty()` (desde toggleGuias)
+
+### 🛠️ **Qué se mueve a Services**
+
+- CRUD de proyectos → `ProjectManager`
+- CRUD de elementos → `ProjectManager`
+- Diálogos de archivos → `ProjectManager`
+- Lógica de fondos → `ProjectManager`
+- (Futuro) Persistencia → `ProjectService` (nuevo)
+- (Futuro) Exportación → `ExportService` (nuevo)
+
+---
+
+## 7️⃣ CHECKLIST DE VALIDACIÓN POR PASO
+
+### ✅ **Después de cada paso:**
+
+1. **Compilación**
+   - [ ] Proyecto compila sin errores
+   - [ ] No hay warnings críticos
+
+2. **Funcionalidad básica**
+   - [ ] App arranca correctamente
+   - [ ] Login funciona (si aplica)
+   - [ ] Transición a MainView funciona
+
+3. **Modo Producción**
+   - [ ] Lista de proyectos visible
+   - [ ] Crear nuevo CR80 funciona
+   - [ ] Seleccionar proyecto funciona
+   - [ ] Canvas muestra tarjeta correctamente
+
+4. **Modo Diseño**
+   - [ ] Cambio a modo Diseño funciona
+   - [ ] Toolbox visible y funcional
+   - [ ] Añadir texto funciona
+   - [ ] Añadir imagen funciona
+   - [ ] Añadir fondo funciona
+   - [ ] Lista de capas funciona
+
+5. **Interacción Canvas**
+   - [ ] Selección de elementos funciona
+   - [ ] Drag & drop funciona
+   - [ ] Resize con handles funciona
+   - [ ] Cursores cambian correctamente
+
+6. **Panel Propiedades**
+   - [ ] Se abre al seleccionar elemento
+   - [ ] Campos muestran valores correctos
+   - [ ] Cambios en campos actualizan elemento
+   - [ ] Cambios en elemento actualizan campos
+   - [ ] No hay bucles infinitos
+
+7. **Controles de Vista**
+   - [ ] Zoom in/out funciona
+   - [ ] Toggle frente/dorso funciona
+   - [ ] Toggle guías funciona
+   - [ ] Toggle panel propiedades funciona
+
+8. **Regresión**
+   - [ ] No se rompió funcionalidad existente
+   - [ ] Animaciones funcionan igual
+   - [ ] Rendimiento similar
+
+---
+
+## 8️⃣ RIESGOS Y MITIGACIONES
+
+### 🚨 **Riesgos Altos**
+
+1. **Bucles infinitos en bindings**
+   - **Causa:** Listeners bidireccionales sin protección
+   - **Mitigación:** Mantener flags como `isUpdatingTextFields`, usar `removeListener()` temporalmente
+
+2. **Pérdida de sincronización UI ↔ Estado**
+   - **Causa:** Olvidar actualizar ViewModel al cambiar estado
+   - **Mitigación:** Listeners en ViewModel que disparen [dibujarCanvas()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#731-892), [buildEditPanels()](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#161-277)
+
+3. **Referencias a nodos UI desde managers**
+   - **Causa:** Managers acceden directamente a `canvas`, `leftPanel`, etc.
+   - **Mitigación:** Pasar nodos en constructor, usar callbacks para comunicación inversa
+
+### ⚠️ **Riesgos Moderados**
+
+4. **Overhead de callbacks**
+   - **Causa:** Múltiples callbacks para comunicación entre capas
+   - **Mitigación:** Usar eventos JavaFX (`EventBus` pattern) si se vuelve inmanejable
+
+5. **Duplicación de constantes**
+   - **Causa:** `CARD_WIDTH`, etc. usadas en múltiples clases
+   - **Mitigación:** Crear clase `CR80Constants` o `EditorConfig` compartida
+
+---
+
+## 9️⃣ SIGUIENTES PASOS (POST-REFACTOR)
+
+### 🔮 **Mejoras Futuras**
+
+1. **Implementar persistencia real**
+   - Crear `ProjectService` con save/load
+   - Usar JSON o serialización Java
+
+2. **Implementar exportación real**
+   - Crear `ExportService`
+   - Generar PNG/PDF con resolución configurable
+
+3. **Mejorar testabilidad**
+   - Crear tests unitarios para ViewModels
+   - Crear tests de integración para Services
+   - Mockear UI para testear Controllers
+
+4. **Optimizar rendering**
+   - Cachear renders de elementos
+   - Usar [Canvas](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/MainViewController.java#110-130) layers para evitar redibujar todo
+
+5. **Añadir Undo/Redo**
+   - Implementar Command pattern
+   - Stack de comandos en ViewModel
+
+6. **Mejorar UX**
+   - Drag & drop desde toolbox
+   - Snap to grid
+   - Alineación automática
+   - Shortcuts de teclado
+
+---
+
+## 🎯 CONCLUSIÓN
+
+### Estado Actual
+- **1594 líneas** en un solo Controller
+- **God Object** con 6 responsabilidades mezcladas
+- **Imposible de testear** sin JavaFX
+- **Frágil** ante cambios
+
+### Estado Objetivo
+- **~250 líneas** en MainViewController (orquestación)
+- **5 clases especializadas** con responsabilidad única
+- **2 ViewModels** con estado observable
+- **Testeable** sin UI
+- **Mantenible** y extensible
+
+### Esfuerzo Estimado
+- **Total:** ~14 horas
+- **Por paso:** 2-4 horas
+- **Validación:** ~1 hora por paso
+
+### Beneficios
+- ✅ Separación clara de concerns
+- ✅ Testabilidad mejorada
+- ✅ Mantenibilidad mejorada
+- ✅ Escalabilidad para nuevas features
+- ✅ Cumplimiento de MVVM
+
+---
+
+**¿Proceder con el refactor?** Espero tu confirmación para empezar con el **PASO 1**.
