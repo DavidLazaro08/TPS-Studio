@@ -1,4 +1,4 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.ClienteInfo;
 import javafx.geometry.Insets;

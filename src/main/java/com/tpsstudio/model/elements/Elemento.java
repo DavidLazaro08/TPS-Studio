@@ -12,6 +12,7 @@ public abstract class Elemento {
     protected boolean visible; // Visible en el canvas
     protected boolean locked; // Bloqueado (no editable)
     protected String nombre; // Nombre del elemento
+    protected String etiqueta; // Etiqueta opcional: "NOMBRE", "Nº SOCIO", "FOTO CARNET", etc.
 
     public Elemento(String nombre, double x, double y, double width, double height) {
         this.nombre = nombre;
@@ -80,6 +81,14 @@ public abstract class Elemento {
         this.nombre = nombre;
     }
 
+    public String getEtiqueta() {
+        return etiqueta;
+    }
+
+    public void setEtiqueta(String etiqueta) {
+        this.etiqueta = etiqueta;
+    }
+
     /**
      * Verifica si un punto está dentro del elemento
      */
@@ -89,6 +98,9 @@ public abstract class Elemento {
 
     @Override
     public String toString() {
+        if (etiqueta != null && !etiqueta.isEmpty()) {
+            return nombre + " | " + etiqueta;
+        }
         return nombre;
     }
 }

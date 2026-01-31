@@ -1,4 +1,4 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.controllers;
 
 import com.tpsstudio.viewmodel.LoginViewModel;
 import javafx.animation.FadeTransition;

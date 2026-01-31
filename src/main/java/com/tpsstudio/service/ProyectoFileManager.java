@@ -368,13 +368,13 @@ public class ProyectoFileManager {
         ImagenFondoElemento fondo = new ImagenFondoElemento(
                 dto.getRutaImagen(),
                 img,
-                com.tpsstudio.view.EditorCanvasManager.CARD_WIDTH,
-                com.tpsstudio.view.EditorCanvasManager.CARD_HEIGHT,
+                com.tpsstudio.view.managers.EditorCanvasManager.CARD_WIDTH,
+                com.tpsstudio.view.managers.EditorCanvasManager.CARD_HEIGHT,
                 fitMode);
         fondo.ajustarATamaño(
-                com.tpsstudio.view.EditorCanvasManager.CARD_WIDTH,
-                com.tpsstudio.view.EditorCanvasManager.CARD_HEIGHT,
-                com.tpsstudio.view.EditorCanvasManager.BLEED_MARGIN);
+                com.tpsstudio.view.managers.EditorCanvasManager.CARD_WIDTH,
+                com.tpsstudio.view.managers.EditorCanvasManager.CARD_HEIGHT,
+                com.tpsstudio.view.managers.EditorCanvasManager.BLEED_MARGIN);
         return fondo;
     }
 

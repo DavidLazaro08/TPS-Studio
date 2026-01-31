@@ -1,4 +1,4 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;

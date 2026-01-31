@@ -21,12 +21,21 @@ public class ImagenElemento extends Elemento {
         this.opacity = 1.0;
         this.mantenerProporcion = true;
 
-        // Ajustar tamaño al de la imagen si es posible
+        // Ajustar tamaño a proporción de foto carnet (32mm × 26mm ≈ 121px × 98px)
         if (imagen != null) {
             this.originalWidth = imagen.getWidth();
             this.originalHeight = imagen.getHeight();
-            this.width = Math.min(imagen.getWidth(), 200);
-            this.height = Math.min(imagen.getHeight(), 200);
+            // Tamaño por defecto: foto carnet
+            double maxW = 121; // 32mm a ~96 DPI
+            double maxH = 98; // 26mm a ~96 DPI
+
+            // Calcular escala para mantener proporción
+            double scaleX = maxW / originalWidth;
+            double scaleY = maxH / originalHeight;
+            double scale = Math.min(scaleX, scaleY);
+
+            this.width = originalWidth * scale;
+            this.height = originalHeight * scale;
         }
     }
 
@@ -45,12 +54,20 @@ public class ImagenElemento extends Elemento {
 
     public void setImagen(Image imagen) {
         this.imagen = imagen;
-        // Actualizar dimensiones
+        // Actualizar dimensiones originales
         if (imagen != null) {
             this.originalWidth = imagen.getWidth();
             this.originalHeight = imagen.getHeight();
-            this.width = Math.min(imagen.getWidth(), 200);
-            this.height = Math.min(imagen.getHeight(), 200);
+
+            // Mantener tamaño de foto carnet con proporción
+            double maxW = 121;
+            double maxH = 98;
+            double scaleX = maxW / originalWidth;
+            double scaleY = maxH / originalHeight;
+            double scale = Math.min(scaleX, scaleY);
+
+            this.width = originalWidth * scale;
+            this.height = originalHeight * scale;
         }
     }
 

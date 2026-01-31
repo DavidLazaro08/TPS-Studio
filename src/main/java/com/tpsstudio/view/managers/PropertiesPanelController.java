@@ -1,4 +1,4 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
@@ -195,6 +195,21 @@ public class PropertiesPanelController {
      * Construye el panel de propiedades para un elemento de texto
      */
     private void buildTextPanel(VBox props, Label lblProps, TextoElemento texto) {
+        // Etiqueta
+        Label lblEtiqueta = new Label("Etiqueta (opcional):");
+        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+        TextField txtEtiqueta = new TextField(texto.getEtiqueta() != null ? texto.getEtiqueta() : "");
+        txtEtiqueta.setPromptText("Ej: NOMBRE, Nº SOCIO, etc.");
+        txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
+            texto.setEtiqueta(newVal.isEmpty() ? null : newVal);
+            // Forzar refresh de capas para mostrar nueva etiqueta
+            if (onCanvasRedrawNeeded != null) {
+                onCanvasRedrawNeeded.run();
+            }
+        });
+
         // Position and size
         Label lblPos = new Label("Posición y Tamaño");
         lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
@@ -341,7 +356,8 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
+        props.getChildren().addAll(lblProps, lblEtiqueta, txtEtiqueta, new Separator(),
+                lblPos, txtX, txtY, txtW, txtH,
                 new Separator(), lblTexto, txtContenido,
                 lblFuente, cmbFuente, lblTamaño, spnTamaño,
                 lblColor, cpColor, lblAlineacion, cmbAlineacion,
@@ -352,6 +368,21 @@ public class PropertiesPanelController {
      * Construye el panel de propiedades para un elemento de imagen
      */
     private void buildImagePanel(VBox props, Label lblProps, ImagenElemento imagen) {
+        // Etiqueta
+        Label lblEtiqueta = new Label("Etiqueta (opcional):");
+        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+        TextField txtEtiqueta = new TextField(imagen.getEtiqueta() != null ? imagen.getEtiqueta() : "");
+        txtEtiqueta.setPromptText("Ej: FOTO CARNET, LOGO, etc.");
+        txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
+            imagen.setEtiqueta(newVal.isEmpty() ? null : newVal);
+            // Forzar refresh de capas para mostrar nueva etiqueta
+            if (onCanvasRedrawNeeded != null) {
+                onCanvasRedrawNeeded.run();
+            }
+        });
+
         // Position and size
         Label lblPos = new Label("Posición y Tamaño");
         lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
@@ -461,7 +492,8 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(lblProps, lblPos, txtX, txtY, txtW, txtH,
+        props.getChildren().addAll(lblProps, lblEtiqueta, txtEtiqueta, new Separator(),
+                lblPos, txtX, txtY, txtW, txtH,
                 new Separator(), lblImagen, lblDimOrig,
                 lblOpacidad, sldOpacidad, chkProporcion, btnReemplazar);
     }

@@ -3,8 +3,8 @@ package com.tpsstudio.service;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
-import com.tpsstudio.view.EditorCanvasManager;
-import com.tpsstudio.view.NuevoProyectoDialog;
+import com.tpsstudio.view.managers.EditorCanvasManager;
+import com.tpsstudio.view.dialogs.NuevoProyectoDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
@@ -213,9 +213,7 @@ public class ProjectManager {
                 Proyecto proyecto = fileManager.cargarProyecto(file);
                 if (proyecto != null) {
                     proyectos.add(proyecto);
-                    if (i == 0) {
-                        proyectoActual = proyecto; // Seleccionar el más reciente
-                    }
+                    // NO seleccionar automáticamente - dejar canvas vacío
                 }
             }
         }
@@ -223,9 +221,7 @@ public class ProjectManager {
         // Ordenar alfabéticamente
         ordenarProyectos();
 
-        if (onProjectChanged != null && !proyectos.isEmpty()) {
-            onProjectChanged.run();
-        }
+        // NO llamar onProjectChanged - no hay proyecto seleccionado al inicio
     }
 
     /**

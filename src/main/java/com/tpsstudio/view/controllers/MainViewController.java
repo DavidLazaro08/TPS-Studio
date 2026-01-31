@@ -1,9 +1,13 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.controllers;
 
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
 import com.tpsstudio.service.ProjectManager;
+import com.tpsstudio.view.managers.EditorCanvasManager;
+import com.tpsstudio.view.managers.ModeManager;
+import com.tpsstudio.view.managers.PropertiesPanelController;
+import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
@@ -85,6 +89,8 @@ public class MainViewController {
 
         // Cargar últimos 8 proyectos recientes automáticamente
         projectManager.cargarProyectosRecientes(8);
+        // NO seleccionar ningún proyecto por defecto - canvas vacío hasta que usuario
+        // seleccione
 
         // Añadir listener de doble clic para editar proyecto
         if (listProyectos != null) {
@@ -146,6 +152,7 @@ public class MainViewController {
         });
         modeManager.setOnProjectSelected(proyecto -> {
             proyectoActual = proyecto;
+            projectManager.setProyectoActual(proyecto); // CRÍTICO: Sync to ProjectManager
             canvasManager.setProyectoActual(proyectoActual); // Sync to canvas manager
             dibujarCanvas();
         });

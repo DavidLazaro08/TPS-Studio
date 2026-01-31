@@ -1,8 +1,9 @@
-package com.tpsstudio.view;
+package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
+import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -252,10 +253,11 @@ public class ModeManager {
                         String lockIcon = item.isLocked() ? "🔒 " : "";
                         setText(lockIcon + item.getNombre());
 
-                        // Context menu for background element
-                        if (item instanceof ImagenFondoElemento) {
-                            ContextMenu contextMenu = new ContextMenu();
+                        // Context menu for all elements
+                        ContextMenu contextMenu = new ContextMenu();
 
+                        // Background-specific options
+                        if (item instanceof ImagenFondoElemento) {
                             MenuItem menuEditar = new MenuItem("Editar imagen externa...");
                             menuEditar.setOnAction(e -> {
                                 if (onEditExternal != null) {
@@ -278,10 +280,21 @@ public class ModeManager {
                             });
 
                             contextMenu.getItems().addAll(menuEditar, menuRecargar, new SeparatorMenuItem(), menuLock);
-                            setContextMenu(contextMenu);
                         } else {
-                            setContextMenu(null);
+                            // Regular elements - just delete option
+                            MenuItem menuEliminar = new MenuItem("Eliminar");
+                            menuEliminar.setOnAction(e -> {
+                                if (proyecto != null) {
+                                    proyecto.getElementosActuales().remove(item);
+                                    if (onElementSelected != null) {
+                                        onElementSelected.accept(null); // Deselect
+                                    }
+                                }
+                            });
+                            contextMenu.getItems().add(menuEliminar);
                         }
+
+                        setContextMenu(contextMenu);
                     }
                 }
             });
