@@ -456,8 +456,11 @@ public class MainViewController {
                                     "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado.");
                     aviso.show();
 
-                    // Abrir con editor personalizado
-                    new ProcessBuilder(customEditor, file.getAbsolutePath()).start();
+                    // LANZAMIENTO DESACOPLADO (DETACHED)
+                    // Usamos 'cmd /c start "" "exe" "file"' para romper la herencia de handles
+                    // Esto evita que Photoshop herede bloqueos de Java y falle al guardar
+                    String[] cmd = { "cmd", "/c", "start", "\"\"", customEditor, file.getAbsolutePath() };
+                    new ProcessBuilder(cmd).start();
                     opened = true;
                 }
             }
@@ -472,9 +475,15 @@ public class MainViewController {
                                 "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado.");
                 aviso.show();
 
-                // Abrir con la aplicación predeterminada
-                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                desktop.open(file);
+                // Intentar lanzamiento desacoplado también para el default
+                try {
+                    String[] cmd = { "cmd", "/c", "start", "\"\"", file.getAbsolutePath() };
+                    new ProcessBuilder(cmd).start();
+                } catch (Exception e) {
+                    // Fallback a Desktop si falla el cmd (raro en Windows)
+                    java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+                    desktop.open(file);
+                }
             }
 
         } catch (Exception ex) {

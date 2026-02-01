@@ -332,6 +332,7 @@ public class ProyectoFileManager {
                 // Resolver ruta relativa
                 Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
                 if (Files.exists(rutaAbsoluta)) {
+                    // USAR PROXY PARA EVITAR BLOQUEOS
                     javafx.scene.image.Image img = ImageUtils
                             .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
                     ImagenElemento imagen = new ImagenElemento(
