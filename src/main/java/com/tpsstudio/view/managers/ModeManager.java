@@ -13,30 +13,29 @@ import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
 
 /**
- * Manages application mode switching and panel building for DESIGN and
- * PRODUCTION modes.
+ * ¡El Director de Escena! (Stage Manager)
+ * Controla qué se muestra en los paneles laterales según si estamos Diseñando o
+ * Produciendo.
  * 
- * Responsibilities:
- * - Switch between DESIGN (editing) and PRODUCTION (export) modes
- * - Build left/right panels for each mode
- * - Coordinate with PropertiesPanelController for properties panel
+ * - MODO DISEÑO: Muestra herramientas (texto, imagen) y lista de capas.
+ * - MODO PRODUCCIÓN: Muestra lista de proyectos y opciones de exportación.
+ * 
+ * Orquesta el cambio de vestuario de la interfaz.
  */
 public class ModeManager {
 
-    // Current application mode
+    // Estado actual: ¿Diseñando o Produciendo?
     private AppMode currentMode;
 
-    // Panel containers (references from MainViewController)
+    // Referencias a los contenedores físicos de la UI
     private final VBox leftPanel;
     private final VBox rightPanel;
 
-    // Reference to PropertiesPanelController for properties panel
+    // Colaboradores
     private final PropertiesPanelController propertiesPanelController;
-
-    // Reference to ProjectManager for project operations
     private com.tpsstudio.service.ProjectManager projectManager;
 
-    // Callbacks for actions
+    // Cables de comunicación (Eventos hacia arriba)
     private Runnable onAddText;
     private Runnable onAddImage;
     private Runnable onAddBackground;
@@ -53,9 +52,10 @@ public class ModeManager {
     /**
      * Constructor
      * 
-     * @param leftPanel                 Left panel container
-     * @param rightPanel                Right panel container
-     * @param propertiesPanelController Controller for properties panel
+     * @param leftPanel                 Panel izquierdo (a rellenar dinámicamente)
+     * @param rightPanel                Panel derecho (a rellenar dinámicamente)
+     * @param propertiesPanelController Controlador de propiedades (se usa en
+     *                                  diseño)
      */
     public ModeManager(VBox leftPanel, VBox rightPanel, PropertiesPanelController propertiesPanelController) {
         this.leftPanel = leftPanel;
@@ -64,7 +64,7 @@ public class ModeManager {
         this.currentMode = AppMode.DESIGN;
     }
 
-    // ========== CALLBACK SETTERS ==========
+    // ========== CONEXIONES (SETTERS DE CALLBACKS) ==========
 
     public void setOnAddText(Runnable callback) {
         this.onAddText = callback;
@@ -118,80 +118,77 @@ public class ModeManager {
         this.projectManager = projectManager;
     }
 
-    // ========== MODE MANAGEMENT ==========
+    // ========== CONTROL DE ESCENA (MODOS) ==========
 
     public AppMode getCurrentMode() {
         return currentMode;
     }
 
     /**
-     * Switches to a new mode and rebuilds panels accordingly
-     * 
-     * @param newMode         New mode to switch to
-     * @param proyecto        Current project
-     * @param selectedElement Currently selected element
-     * @param projects        List of all projects
+     * El Gran Cambio: Pasa de Diseño a Producción (o viceversa).
+     * Limpia los paneles laterales y los reconstruye con los widgets adecuados.
      */
     public void switchMode(AppMode newMode, Proyecto proyecto, Elemento selectedElement,
             ObservableList<Proyecto> projects) {
         this.currentMode = newMode;
 
-        // Clear panels
+        // Limpieza total
         leftPanel.getChildren().clear();
         rightPanel.getChildren().clear();
 
+        // Reconstrucción según el guion
         if (newMode == AppMode.DESIGN) {
             buildDesignModePanels(proyecto, selectedElement);
         } else {
             buildProductionModePanels(projects, proyecto);
         }
 
-        // Trigger canvas redraw
+        // Forzar repintado por si acaso
         if (onCanvasRedraw != null) {
             onCanvasRedraw.run();
         }
     }
 
-    // ========== DESIGN MODE PANELS ==========
+    // ========== ESCENARIO 1: MODO DISEÑO ==========
+
+    private VBox layersPanel; // Guardamos referencia para refrescos rápidos
 
     /**
-     * Builds all panels for DESIGN mode (toolbox, layers, properties)
-     */
-    private VBox layersPanel; // Referencia para actualizar
-
-    /**
-     * Builds all panels for DESIGN mode (toolbox, layers, properties)
+     * Monta el set de Diseño:
+     * - Izquierda: Herramientas y Capas
+     * - Derecha: Propiedades del elemento
      */
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
-        // LEFT: Toolbox + Layers
+        // IZQUIERDA
         VBox toolbox = buildToolboxPanel();
         layersPanel = buildLayersPanel(proyecto, selectedElement);
         leftPanel.getChildren().addAll(toolbox, new Separator(), layersPanel);
 
-        // RIGHT: Properties
+        // DERECHA
         VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
         rightPanel.getChildren().setAll(properties);
     }
 
     /**
-     * Actualiza solo el panel de capas (útil para cambios de nombre/etiqueta)
+     * Truco de magia: Actualiza solo el panel de capas sin tocar el resto.
+     * Útil cuando movemos capas o cambiamos visibilidad.
      */
     public void refreshLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         if (leftPanel.getChildren().size() >= 3) {
-            // Asumiendo que el orden es Toolbox, Separator, Layers
-            // Reconstruir solo el panel de capas
+            // Asumimos estructura fija: [0]Toolbox, [1]Separator, [2]Layers
             VBox newLayers = buildLayersPanel(proyecto, selectedElement);
-            // Reemplazar el nodo antiguo
+
+            // Reemplazo quirúrgico
             int index = leftPanel.getChildren().indexOf(layersPanel);
             if (index != -1) {
                 leftPanel.getChildren().set(index, newLayers);
-                layersPanel = newLayers; // Actualizar referencia
+                layersPanel = newLayers;
             }
         }
     }
 
     /**
-     * Builds the toolbox panel with element creation buttons
+     * Caja de Herramientas: Botones para añadir cosas.
      */
     private VBox buildToolboxPanel() {
         VBox toolbox = new VBox(8);
@@ -224,22 +221,24 @@ public class ModeManager {
         btnFondo.setMaxWidth(Double.MAX_VALUE);
         btnFondo.getStyleClass().add("toolbox-btn");
 
+        // Placeholders para futuro
         Button btnRectangulo = new Button("▭ Rectángulo");
         btnRectangulo.setMaxWidth(Double.MAX_VALUE);
         btnRectangulo.getStyleClass().add("toolbox-btn");
-        btnRectangulo.setDisable(true); // Placeholder
+        btnRectangulo.setDisable(true);
 
         Button btnElipse = new Button("○ Elipse");
         btnElipse.setMaxWidth(Double.MAX_VALUE);
         btnElipse.getStyleClass().add("toolbox-btn");
-        btnElipse.setDisable(true); // Placeholder
+        btnElipse.setDisable(true);
 
         toolbox.getChildren().addAll(lblToolbox, btnTexto, btnImagen, btnFondo, btnRectangulo, btnElipse);
         return toolbox;
     }
 
     /**
-     * Builds the layers panel showing all elements in the project
+     * Panel de Capas: Lista de elementos en el lienzo.
+     * Incluye menú contextual para bloquear, borrar, etc.
      */
     private VBox buildLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         VBox layersPanel = new VBox(8);
@@ -253,7 +252,7 @@ public class ModeManager {
         listCapas.setPrefHeight(200);
 
         if (proyecto != null) {
-            // Combine background + normal elements
+            // Unificamos fondo y elementos en una sola lista visual
             ObservableList<Elemento> allElements = FXCollections.observableArrayList();
             ImagenFondoElemento fondo = proyecto.getFondoActual();
             if (fondo != null) {
@@ -263,7 +262,7 @@ public class ModeManager {
 
             listCapas.setItems(allElements);
 
-            // Custom cell factory to show lock icon for background
+            // Personalización de celda (Iconos y Click derecho)
             listCapas.setCellFactory(lv -> new ListCell<Elemento>() {
                 @Override
                 protected void updateItem(Elemento item, boolean empty) {
@@ -273,13 +272,13 @@ public class ModeManager {
                         setContextMenu(null);
                     } else {
                         String lockIcon = item.isLocked() ? "🔒 " : "";
-                        setText(lockIcon + item.toString()); // Usar toString() para incluir etiqueta
+                        setText(lockIcon + item.toString());
 
-                        // Context menu for all elements
+                        // Menú Click Derecho
                         ContextMenu contextMenu = new ContextMenu();
 
-                        // Background-specific options
                         if (item instanceof ImagenFondoElemento) {
+                            // Opciones exclusivas de Fondo
                             MenuItem menuEditar = new MenuItem("Editar imagen externa...");
                             menuEditar.setOnAction(e -> {
                                 if (onEditExternal != null) {
@@ -303,13 +302,13 @@ public class ModeManager {
 
                             contextMenu.getItems().addAll(menuEditar, menuRecargar, new SeparatorMenuItem(), menuLock);
                         } else {
-                            // Regular elements - just delete option
+                            // Elementos normales
                             MenuItem menuEliminar = new MenuItem("Eliminar");
                             menuEliminar.setOnAction(e -> {
                                 if (proyecto != null) {
                                     proyecto.getElementosActuales().remove(item);
                                     if (onElementSelected != null) {
-                                        onElementSelected.accept(null); // Deselect
+                                        onElementSelected.accept(null);
                                     }
                                 }
                             });
@@ -321,6 +320,7 @@ public class ModeManager {
                 }
             });
 
+            // Selección
             listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
                 if (onElementSelected != null) {
                     onElementSelected.accept(newVal);
@@ -332,20 +332,21 @@ public class ModeManager {
         return layersPanel;
     }
 
-    // ========== PRODUCTION MODE PANELS ==========
+    // ========== ESCENARIO 2: MODO PRODUCCIÓN ==========
 
     /**
-     * Builds all panels for PRODUCTION mode (project list, export controls)
+     * Monta el set de Producción:
+     * - Izquierda: Lista de Proyectos (Portfolio)
+     * - Derecha: Opciones de Exportación
      */
     private void buildProductionModePanels(ObservableList<Proyecto> projects, Proyecto currentProject) {
-        // LEFT: Project list
+        // IZQUIERDA
         VBox projectPanel = buildProjectListPanel(projects, currentProject);
         leftPanel.getChildren().add(projectPanel);
 
-        // RIGHT: Export controls
+        // DERECHA (Con scroll por si hay muchas opciones)
         VBox exportPanel = buildExportPanel();
 
-        // Wrap in ScrollPane for consistency
         exportPanel.setStyle("-fx-background-color: #1e1b1c;");
         ScrollPane scrollPane = new ScrollPane(exportPanel);
         scrollPane.setFitToWidth(true);
@@ -358,7 +359,7 @@ public class ModeManager {
     }
 
     /**
-     * Builds the project list panel
+     * Panel de Lista de Proyectos
      */
     private VBox buildProjectListPanel(ObservableList<Proyecto> projects, Proyecto currentProject) {
         VBox projectPanel = new VBox(8);
@@ -371,25 +372,21 @@ public class ModeManager {
         listProyectos.setItems(projects);
         listProyectos.getStyleClass().add("project-list");
         listProyectos.setPrefHeight(400);
+
+        // Selección de proyecto
         listProyectos.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
             if (newVal != null && onProjectSelected != null) {
                 onProjectSelected.accept(newVal);
             }
         });
 
-        // Añadir listener de doble clic para editar proyecto
+        // Doble Clic para editar metadatos
         listProyectos.setOnMouseClicked(event -> {
-            System.out.println("[DEBUG] Mouse clicked, count: " + event.getClickCount());
             if (event.getClickCount() == 2) {
                 Proyecto proyectoSeleccionado = listProyectos.getSelectionModel().getSelectedItem();
-                System.out.println("[DEBUG] Doble clic detectado, proyecto: "
-                        + (proyectoSeleccionado != null ? proyectoSeleccionado.getNombre() : "null"));
                 if (proyectoSeleccionado != null && proyectoSeleccionado.getMetadata() != null) {
-                    System.out.println("[DEBUG] Llamando a onEditProject callback");
                     if (onEditProject != null) {
                         onEditProject.accept(proyectoSeleccionado);
-                    } else {
-                        System.out.println("[DEBUG] ERROR: onEditProject callback es null!");
                     }
                 }
             }
@@ -408,24 +405,24 @@ public class ModeManager {
     }
 
     /**
-     * Abre el diálogo para editar un proyecto existente
+     * Helper para abrir el diálogo de edición (Delegado al click handler)
      */
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
+        // ... Lógica delegada al ProjectManager o invocada desde callbacks ...
+        // Este método se deja como referencia o para uso futuro interno
         EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
         java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {
-            // Usuario quiere eliminar el proyecto
             projectManager.eliminarProyecto(proyecto);
         } else if (resultado.isPresent()) {
-            // Usuario guardó cambios
             ProyectoMetadata nuevaMetadata = resultado.get();
             projectManager.editarProyecto(proyecto, nuevaMetadata);
         }
     }
 
     /**
-     * Builds the export controls panel
+     * Panel de Exportación (Futuro)
      */
     private VBox buildExportPanel() {
         VBox exportPanel = new VBox(15);
@@ -435,16 +432,17 @@ public class ModeManager {
         Label lblExport = new Label("Exportación");
         lblExport.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
 
-        Label lblInfoExp = new Label("Formato: PNG/PDF (placeholder)");
+        // Placeholders informativos
+        Label lblInfoExp = new Label("Formato: PNG/PDF (pendiente)");
         lblInfoExp.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-        Label lblDpi = new Label("DPI: 300 (placeholder)");
+        Label lblDpi = new Label("DPI: 300 (pendiente)");
         lblDpi.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-        Label lblGuias = new Label("Incluir guías: No (placeholder)");
+        Label lblGuias = new Label("Incluir guías: No (pendiente)");
         lblGuias.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
-        Label lblSide = new Label("Exportar: Frente (placeholder)");
+        Label lblSide = new Label("Exportar: Frente (pendiente)");
         lblSide.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
         Button btnDoExport = new Button("Exportar");

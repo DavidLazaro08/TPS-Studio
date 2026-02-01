@@ -19,21 +19,26 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 
 /**
- * Controller responsable de construir y gestionar el panel de propiedades
- * del elemento seleccionado en el editor.
+ * Controlador del panel "Propiedades".
+ * Este panel es el cerebro derecho de la interfaz: cambia dinámicamente según
+ * qué toques.
  * 
- * Maneja la construcción dinámica del panel según el tipo de elemento
- * y los bindings bidireccionales entre la UI y las propiedades del elemento.
+ * Si tocas un texto -> muestra fuente, tamaño, color.
+ * Si tocas una imagen -> muestra opacidad, reemplazo.
+ * Si tocas el fondo -> opciones de ajuste y sangrado.
+ * 
+ * Usa "Bindings" (listeners) para que si escribes en un TextField, el elemento
+ * cambie en tiempo real.
  */
 public class PropertiesPanelController {
 
-    // Ancho máximo de controles para mantener márgenes visuales
+    // Tope de anchura para que los inputs no se estiren feo
     private static final double MAX_CONTROL_WIDTH = 200.0;
 
-    // Canvas reference para obtener la ventana padre en diálogos
+    // Referencia al Canvas para saber quién es nuestra ventana padre (para modales)
     private final Canvas canvas;
 
-    // Callbacks para notificar cambios al MainViewController
+    // Callbacks: cables para avisar al jefe (MainViewController) cuando algo pasa
     private Runnable onPropertyChanged;
     private Runnable onCanvasRedrawNeeded;
     private Consumer<ImagenFondoElemento> onEditExternal;
@@ -42,25 +47,23 @@ public class PropertiesPanelController {
     /**
      * Constructor
      * 
-     * @param canvas Canvas del editor (usado para obtener la ventana padre)
+     * @param canvas Recibimos el canvas para poder preguntar quién es la ventana
+     *               padre
      */
     public PropertiesPanelController(Canvas canvas) {
         this.canvas = canvas;
     }
 
     /**
-     * Establece el callback que se ejecuta cuando una propiedad cambia
-     * 
-     * @param callback Runnable a ejecutar
+     * Callback: Se disparará cuando toquemos cualquier propiedad vital
      */
     public void setOnPropertyChanged(Runnable callback) {
         this.onPropertyChanged = callback;
     }
 
     /**
-     * Establece el callback que se ejecuta cuando se necesita redibujar el canvas
-     * 
-     * @param callback Runnable a ejecutar
+     * Callback: Se disparará cuando necesitemos que el Canvas se repinte (ej.
+     * cambio color)
      */
     public void setOnCanvasRedrawNeeded(Runnable callback) {
         this.onCanvasRedrawNeeded = callback;
@@ -75,14 +78,12 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Construye el panel de propiedades según el tipo de elemento seleccionado
-     * 
-     * @param elemento Elemento seleccionado (puede ser null)
-     * @param proyecto Proyecto actual
-     * @return VBox con el panel de propiedades
+     * Método Maestro: Construye todo el panel desde cero.
+     * Analiza qué elemento hemos clicado y llama al constructor específico
+     * (sub-paneles).
      */
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
-        VBox props = new VBox(8);
+        VBox props = new VBox(8); // Espaciado vertical de 8px
         props.setPadding(new Insets(30));
         props.setFillWidth(true);
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
@@ -106,7 +107,7 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Construye el panel de propiedades para un elemento de fondo
+     * Sub-panel: Configuración específica del Fondo (Background)
      */
     private void buildBackgroundPanel(VBox props, Label lblProps, ImagenFondoElemento fondo) {
         Label lblInfo = new Label("Fondo de la tarjeta");
@@ -118,7 +119,7 @@ public class PropertiesPanelController {
         lblDim.setMaxWidth(MAX_CONTROL_WIDTH);
         lblDim.setWrapText(true);
 
-        // Modo de ajuste
+        // Selector de Modo Ajuste (Con Sangre vs Corte Final)
         Label lblModo = new Label("Modo de ajuste:");
         lblModo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -143,6 +144,7 @@ public class PropertiesPanelController {
             } else {
                 fondo.setFitMode(FondoFitMode.FINAL);
             }
+            // Recalcular tamaño al vuelo
             fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
                     EditorCanvasManager.BLEED_MARGIN);
             notifyPropertyChanged();
@@ -160,7 +162,7 @@ public class PropertiesPanelController {
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
             if (file != null) {
                 try {
-                    // Usar carga sin bloqueo
+                    // Usar carga inteligente sin bloqueo de fichero (Proxy)
                     Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
                     if (img != null) {
                         fondo.setImagen(img);
@@ -175,6 +177,7 @@ public class PropertiesPanelController {
             }
         });
 
+        // Botón para editar externamente (Photoshop, etc)
         Button btnEditarExterno = new Button("Editor Externo");
         btnEditarExterno.setMaxWidth(Double.MAX_VALUE); // Expandir en el HBox
         btnEditarExterno.getStyleClass().add("toolbox-btn");
@@ -184,12 +187,13 @@ public class PropertiesPanelController {
             }
         });
 
+        // Botón engranaje configuración editor
         Button btnConfigEditor = new Button("⚙");
         btnConfigEditor.setTooltip(new Tooltip("Configurar editor externo..."));
         btnConfigEditor.getStyleClass().add("toolbox-btn");
         btnConfigEditor.setPrefWidth(40);
         btnConfigEditor.setOnAction(e -> {
-            // 1. Mostrar explicación
+            // 1. Mostrar explicación amigable
             Alert info = new Alert(Alert.AlertType.CONFIRMATION);
             info.setTitle("Configurar Editor Externo");
             info.setHeaderText("Vincula tu editor de imágenes favorito");
@@ -204,7 +208,7 @@ public class PropertiesPanelController {
 
             info.showAndWait().ifPresent(response -> {
                 if (response == btnBuscar) {
-                    // 2. Abrir selector
+                    // 2. Abrir selector de ejecutables
                     FileChooser fc = new FileChooser();
                     fc.setTitle("Seleccionar Ejecutable del Editor");
                     fc.getExtensionFilters().addAll(
@@ -242,10 +246,10 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Construye el panel de propiedades para un elemento de texto
+     * Sub-panel: Configuración de Texto (Fuentes, Colores, Contenido)
      */
     private void buildTextPanel(VBox props, Label lblProps, TextoElemento texto) {
-        // Etiqueta
+        // Etiqueta lógica (ej: "NOMBRE_CLIENTE")
         Label lblEtiqueta = new Label("Etiqueta (opcional):");
         lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -254,13 +258,13 @@ public class PropertiesPanelController {
         txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
         txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
             texto.setEtiqueta(newVal.isEmpty() ? null : newVal);
-            // Forzar refresh de capas para mostrar nueva etiqueta
+            // Si cambia la etiqueta, actualizamos la lista de capas
             if (onCanvasRedrawNeeded != null) {
                 onCanvasRedrawNeeded.run();
             }
         });
 
-        // Position and size
+        // Posición y Tamaño (Coordenadas)
         Label lblPos = new Label("Posición y Tamaño");
         lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -279,7 +283,7 @@ public class PropertiesPanelController {
         txtW.setMaxWidth(MAX_CONTROL_WIDTH);
         txtH.setMaxWidth(MAX_CONTROL_WIDTH);
 
-        // Listeners para posición y tamaño
+        // Listeners manuales por si el usuario escribe coordenadas a mano
         txtX.textProperty().addListener((obs, old, newVal) -> {
             try {
                 texto.setX(Double.parseDouble(newVal));
@@ -312,7 +316,7 @@ public class PropertiesPanelController {
             }
         });
 
-        // Text content
+        // Contenido del texto
         Label lblTexto = new Label("Texto");
         lblTexto.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -324,7 +328,7 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Font family
+        // Selector de Fuente (Font Family)
         Label lblFuente = new Label("Fuente:");
         lblFuente.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -339,7 +343,7 @@ public class PropertiesPanelController {
             }
         });
 
-        // Font size
+        // Tamaño de letra
         Label lblTamaño = new Label("Tamaño:");
         lblTamaño.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -351,13 +355,14 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Color
+        // Selector de Color
         Label lblColor = new Label("Color:");
         lblColor.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
         ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
         cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
         cpColor.valueProperty().addListener((obs, old, newVal) -> {
+            // Convertir Color de JavaFX a Hex string #RRGGBB
             texto.setColor(String.format("#%02X%02X%02X",
                     (int) (newVal.getRed() * 255),
                     (int) (newVal.getGreen() * 255),
@@ -365,7 +370,7 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Alignment
+        // Alineación interna
         Label lblAlineacion = new Label("Alineación:");
         lblAlineacion.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -384,7 +389,7 @@ public class PropertiesPanelController {
             }
         });
 
-        // Style (Bold/Italic)
+        // Estilos extra (Negrita, Cursiva)
         Label lblEstilo = new Label("Estilo:");
         lblEstilo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -415,10 +420,10 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Construye el panel de propiedades para un elemento de imagen
+     * Sub-panel: Configuración de Imágenes flotantes (Logos, fotos carnet...)
      */
     private void buildImagePanel(VBox props, Label lblProps, ImagenElemento imagen) {
-        // Etiqueta
+        // Etiqueta lógica
         Label lblEtiqueta = new Label("Etiqueta (opcional):");
         lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -427,13 +432,12 @@ public class PropertiesPanelController {
         txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
         txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
             imagen.setEtiqueta(newVal.isEmpty() ? null : newVal);
-            // Forzar refresh de capas para mostrar nueva etiqueta
             if (onCanvasRedrawNeeded != null) {
                 onCanvasRedrawNeeded.run();
             }
         });
 
-        // Position and size
+        // Posición y Tamaño
         Label lblPos = new Label("Posición y Tamaño");
         lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -452,7 +456,7 @@ public class PropertiesPanelController {
         txtW.setMaxWidth(MAX_CONTROL_WIDTH);
         txtH.setMaxWidth(MAX_CONTROL_WIDTH);
 
-        // Listeners para posición y tamaño
+        // Listeners
         txtX.textProperty().addListener((obs, old, newVal) -> {
             try {
                 imagen.setX(Double.parseDouble(newVal));
@@ -485,7 +489,7 @@ public class PropertiesPanelController {
             }
         });
 
-        // Image info
+        // Información de la imagen original
         Label lblImagen = new Label("Imagen");
         lblImagen.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -495,7 +499,7 @@ public class PropertiesPanelController {
         lblDimOrig.setMaxWidth(MAX_CONTROL_WIDTH);
         lblDimOrig.setWrapText(true);
 
-        // Opacity
+        // Opacidad
         Label lblOpacidad = new Label("Opacidad:");
         lblOpacidad.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -509,7 +513,7 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Maintain proportion
+        // Mantener proporción al redimensionar
         CheckBox chkProporcion = new CheckBox("Mantener proporción");
         chkProporcion.setSelected(imagen.isMantenerProporcion());
         chkProporcion.setStyle("-fx-text-fill: #e8e6e7;");
@@ -519,7 +523,6 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Replace button
         Button btnReemplazar = new Button("Reemplazar Imagen");
         btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
         btnReemplazar.getStyleClass().add("toolbox-btn");
@@ -531,11 +534,12 @@ public class PropertiesPanelController {
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
             if (file != null) {
                 try {
+                    // Cargar imagen con seguridad anti-bloqueo
                     Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
                     if (img != null) {
                         imagen.setImagen(img);
                         imagen.setRutaArchivo(file.getAbsolutePath());
-                        // originalWidth and originalHeight are automatically updated by setImagen()
+                        // Dimensiones se auto-actualizan en el objeto imagen
                         notifyCanvasRedraw();
                     }
                 } catch (Exception ex) {
@@ -551,7 +555,7 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Notifica que una propiedad ha cambiado
+     * Auxiliar: Avisa a los listeners de que una propiedad cambió
      */
     private void notifyPropertyChanged() {
         if (onPropertyChanged != null) {
@@ -560,7 +564,7 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Notifica que se necesita redibujar el canvas
+     * Auxiliar: Solicita un repintado del canvas
      */
     private void notifyCanvasRedraw() {
         if (onCanvasRedrawNeeded != null) {
