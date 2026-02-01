@@ -383,12 +383,56 @@ public class MainViewController {
             return;
         }
 
+        // 1. Intentar ruta tal cual
         File file = new File(fondo.getRutaArchivo());
+
+        // 2. Si no existe, intentar búsqueda inteligente en carpeta del proyecto
+        if (!file.exists() && proyectoActual != null && proyectoActual.getMetadata() != null) {
+            String projectDir = proyectoActual.getMetadata().getCarpetaProyecto();
+            if (projectDir != null) {
+                File fondosDir = new File(projectDir, "Fondos");
+                String originalName = file.getName();
+
+                // Opción A: Buscar en carpeta Fondos con mismo nombre
+                File optionA = new File(fondosDir, originalName);
+
+                // Opción B: Construir nombre con sufijo _FRENTE o _DORSO
+                String nameNoExt = originalName;
+                String ext = "";
+                int dotIndex = originalName.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    nameNoExt = originalName.substring(0, dotIndex);
+                    ext = originalName.substring(dotIndex); // incluye el punto
+                }
+
+                // Determinar el sufijo correcto comparando con la referencia en el proyecto
+                String suffix = "";
+                if (fondo == proyectoActual.getFondoFrente()) {
+                    suffix = "_FRENTE";
+                } else if (fondo == proyectoActual.getFondoDorso()) {
+                    suffix = "_DORSO";
+                }
+
+                File optionB = new File(fondosDir, nameNoExt + suffix + ext);
+
+                // Verificar cuál existe
+                if (optionB.exists()) {
+                    file = optionB;
+                    // Actualizar la ruta en el objeto para que 'Recargar' funcione luego
+                    fondo.setRutaArchivo(file.getAbsolutePath());
+                } else if (optionA.exists()) {
+                    file = optionA;
+                    fondo.setRutaArchivo(file.getAbsolutePath());
+                }
+            }
+        }
+
         if (!file.exists()) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
-            alert.setContentText("El archivo " + file.getName() + " no existe en el disco.");
+            alert.setContentText("El archivo " + file.getName() + " no existe en el disco.\n\n" +
+                    "Buscado en: " + file.getAbsolutePath());
             alert.showAndWait();
             return;
         }
