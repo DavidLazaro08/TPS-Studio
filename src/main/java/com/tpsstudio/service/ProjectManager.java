@@ -19,6 +19,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
+import com.tpsstudio.util.ImageUtils;
+
 /**
  * ProjectManager - Service para gestión de proyectos y elementos
  * 
@@ -393,7 +395,7 @@ public class ProjectManager {
 
                     // Cargar imagen desde la nueva ubicación
                     Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
-                    Image img = new Image(rutaAbsoluta.toUri().toString());
+                    Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
                     int num = proyectoActual.getElementosActuales().size() + 1;
                     ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50, rutaImagen, img);
@@ -409,7 +411,7 @@ public class ProjectManager {
                     return imgElem;
                 } else {
                     // Proyecto sin metadata (modo antiguo)
-                    Image img = new Image(file.toURI().toString());
+                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
                     int num = proyectoActual.getElementosActuales().size() + 1;
                     ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50,
                             file.getAbsolutePath(), img);
@@ -490,7 +492,7 @@ public class ProjectManager {
 
                     // Cargar imagen desde la nueva ubicación
                     Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
-                    Image img = new Image(rutaAbsoluta.toUri().toString());
+                    Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
                     ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
                             rutaFondo, img,
@@ -514,7 +516,7 @@ public class ProjectManager {
                     return nuevoFondo;
                 } else {
                     // Proyecto sin metadata (modo antiguo)
-                    Image img = new Image(file.toURI().toString());
+                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
 
                     ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
                             file.getAbsolutePath(), img,

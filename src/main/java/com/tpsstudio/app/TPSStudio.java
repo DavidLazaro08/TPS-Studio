@@ -28,4 +28,10 @@ public class TPSStudio extends Application {
     public static void main(String[] args) {
         launch();
     }
+
+    @Override
+    public void stop() throws Exception {
+        com.tpsstudio.util.ImageUtils.limpiarCache();
+        super.stop();
+    }
 }

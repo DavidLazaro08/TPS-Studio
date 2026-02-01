@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonWriter;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
+import com.tpsstudio.util.ImageUtils;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 
@@ -331,8 +332,8 @@ public class ProyectoFileManager {
                 // Resolver ruta relativa
                 Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
                 if (Files.exists(rutaAbsoluta)) {
-                    javafx.scene.image.Image img = new javafx.scene.image.Image(
-                            rutaAbsoluta.toUri().toString());
+                    javafx.scene.image.Image img = ImageUtils
+                            .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
                     ImagenElemento imagen = new ImagenElemento(
                             dto.getNombre(),
                             dto.getX(),
@@ -361,8 +362,8 @@ public class ProyectoFileManager {
             return null;
         }
 
-        javafx.scene.image.Image img = new javafx.scene.image.Image(
-                rutaAbsoluta.toUri().toString());
+        javafx.scene.image.Image img = ImageUtils
+                .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
         FondoFitMode fitMode = FondoFitMode.valueOf(dto.getFitMode());
         ImagenFondoElemento fondo = new ImagenFondoElemento(

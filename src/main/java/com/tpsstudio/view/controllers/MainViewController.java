@@ -8,6 +8,8 @@ import com.tpsstudio.view.managers.EditorCanvasManager;
 import com.tpsstudio.view.managers.ModeManager;
 import com.tpsstudio.view.managers.PropertiesPanelController;
 import com.tpsstudio.view.dialogs.EditarProyectoDialog;
+import com.tpsstudio.service.SettingsManager;
+import com.tpsstudio.util.ImageUtils;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -438,18 +440,42 @@ public class MainViewController {
         }
 
         try {
-            // Mostrar aviso
-            Alert aviso = new Alert(Alert.AlertType.INFORMATION);
-            aviso.setTitle("Editor Externo");
-            aviso.setHeaderText("Abriendo editor externo...");
-            aviso.setContentText(
-                    "Se abrirá la imagen en el editor predeterminado del sistema.\n" +
-                            "Después de editar, guarde los cambios y use 'Recargar' para aplicarlos.");
-            aviso.show();
+            SettingsManager settings = new SettingsManager();
+            String customEditor = settings.getExternalEditorPath();
+            boolean opened = false;
 
-            // Abrir con la aplicación predeterminada
-            java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-            desktop.open(file);
+            if (customEditor != null) {
+                File editorFile = new File(customEditor);
+                if (editorFile.exists()) {
+                    // Mostrar aviso
+                    Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                    aviso.setTitle("Editando Externamente");
+                    aviso.setHeaderText("Abriendo con " + settings.getExternalEditorName() + "...");
+                    aviso.setContentText(
+                            "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
+                                    "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado.");
+                    aviso.show();
+
+                    // Abrir con editor personalizado
+                    new ProcessBuilder(customEditor, file.getAbsolutePath()).start();
+                    opened = true;
+                }
+            }
+
+            if (!opened) {
+                // Mostrar aviso default
+                Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                aviso.setTitle("Editando Externamente");
+                aviso.setHeaderText("Abriendo editor predeterminado...");
+                aviso.setContentText(
+                        "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
+                                "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado.");
+                aviso.show();
+
+                // Abrir con la aplicación predeterminada
+                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+                desktop.open(file);
+            }
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -487,9 +513,21 @@ public class MainViewController {
         }
 
         try {
-            // Recargar imagen
-            Image nuevaImagen = new Image(file.toURI().toString());
+            // Recargar imagen SIN BLOQUEO
+            Image nuevaImagen = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+            if (nuevaImagen == null) {
+                throw new Exception("No se pudo cargar la imagen (null return)");
+            }
+
             fondo.setImagen(nuevaImagen);
+
+            // Preguntar modo de ajuste (Sangre vs Final)
+            // Esto permite reajustar si el usuario cambió el tamaño en el editor externo
+            FondoFitMode nuevoModo = mostrarDialogoFitMode();
+            if (nuevoModo != null) {
+                fondo.setFitMode(nuevoModo);
+            }
+
             fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
                     EditorCanvasManager.BLEED_MARGIN);
 
@@ -500,7 +538,7 @@ public class MainViewController {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Éxito");
             alert.setHeaderText("Fondo recargado");
-            alert.setContentText("La imagen se ha recargado correctamente desde el disco.");
+            alert.setContentText("La imagen se ha recargado y ajustado correctamente.");
             alert.showAndWait();
 
         } catch (Exception ex) {

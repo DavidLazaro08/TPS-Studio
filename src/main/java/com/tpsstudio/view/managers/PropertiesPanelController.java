@@ -13,6 +13,10 @@ import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.util.function.Consumer;
+import com.tpsstudio.service.SettingsManager;
+import com.tpsstudio.util.ImageUtils;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 
 /**
  * Controller responsable de construir y gestionar el panel de propiedades
@@ -156,26 +160,72 @@ public class PropertiesPanelController {
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
             if (file != null) {
                 try {
-                    Image img = new Image(file.toURI().toString());
-                    fondo.setImagen(img);
-                    fondo.setRutaArchivo(file.getAbsolutePath());
-                    fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
-                            EditorCanvasManager.BLEED_MARGIN);
-                    notifyCanvasRedraw();
+                    // Usar carga sin bloqueo
+                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+                    if (img != null) {
+                        fondo.setImagen(img);
+                        fondo.setRutaArchivo(file.getAbsolutePath());
+                        fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
+                                EditorCanvasManager.BLEED_MARGIN);
+                        notifyCanvasRedraw();
+                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }
         });
 
-        Button btnEditarExterno = new Button("Editar Externa...");
-        btnEditarExterno.setMaxWidth(MAX_CONTROL_WIDTH);
+        Button btnEditarExterno = new Button("Editor Externo");
+        btnEditarExterno.setMaxWidth(Double.MAX_VALUE); // Expandir en el HBox
         btnEditarExterno.getStyleClass().add("toolbox-btn");
         btnEditarExterno.setOnAction(e -> {
             if (onEditExternal != null) {
                 onEditExternal.accept(fondo);
             }
         });
+
+        Button btnConfigEditor = new Button("⚙");
+        btnConfigEditor.setTooltip(new Tooltip("Configurar editor externo..."));
+        btnConfigEditor.getStyleClass().add("toolbox-btn");
+        btnConfigEditor.setPrefWidth(40);
+        btnConfigEditor.setOnAction(e -> {
+            // 1. Mostrar explicación
+            Alert info = new Alert(Alert.AlertType.CONFIRMATION);
+            info.setTitle("Configurar Editor Externo");
+            info.setHeaderText("Vincula tu editor de imágenes favorito");
+            info.setContentText(
+                    "Selecciona el archivo ejecutable (.exe) de tu programa de edición preferido \n" +
+                            "(por ejemplo: Photoshop, Illustrator, GIMP...).\n\n" +
+                            "Esto permitirá abrir los fondos directamente en ese programa al pulsar 'Editar Externa'.");
+
+            ButtonType btnBuscar = new ButtonType("Buscar Ejecutable...", ButtonBar.ButtonData.OK_DONE);
+            ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+            info.getButtonTypes().setAll(btnBuscar, btnCancelar);
+
+            info.showAndWait().ifPresent(response -> {
+                if (response == btnBuscar) {
+                    // 2. Abrir selector
+                    FileChooser fc = new FileChooser();
+                    fc.setTitle("Seleccionar Ejecutable del Editor");
+                    fc.getExtensionFilters().addAll(
+                            new FileChooser.ExtensionFilter("Ejecutables", "*.exe", "*.app", "*.bat", "*.cmd"));
+                    File editor = fc.showOpenDialog(canvas.getScene().getWindow());
+                    if (editor != null) {
+                        new SettingsManager().setExternalEditorPath(editor.getAbsolutePath());
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Editor Configurado");
+                        alert.setHeaderText(null);
+                        alert.setContentText("¡Listo! Se usará: " + editor.getName());
+                        alert.showAndWait();
+                    }
+                }
+            });
+        });
+
+        HBox cajaEdicion = new HBox(5);
+        cajaEdicion.setMaxWidth(MAX_CONTROL_WIDTH);
+        HBox.setHgrow(btnEditarExterno, Priority.ALWAYS);
+        cajaEdicion.getChildren().addAll(btnEditarExterno, btnConfigEditor);
 
         Button btnRecargar = new Button("Recargar");
         btnRecargar.setMaxWidth(MAX_CONTROL_WIDTH);
@@ -188,7 +238,7 @@ public class PropertiesPanelController {
 
         props.getChildren().addAll(lblProps, lblInfo, lblDim,
                 new Separator(), lblModo, rbBleed, rbFinal, new Separator(),
-                btnReemplazar, btnEditarExterno, btnRecargar);
+                btnReemplazar, cajaEdicion, btnRecargar);
     }
 
     /**
@@ -481,11 +531,13 @@ public class PropertiesPanelController {
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
             if (file != null) {
                 try {
-                    Image img = new Image(file.toURI().toString());
-                    imagen.setImagen(img);
-                    imagen.setRutaArchivo(file.getAbsolutePath());
-                    // originalWidth and originalHeight are automatically updated by setImagen()
-                    notifyCanvasRedraw();
+                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+                    if (img != null) {
+                        imagen.setImagen(img);
+                        imagen.setRutaArchivo(file.getAbsolutePath());
+                        // originalWidth and originalHeight are automatically updated by setImagen()
+                        notifyCanvasRedraw();
+                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
