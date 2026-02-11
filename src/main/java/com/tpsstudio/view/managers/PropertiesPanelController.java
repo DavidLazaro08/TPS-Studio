@@ -1,70 +1,52 @@
 package com.tpsstudio.view.managers;
 
-import com.tpsstudio.model.elements.*;
-import com.tpsstudio.model.enums.*;
-import com.tpsstudio.model.project.*;
+import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ImagenElemento;
+import com.tpsstudio.model.elements.ImagenFondoElemento;
+import com.tpsstudio.model.elements.TextoElemento;
+import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.service.SettingsManager;
+import com.tpsstudio.util.ImageUtils;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.util.function.Consumer;
-import com.tpsstudio.service.SettingsManager;
-import com.tpsstudio.util.ImageUtils;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 
 /**
- * Controlador del panel "Propiedades".
- * Este panel es el cerebro derecho de la interfaz: cambia dinámicamente según
- * qué toques.
- * 
- * Si tocas un texto -> muestra fuente, tamaño, color.
- * Si tocas una imagen -> muestra opacidad, reemplazo.
- * Si tocas el fondo -> opciones de ajuste y sangrado.
- * 
- * Usa "Bindings" (listeners) para que si escribes en un TextField, el elemento
- * cambie en tiempo real.
+ * Construye el panel de propiedades de la parte derecha.
+ * El contenido cambia según el elemento seleccionado:
+ * - Texto: contenido, fuente, color, etc.
+ * - Imagen: tamaño, opacidad, reemplazo...
+ * - Fondo: modo de ajuste, recargar, editor externo...
  */
 public class PropertiesPanelController {
 
-    // Tope de anchura para que los inputs no se estiren feo
     private static final double MAX_CONTROL_WIDTH = 200.0;
 
-    // Referencia al Canvas para saber quién es nuestra ventana padre (para modales)
     private final Canvas canvas;
 
-    // Callbacks: cables para avisar al jefe (MainViewController) cuando algo pasa
     private Runnable onPropertyChanged;
     private Runnable onCanvasRedrawNeeded;
     private Consumer<ImagenFondoElemento> onEditExternal;
     private Consumer<ImagenFondoElemento> onReload;
 
-    /**
-     * Constructor
-     * 
-     * @param canvas Recibimos el canvas para poder preguntar quién es la ventana
-     *               padre
-     */
     public PropertiesPanelController(Canvas canvas) {
         this.canvas = canvas;
     }
 
-    /**
-     * Callback: Se disparará cuando toquemos cualquier propiedad vital
-     */
     public void setOnPropertyChanged(Runnable callback) {
         this.onPropertyChanged = callback;
     }
 
-    /**
-     * Callback: Se disparará cuando necesitemos que el Canvas se repinte (ej.
-     * cambio color)
-     */
     public void setOnCanvasRedrawNeeded(Runnable callback) {
         this.onCanvasRedrawNeeded = callback;
     }
@@ -78,12 +60,11 @@ public class PropertiesPanelController {
     }
 
     /**
-     * Método Maestro: Construye todo el panel desde cero.
-     * Analiza qué elemento hemos clicado y llama al constructor específico
-     * (sub-paneles).
+     * Construye el panel completo en función del elemento seleccionado.
+     * Nota: ahora mismo "proyecto" no se usa, pero lo dejamos por si luego hace falta.
      */
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
-        VBox props = new VBox(8); // Espaciado vertical de 8px
+        VBox props = new VBox(8);
         props.setPadding(new Insets(30));
         props.setFillWidth(true);
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
@@ -95,35 +76,101 @@ public class PropertiesPanelController {
             Label placeholder = new Label("Seleccione un elemento");
             placeholder.setStyle("-fx-text-fill: #6a6568; -fx-font-size: 12px; -fx-font-style: italic;");
             props.getChildren().addAll(lblProps, placeholder);
-        } else if (elemento instanceof ImagenFondoElemento) {
-            buildBackgroundPanel(props, lblProps, (ImagenFondoElemento) elemento);
-        } else if (elemento instanceof TextoElemento) {
-            buildTextPanel(props, lblProps, (TextoElemento) elemento);
-        } else if (elemento instanceof ImagenElemento) {
-            buildImagePanel(props, lblProps, (ImagenElemento) elemento);
+            return props;
+        }
+
+        if (elemento instanceof ImagenFondoElemento fondo) {
+            buildBackgroundPanel(props, lblProps, fondo);
+        } else if (elemento instanceof TextoElemento texto) {
+            buildTextPanel(props, lblProps, texto);
+        } else if (elemento instanceof ImagenElemento imagen) {
+            buildImagePanel(props, lblProps, imagen);
         }
 
         return props;
     }
 
+    // ===================== HELPERS (para no repetir código) =====================
+
     /**
-     * Sub-panel: Configuración específica del Fondo (Background)
+     * Crea un TextField numérico (X/Y/Ancho/Alto) con listener seguro.
+     * Si el usuario escribe algo no numérico, simplemente se ignora.
      */
+    private TextField createNumberField(double initialValue, String prompt, Consumer<Double> onValidChange) {
+        TextField tf = new TextField(String.format("%.0f", initialValue));
+        tf.setPromptText(prompt);
+        tf.setMaxWidth(MAX_CONTROL_WIDTH);
+
+        tf.textProperty().addListener((obs, old, newVal) -> {
+            try {
+                double value = Double.parseDouble(newVal);
+                onValidChange.accept(value);
+                notifyCanvasRedraw();
+            } catch (NumberFormatException ignored) {
+                // Si escribe letras o deja vacío, no hacemos nada
+            }
+        });
+
+        return tf;
+    }
+
+    /**
+     * Añade al VBox el bloque de "Posición y Tamaño" (X, Y, Ancho, Alto).
+     * Sirve tanto para TextoElemento como para ImagenElemento.
+     */
+    private void addPositionSizeControls(VBox props,
+                                         double x, Consumer<Double> setX,
+                                         double y, Consumer<Double> setY,
+                                         double w, Consumer<Double> setW,
+                                         double h, Consumer<Double> setH) {
+
+        Label lblPos = new Label("Posición y Tamaño");
+        lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+        TextField txtX = createNumberField(x, "X", setX);
+        TextField txtY = createNumberField(y, "Y", setY);
+        TextField txtW = createNumberField(w, "Ancho", setW);
+        TextField txtH = createNumberField(h, "Alto", setH);
+
+        props.getChildren().addAll(lblPos, txtX, txtY, txtW, txtH);
+    }
+
+    /**
+     * Bloque reutilizable: "Etiqueta (opcional)" para dar nombre lógico al elemento.
+     * Esto es lo que luego te sirve para capas/listas, o para identificar cada objeto.
+     */
+    private void addEtiquetaControl(VBox props, String etiquetaActual, Consumer<String> setEtiqueta, String prompt) {
+        Label lblEtiqueta = new Label("Etiqueta (opcional):");
+        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+
+        TextField txtEtiqueta = new TextField(etiquetaActual != null ? etiquetaActual : "");
+        txtEtiqueta.setPromptText(prompt);
+        txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
+
+        txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
+            setEtiqueta.accept(newVal.isEmpty() ? null : newVal);
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblEtiqueta, txtEtiqueta, new Separator());
+    }
+
+    // ===================== PANEL FONDO =====================
+
     private void buildBackgroundPanel(VBox props, Label lblProps, ImagenFondoElemento fondo) {
         Label lblInfo = new Label("Fondo de la tarjeta");
         lblInfo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px; -fx-font-style: italic;");
 
-        Label lblDim = new Label(String.format("Dimensiones: %.0f × %.0f px",
-                fondo.getWidth(), fondo.getHeight()));
+        Label lblDim = new Label(String.format("Dimensiones: %.0f × %.0f px", fondo.getWidth(), fondo.getHeight()));
         lblDim.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
         lblDim.setMaxWidth(MAX_CONTROL_WIDTH);
         lblDim.setWrapText(true);
 
-        // Selector de Modo Ajuste (Con Sangre vs Corte Final)
         Label lblModo = new Label("Modo de ajuste:");
         lblModo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
         ToggleGroup modoGroup = new ToggleGroup();
+
         RadioButton rbBleed = new RadioButton("Con sangre (CR80 + sangrado)");
         rbBleed.setToggleGroup(modoGroup);
         rbBleed.setSelected(fondo.getFitMode() == FondoFitMode.BLEED);
@@ -144,9 +191,13 @@ public class PropertiesPanelController {
             } else {
                 fondo.setFitMode(FondoFitMode.FINAL);
             }
-            // Recalcular tamaño al vuelo
-            fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
-                    EditorCanvasManager.BLEED_MARGIN);
+
+            fondo.ajustarATamaño(
+                    EditorCanvasManager.CARD_WIDTH,
+                    EditorCanvasManager.CARD_HEIGHT,
+                    EditorCanvasManager.BLEED_MARGIN
+            );
+
             notifyPropertyChanged();
             notifyCanvasRedraw();
         });
@@ -158,28 +209,34 @@ public class PropertiesPanelController {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Fondo");
             fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                    new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif")
+            );
+
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-            if (file != null) {
-                try {
-                    // Usar carga inteligente sin bloqueo de fichero (Proxy)
-                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
-                    if (img != null) {
-                        fondo.setImagen(img);
-                        fondo.setRutaArchivo(file.getAbsolutePath());
-                        fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
-                                EditorCanvasManager.BLEED_MARGIN);
-                        notifyCanvasRedraw();
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+            if (file == null) return;
+
+            try {
+                Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+                if (img != null) {
+                    fondo.setImagen(img);
+                    fondo.setRutaArchivo(file.getAbsolutePath());
+
+                    fondo.ajustarATamaño(
+                            EditorCanvasManager.CARD_WIDTH,
+                            EditorCanvasManager.CARD_HEIGHT,
+                            EditorCanvasManager.BLEED_MARGIN
+                    );
+
+                    notifyPropertyChanged();
+                    notifyCanvasRedraw();
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         });
 
-        // Botón para editar externamente (Photoshop, etc)
         Button btnEditarExterno = new Button("Editor Externo");
-        btnEditarExterno.setMaxWidth(Double.MAX_VALUE); // Expandir en el HBox
+        btnEditarExterno.setMaxWidth(Double.MAX_VALUE);
         btnEditarExterno.getStyleClass().add("toolbox-btn");
         btnEditarExterno.setOnAction(e -> {
             if (onEditExternal != null) {
@@ -187,41 +244,42 @@ public class PropertiesPanelController {
             }
         });
 
-        // Botón engranaje configuración editor
         Button btnConfigEditor = new Button("⚙");
         btnConfigEditor.setTooltip(new Tooltip("Configurar editor externo..."));
         btnConfigEditor.getStyleClass().add("toolbox-btn");
         btnConfigEditor.setPrefWidth(40);
         btnConfigEditor.setOnAction(e -> {
-            // 1. Mostrar explicación amigable
             Alert info = new Alert(Alert.AlertType.CONFIRMATION);
             info.setTitle("Configurar Editor Externo");
-            info.setHeaderText("Vincula tu editor de imágenes favorito");
+            info.setHeaderText("Vincula tu editor de imágenes");
             info.setContentText(
-                    "Selecciona el archivo ejecutable (.exe) de tu programa de edición preferido \n" +
-                            "(por ejemplo: Photoshop, Illustrator, GIMP...).\n\n" +
-                            "Esto permitirá abrir los fondos directamente en ese programa al pulsar 'Editar Externa'.");
+                    "Selecciona el ejecutable de tu programa de edición.\n" +
+                            "Ejemplos: Photoshop, Illustrator, GIMP...\n\n" +
+                            "Luego podrás abrir el fondo desde aquí."
+            );
 
-            ButtonType btnBuscar = new ButtonType("Buscar Ejecutable...", ButtonBar.ButtonData.OK_DONE);
+            ButtonType btnBuscar = new ButtonType("Buscar ejecutable...", ButtonBar.ButtonData.OK_DONE);
             ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
             info.getButtonTypes().setAll(btnBuscar, btnCancelar);
 
             info.showAndWait().ifPresent(response -> {
-                if (response == btnBuscar) {
-                    // 2. Abrir selector de ejecutables
-                    FileChooser fc = new FileChooser();
-                    fc.setTitle("Seleccionar Ejecutable del Editor");
-                    fc.getExtensionFilters().addAll(
-                            new FileChooser.ExtensionFilter("Ejecutables", "*.exe", "*.app", "*.bat", "*.cmd"));
-                    File editor = fc.showOpenDialog(canvas.getScene().getWindow());
-                    if (editor != null) {
-                        new SettingsManager().setExternalEditorPath(editor.getAbsolutePath());
-                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                        alert.setTitle("Editor Configurado");
-                        alert.setHeaderText(null);
-                        alert.setContentText("¡Listo! Se usará: " + editor.getName());
-                        alert.showAndWait();
-                    }
+                if (response != btnBuscar) return;
+
+                FileChooser fc = new FileChooser();
+                fc.setTitle("Seleccionar Ejecutable del Editor");
+                fc.getExtensionFilters().addAll(
+                        new FileChooser.ExtensionFilter("Ejecutables", "*.exe", "*.bat", "*.cmd", "*.app")
+                );
+
+                File editor = fc.showOpenDialog(canvas.getScene().getWindow());
+                if (editor != null) {
+                    new SettingsManager().setExternalEditorPath(editor.getAbsolutePath());
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Editor Configurado");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Se usará: " + editor.getName());
+                    alert.showAndWait();
                 }
             });
         });
@@ -240,83 +298,34 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(lblProps, lblInfo, lblDim,
-                new Separator(), lblModo, rbBleed, rbFinal, new Separator(),
-                btnReemplazar, cajaEdicion, btnRecargar);
+        props.getChildren().addAll(
+                lblProps, lblInfo, lblDim,
+                new Separator(),
+                lblModo, rbBleed, rbFinal,
+                new Separator(),
+                btnReemplazar, cajaEdicion, btnRecargar
+        );
     }
 
-    /**
-     * Sub-panel: Configuración de Texto (Fuentes, Colores, Contenido)
-     */
+    // ===================== PANEL TEXTO =====================
+
     private void buildTextPanel(VBox props, Label lblProps, TextoElemento texto) {
-        // Etiqueta lógica (ej: "NOMBRE_CLIENTE")
-        Label lblEtiqueta = new Label("Etiqueta (opcional):");
-        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        props.getChildren().add(lblProps);
 
-        TextField txtEtiqueta = new TextField(texto.getEtiqueta() != null ? texto.getEtiqueta() : "");
-        txtEtiqueta.setPromptText("Ej: NOMBRE, Nº SOCIO, etc.");
-        txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
-            texto.setEtiqueta(newVal.isEmpty() ? null : newVal);
-            // Si cambia la etiqueta, actualizamos la lista de capas
-            if (onCanvasRedrawNeeded != null) {
-                onCanvasRedrawNeeded.run();
-            }
-        });
+        // Etiqueta del elemento (nombre lógico)
+        addEtiquetaControl(props, texto.getEtiqueta(), texto::setEtiqueta, "Ej: NOMBRE, Nº SOCIO...");
 
-        // Posición y Tamaño (Coordenadas)
-        Label lblPos = new Label("Posición y Tamaño");
-        lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        // Posición / Tamaño (X/Y/W/H)
+        addPositionSizeControls(
+                props,
+                texto.getX(), texto::setX,
+                texto.getY(), texto::setY,
+                texto.getWidth(), texto::setWidth,
+                texto.getHeight(), texto::setHeight
+        );
 
-        TextField txtX = new TextField(String.format("%.0f", texto.getX()));
-        TextField txtY = new TextField(String.format("%.0f", texto.getY()));
-        TextField txtW = new TextField(String.format("%.0f", texto.getWidth()));
-        TextField txtH = new TextField(String.format("%.0f", texto.getHeight()));
+        props.getChildren().add(new Separator());
 
-        txtX.setPromptText("X");
-        txtY.setPromptText("Y");
-        txtW.setPromptText("Ancho");
-        txtH.setPromptText("Alto");
-
-        txtX.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtY.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtW.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtH.setMaxWidth(MAX_CONTROL_WIDTH);
-
-        // Listeners manuales por si el usuario escribe coordenadas a mano
-        txtX.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                texto.setX(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtY.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                texto.setY(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtW.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                texto.setWidth(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtH.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                texto.setHeight(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        // Contenido del texto
         Label lblTexto = new Label("Texto");
         lblTexto.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -328,7 +337,6 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Selector de Fuente (Font Family)
         Label lblFuente = new Label("Fuente:");
         lblFuente.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -343,7 +351,6 @@ public class PropertiesPanelController {
             }
         });
 
-        // Tamaño de letra
         Label lblTamaño = new Label("Tamaño:");
         lblTamaño.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -351,45 +358,51 @@ public class PropertiesPanelController {
         spnTamaño.setEditable(true);
         spnTamaño.setMaxWidth(MAX_CONTROL_WIDTH);
         spnTamaño.valueProperty().addListener((obs, old, newVal) -> {
-            texto.setFontSize(newVal);
-            notifyCanvasRedraw();
+            if (newVal != null) {
+                texto.setFontSize(newVal);
+                notifyCanvasRedraw();
+            }
         });
 
-        // Selector de Color
         Label lblColor = new Label("Color:");
         lblColor.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
         ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
         cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
         cpColor.valueProperty().addListener((obs, old, newVal) -> {
-            // Convertir Color de JavaFX a Hex string #RRGGBB
             texto.setColor(String.format("#%02X%02X%02X",
                     (int) (newVal.getRed() * 255),
                     (int) (newVal.getGreen() * 255),
-                    (int) (newVal.getBlue() * 255)));
+                    (int) (newVal.getBlue() * 255)
+            ));
             notifyCanvasRedraw();
         });
 
-        // Alineación interna
         Label lblAlineacion = new Label("Alineación:");
         lblAlineacion.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
         ComboBox<String> cmbAlineacion = new ComboBox<>();
         cmbAlineacion.getItems().addAll("Izquierda", "Centro", "Derecha");
+
         String currentAlign = texto.getAlineacion();
         cmbAlineacion.setValue(
                 "LEFT".equals(currentAlign) ? "Izquierda"
-                        : "CENTER".equals(currentAlign) ? "Centro" : "Derecha");
+                        : "CENTER".equals(currentAlign) ? "Centro"
+                        : "Derecha"
+        );
+
         cmbAlineacion.setMaxWidth(MAX_CONTROL_WIDTH);
         cmbAlineacion.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 texto.setAlineacion(
-                        "Izquierda".equals(newVal) ? "LEFT" : "Centro".equals(newVal) ? "CENTER" : "RIGHT");
+                        "Izquierda".equals(newVal) ? "LEFT"
+                                : "Centro".equals(newVal) ? "CENTER"
+                                : "RIGHT"
+                );
                 notifyCanvasRedraw();
             }
         });
 
-        // Estilos extra (Negrita, Cursiva)
         Label lblEstilo = new Label("Estilo:");
         lblEstilo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
 
@@ -411,85 +424,35 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        props.getChildren().addAll(lblProps, lblEtiqueta, txtEtiqueta, new Separator(),
-                lblPos, txtX, txtY, txtW, txtH,
-                new Separator(), lblTexto, txtContenido,
-                lblFuente, cmbFuente, lblTamaño, spnTamaño,
-                lblColor, cpColor, lblAlineacion, cmbAlineacion,
-                lblEstilo, chkNegrita, chkCursiva);
+        props.getChildren().addAll(
+                lblTexto, txtContenido,
+                lblFuente, cmbFuente,
+                lblTamaño, spnTamaño,
+                lblColor, cpColor,
+                lblAlineacion, cmbAlineacion,
+                lblEstilo, chkNegrita, chkCursiva
+        );
     }
 
-    /**
-     * Sub-panel: Configuración de Imágenes flotantes (Logos, fotos carnet...)
-     */
+    // ===================== PANEL IMAGEN =====================
+
     private void buildImagePanel(VBox props, Label lblProps, ImagenElemento imagen) {
-        // Etiqueta lógica
-        Label lblEtiqueta = new Label("Etiqueta (opcional):");
-        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        props.getChildren().add(lblProps);
 
-        TextField txtEtiqueta = new TextField(imagen.getEtiqueta() != null ? imagen.getEtiqueta() : "");
-        txtEtiqueta.setPromptText("Ej: FOTO CARNET, LOGO, etc.");
-        txtEtiqueta.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtEtiqueta.textProperty().addListener((obs, old, newVal) -> {
-            imagen.setEtiqueta(newVal.isEmpty() ? null : newVal);
-            if (onCanvasRedrawNeeded != null) {
-                onCanvasRedrawNeeded.run();
-            }
-        });
+        // Etiqueta del elemento (nombre lógico)
+        addEtiquetaControl(props, imagen.getEtiqueta(), imagen::setEtiqueta, "Ej: FOTO, LOGO...");
 
-        // Posición y Tamaño
-        Label lblPos = new Label("Posición y Tamaño");
-        lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        // Posición / Tamaño (X/Y/W/H)
+        addPositionSizeControls(
+                props,
+                imagen.getX(), imagen::setX,
+                imagen.getY(), imagen::setY,
+                imagen.getWidth(), imagen::setWidth,
+                imagen.getHeight(), imagen::setHeight
+        );
 
-        TextField txtX = new TextField(String.format("%.0f", imagen.getX()));
-        TextField txtY = new TextField(String.format("%.0f", imagen.getY()));
-        TextField txtW = new TextField(String.format("%.0f", imagen.getWidth()));
-        TextField txtH = new TextField(String.format("%.0f", imagen.getHeight()));
+        props.getChildren().add(new Separator());
 
-        txtX.setPromptText("X");
-        txtY.setPromptText("Y");
-        txtW.setPromptText("Ancho");
-        txtH.setPromptText("Alto");
-
-        txtX.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtY.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtW.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtH.setMaxWidth(MAX_CONTROL_WIDTH);
-
-        // Listeners
-        txtX.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                imagen.setX(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtY.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                imagen.setY(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtW.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                imagen.setWidth(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        txtH.textProperty().addListener((obs, old, newVal) -> {
-            try {
-                imagen.setHeight(Double.parseDouble(newVal));
-                notifyCanvasRedraw();
-            } catch (NumberFormatException ignored) {
-            }
-        });
-
-        // Información de la imagen original
         Label lblImagen = new Label("Imagen");
         lblImagen.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -499,7 +462,6 @@ public class PropertiesPanelController {
         lblDimOrig.setMaxWidth(MAX_CONTROL_WIDTH);
         lblDimOrig.setWrapText(true);
 
-        // Opacidad
         Label lblOpacidad = new Label("Opacidad:");
         lblOpacidad.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
 
@@ -513,7 +475,6 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Mantener proporción al redimensionar
         CheckBox chkProporcion = new CheckBox("Mantener proporción");
         chkProporcion.setSelected(imagen.isMantenerProporcion());
         chkProporcion.setStyle("-fx-text-fill: #e8e6e7;");
@@ -530,42 +491,42 @@ public class PropertiesPanelController {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Imagen");
             fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                    new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif")
+            );
+
             File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-            if (file != null) {
-                try {
-                    // Cargar imagen con seguridad anti-bloqueo
-                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
-                    if (img != null) {
-                        imagen.setImagen(img);
-                        imagen.setRutaArchivo(file.getAbsolutePath());
-                        // Dimensiones se auto-actualizan en el objeto imagen
-                        notifyCanvasRedraw();
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+            if (file == null) return;
+
+            try {
+                Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+                if (img != null) {
+                    imagen.setImagen(img);
+                    imagen.setRutaArchivo(file.getAbsolutePath());
+
+                    notifyPropertyChanged();
+                    notifyCanvasRedraw();
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         });
 
-        props.getChildren().addAll(lblProps, lblEtiqueta, txtEtiqueta, new Separator(),
-                lblPos, txtX, txtY, txtW, txtH,
-                new Separator(), lblImagen, lblDimOrig,
-                lblOpacidad, sldOpacidad, chkProporcion, btnReemplazar);
+        props.getChildren().addAll(
+                lblImagen, lblDimOrig,
+                lblOpacidad, sldOpacidad,
+                chkProporcion,
+                btnReemplazar
+        );
     }
 
-    /**
-     * Auxiliar: Avisa a los listeners de que una propiedad cambió
-     */
+    // ===================== NOTIFICACIONES =====================
+
     private void notifyPropertyChanged() {
         if (onPropertyChanged != null) {
             onPropertyChanged.run();
         }
     }
 
-    /**
-     * Auxiliar: Solicita un repintado del canvas
-     */
     private void notifyCanvasRedraw() {
         if (onCanvasRedrawNeeded != null) {
             onCanvasRedrawNeeded.run();

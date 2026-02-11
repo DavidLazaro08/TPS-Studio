@@ -3,32 +3,33 @@ package com.tpsstudio.viewmodel;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-/**
- * ViewModel principal (aunque de momento hace poquito).
- * Se encarga de guardar el estado de la UI que no tiene cabida en los Managers.
- * 
- * Ahora mismo solo gestiona el texto de la barra de estado.
- */
+/* ViewModel principal de la aplicación.
+ * Se encarga de mantener el estado de la interfaz que no tiene cabida
+ * en los Managers ni en los Controllers.
+ *
+ * Por ahora solo gestiona el texto de la barra de estado inferior
+ * ("Listo", "Guardado...", etc.). */
+
 public class MainViewModel {
 
-    // Texto que sale abajo a la izquierda ("Listo", "Guardado...", etc.)
+    // Texto que se muestra en la barra de estado
     private final StringProperty statusText;
 
     public MainViewModel() {
         this.statusText = new SimpleStringProperty("TPS Studio listo");
     }
 
-    // Property getter (para conectar con la UI automáticamente)
+    // Property getter (binding con la UI)
     public StringProperty statusTextProperty() {
         return statusText;
     }
 
-    // Getter normal (para leer el valor)
+    // Getter normal
     public String getStatusText() {
         return statusText.get();
     }
 
-    // Setter normal (para cambiar el mensaje)
+    // Setter normal
     public void setStatusText(String text) {
         statusText.set(text);
     }

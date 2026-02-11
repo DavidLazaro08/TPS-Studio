@@ -31,8 +31,18 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
     public EditarProyectoDialog(Proyecto proyecto) {
         this.proyecto = proyecto;
-        this.metadata = proyecto.getMetadata();
-        this.clienteInfoActual = metadata != null ? metadata.getClienteInfo() : null;
+
+        // Asegurar metadata no-null (por si acaso)
+        ProyectoMetadata meta = proyecto.getMetadata();
+        if (meta == null) {
+            meta = new ProyectoMetadata();
+            meta.setNombre(proyecto.getNombre());
+        }
+        this.metadata = meta;
+
+        // Asegurar clienteInfoActual no-null
+        this.clienteInfoActual = (metadata.getClienteInfo() != null) ? metadata.getClienteInfo() : new ClienteInfo();
+        metadata.setClienteInfo(this.clienteInfoActual);
 
         setTitle("Editar Proyecto");
         setHeaderText("Modificar información del proyecto");
@@ -52,9 +62,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         HBox clienteBox = new HBox(10);
         clienteBox.setAlignment(Pos.CENTER_LEFT);
 
-        lblClienteInfo = new Label(clienteInfoActual != null && clienteInfoActual.tieneInformacion()
-                ? "✓ " + clienteInfoActual.getNombreEmpresa()
-                : "Sin datos del cliente");
+        lblClienteInfo = new Label(getTextoClienteInfo(clienteInfoActual));
         lblClienteInfo.setStyle("-fx-text-fill: #666;");
 
         Button btnEditarCliente = new Button("📋 Editar Datos Cliente");
@@ -67,6 +75,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         chkVincularBD = new CheckBox("Vincular base de datos (Excel/Access)");
 
         HBox bdBox = new HBox(10);
+
         txtRutaBD = new TextField();
         txtRutaBD.setPromptText("Ruta del archivo de base de datos");
         txtRutaBD.setEditable(false);
@@ -80,7 +89,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         bdBox.getChildren().addAll(txtRutaBD, btnExaminarBD);
 
         // Si ya tiene BD vinculada
-        if (metadata != null && metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
+        if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
             chkVincularBD.setSelected(true);
             txtRutaBD.setText(metadata.getRutaBBDD());
             txtRutaBD.setDisable(false);
@@ -106,7 +115,8 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
                 new Separator(),
                 lblBD, chkVincularBD, bdBox,
                 new Separator(),
-                lblInfo);
+                lblInfo
+        );
 
         getDialogPane().setContent(content);
 
@@ -125,7 +135,8 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
             confirmacion.setTitle("Confirmar eliminación");
             confirmacion.setHeaderText("¿Eliminar proyecto de la lista?");
             confirmacion.setContentText(
-                    "El proyecto se eliminará de la lista de Trabajos, pero los archivos en disco NO se borrarán.");
+                    "El proyecto se eliminará de la lista de Trabajos, pero los archivos en disco NO se borrarán."
+            );
 
             Optional<ButtonType> resultado = confirmacion.showAndWait();
             if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
@@ -147,10 +158,11 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
             if (dialogButton == btnGuardar) {
                 // Actualizar metadata
                 metadata.setNombre(txtNombre.getText().trim());
-                metadata.setClienteInfo(clienteInfoActual);
+                metadata.setClienteInfo(clienteInfoActual != null ? clienteInfoActual : new ClienteInfo());
 
-                if (chkVincularBD.isSelected() && !txtRutaBD.getText().isEmpty()) {
-                    metadata.setRutaBBDD(txtRutaBD.getText());
+                if (chkVincularBD.isSelected()) {
+                    String ruta = txtRutaBD.getText() != null ? txtRutaBD.getText().trim() : "";
+                    metadata.setRutaBBDD(ruta.isEmpty() ? null : ruta);
                 } else {
                     metadata.setRutaBBDD(null);
                 }
@@ -162,16 +174,14 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
     }
 
     private void abrirDialogoCliente() {
+        if (clienteInfoActual == null) clienteInfoActual = new ClienteInfo();
+
         DatosClienteDialog dialog = new DatosClienteDialog(clienteInfoActual);
         Optional<ClienteInfo> resultado = dialog.showAndWait();
 
         if (resultado.isPresent()) {
-            clienteInfoActual = resultado.get();
-            if (clienteInfoActual.tieneInformacion()) {
-                lblClienteInfo.setText("✓ " + clienteInfoActual.getNombreEmpresa());
-            } else {
-                lblClienteInfo.setText("Sin datos del cliente");
-            }
+            clienteInfoActual = resultado.get() != null ? resultado.get() : new ClienteInfo();
+            lblClienteInfo.setText(getTextoClienteInfo(clienteInfoActual));
         }
     }
 
@@ -181,12 +191,50 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Archivos de Base de Datos", "*.xlsx", "*.xls", "*.accdb", "*.mdb"),
                 new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"),
-                new FileChooser.ExtensionFilter("Access", "*.accdb", "*.mdb"));
+                new FileChooser.ExtensionFilter("Access", "*.accdb", "*.mdb")
+        );
+
+        File inicial = buscarDirectorioInicial();
+        if (inicial != null && inicial.exists() && inicial.isDirectory()) {
+            fileChooser.setInitialDirectory(inicial);
+        }
 
         File file = fileChooser.showOpenDialog(getDialogPane().getScene().getWindow());
         if (file != null) {
             txtRutaBD.setText(file.getAbsolutePath());
         }
+    }
+
+    private File buscarDirectorioInicial() {
+        String userHome = System.getProperty("user.home");
+
+        File docsES = new File(userHome, "Documentos");
+        if (docsES.exists() && docsES.isDirectory()) return docsES;
+
+        File docsEN = new File(userHome, "Documents");
+        if (docsEN.exists() && docsEN.isDirectory()) return docsEN;
+
+        File desktop = new File(userHome, "Desktop");
+        if (desktop.exists() && desktop.isDirectory()) return desktop;
+
+        File home = new File(userHome);
+        if (home.exists() && home.isDirectory()) return home;
+
+        return null;
+    }
+
+    private String getTextoClienteInfo(ClienteInfo info) {
+        if (info == null || !info.tieneInformacion()) {
+            return "Sin datos del cliente";
+        }
+
+        String empresa = info.getNombreEmpresa() != null ? info.getNombreEmpresa().trim() : "";
+        String contacto = info.getNombreContacto() != null ? info.getNombreContacto().trim() : "";
+
+        if (!empresa.isEmpty()) return "✓ " + empresa;
+        if (!contacto.isEmpty()) return "✓ " + contacto;
+
+        return "✓ Datos del cliente añadidos";
     }
 
     public boolean isEliminarProyecto() {

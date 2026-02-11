@@ -30,9 +30,19 @@ import javafx.animation.TranslateTransition;
 import javafx.scene.effect.DropShadow;
 import javafx.util.Duration;
 
+/* Controlador principal de TPS Studio.
+ * Coordina la pantalla de trabajo: canvas central, paneles laterales y lista de proyectos.
+ *
+ * Nota:
+ * - La lógica de negocio de proyectos vive en ProjectManager.
+ * - El renderizado y eventos del canvas se delegan en EditorCanvasManager.
+ * - El montaje de paneles y modos se gestiona con ModeManager. */
+
 public class MainViewController {
 
-    // ========== FXML Components ==========
+    // =====================================================
+    // FXML (Componentes)
+    // =====================================================
     @FXML
     private VBox leftPanel;
     @FXML
@@ -56,30 +66,43 @@ public class MainViewController {
     @FXML
     private ToggleButton togglePropiedades;
 
-    // ========== State Variables ==========
+    // =====================================================
+    // Estado
+    // =====================================================
     private AppMode currentMode = AppMode.PRODUCTION;
     private Proyecto proyectoActual;
     private Elemento elementoSeleccionado;
-    private double zoomLevel = 1.3; // 130% zoom inicial
+    private double zoomLevel = 1.4; // 130% zoom inicial
 
-    // EditorCanvasManager - maneja renderizado y eventos de mouse
+    // =====================================================
+    // Managers (coordinación)
+    // =====================================================
+    // maneja renderizado y eventos de mouse
     private EditorCanvasManager canvasManager;
-
-    // PropertiesPanelController - maneja el panel de propiedades
+    // maneja el panel de propiedades
     private PropertiesPanelController propertiesPanelController;
-
-    // ModeManager - maneja cambio de modo y construcción de paneles
+    // maneja cambio de modo y construcción de paneles
     private ModeManager modeManager;
-
-    // ProjectManager - maneja lógica de negocio de proyectos y elementos
+    // maneja lógica de negocio de proyectos y elementos
     private ProjectManager projectManager;
 
+    // =====================================================
+    // Inicialización
+    // =====================================================
     @FXML
     private void initialize() {
         setupCanvas();
         switchMode(AppMode.PRODUCTION); // Start in PRODUCTION mode
 
-        // Initialize panel states and apply shadows
+        initUI();
+        initProjectList();
+
+        projectManager.cargarProyectosRecientes(8);
+
+        Platform.runLater(() -> adjustCanvasCentering(true));
+    }
+
+    private void initUI() {
         DropShadow shadow = new DropShadow();
         shadow.setColor(Color.rgb(0, 0, 0, 0.5));
         shadow.setRadius(15);
@@ -87,100 +110,122 @@ public class MainViewController {
 
         rightPanel.setEffect(shadow);
 
-        // Ensure initial state matches toggle buttons
+        // Estado inicial del panel de propiedades (según el toggle)
         togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+    }
 
-        // Cargar últimos 8 proyectos recientes automáticamente
-        projectManager.cargarProyectosRecientes(8);
-        // NO seleccionar ningún proyecto por defecto - canvas vacío hasta que usuario
-        // seleccione
+    private void initProjectList() {
+        if (listProyectos == null) return;
 
-        // Centrar canvas inicialmente (panel de propiedades abierto por defecto)
-        Platform.runLater(() -> adjustCanvasCentering(true));
-
-        // Añadir listener de doble clic para editar proyecto
-        if (listProyectos != null) {
-            listProyectos.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2) {
-                    Proyecto proyectoSeleccionado = listProyectos.getSelectionModel().getSelectedItem();
-                    if (proyectoSeleccionado != null && proyectoSeleccionado.getMetadata() != null) {
-                        abrirDialogoEditarProyecto(proyectoSeleccionado);
-                    }
+        listProyectos.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Proyecto proyectoSeleccionado = listProyectos.getSelectionModel().getSelectedItem();
+                if (proyectoSeleccionado != null && proyectoSeleccionado.getMetadata() != null) {
+                    abrirDialogoEditarProyecto(proyectoSeleccionado);
                 }
-            });
-        }
+            }
+        });
     }
 
     private void setupCanvas() {
-        // Inicializar ProjectManager
+
+        // -------------------------------------------------
+        // ProjectManager (estado del proyecto y cambios)
+        // -------------------------------------------------
         projectManager = new ProjectManager();
+
         projectManager.setOnProjectChanged(() -> {
             proyectoActual = projectManager.getProyectoActual();
             canvasManager.setProyectoActual(proyectoActual);
             dibujarCanvas();
         });
+
         projectManager.setOnElementAdded(() -> {
+            // Fuerza la reconstrucción de paneles cuando cambia la estructura del diseño
             buildEditPanels();
             dibujarCanvas();
         });
 
-        // Inicializar EditorCanvasManager
+        // -------------------------------------------------
+        // EditorCanvasManager (render y eventos del canvas)
+        // -------------------------------------------------
         canvasManager = new EditorCanvasManager(canvas);
         canvasManager.setProyectoActual(proyectoActual);
         canvasManager.setZoomLevel(zoomLevel);
         canvasManager.setCurrentMode(currentMode);
         canvasManager.setMostrarGuias(true); // Guías activadas por defecto
 
-        // Inicializar PropertiesPanelController
+        // -------------------------------------------------
+        // Panel de propiedades (edición del elemento seleccionado)
+        // -------------------------------------------------
         propertiesPanelController = new PropertiesPanelController(canvas);
-        propertiesPanelController.setOnPropertyChanged(
-                () -> modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado,
-                        projectManager.getProyectos()));
+
+        propertiesPanelController.setOnPropertyChanged(() ->
+                modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos())
+        );
+
         propertiesPanelController.setOnCanvasRedrawNeeded(() -> {
-            // SOLO refrescar lista de capas y redibujar canvas (evita perder foco en
-            // propiedades)
+            // SOLO refrescar lista de capas y redibujar canvas (evita perder foco en propiedades)
             if (currentMode == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(proyectoActual, elementoSeleccionado);
             }
             dibujarCanvas();
         });
+
         propertiesPanelController.setOnEditExternal(this::abrirEditorExterno);
         propertiesPanelController.setOnReload(this::recargarFondo);
 
-        // Inicializar ModeManager
+        // -------------------------------------------------
+        // ModeManager (montaje de paneles + acciones de UI)
+        // -------------------------------------------------
         modeManager = new ModeManager(leftPanel, rightPanel, propertiesPanelController);
+
         modeManager.setOnAddText(this::onAñadirTexto);
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
+
         modeManager.setOnNewCR80(this::onNuevoCR80);
         modeManager.setOnExport(this::onExportarProyecto);
+
         modeManager.setOnElementSelected(elemento -> {
             elementoSeleccionado = elemento;
-            canvasManager.setElementoSeleccionado(elemento); // Sync to canvas manager
+            canvasManager.setElementoSeleccionado(elemento); // sincroniza selección con el canvas
+
             if (elemento != null) {
                 ensurePropertiesPanelVisible();
             }
+
             modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
             dibujarCanvas();
         });
+
         modeManager.setOnProjectSelected(proyecto -> {
             proyectoActual = proyecto;
-            projectManager.setProyectoActual(proyecto); // CRÍTICO: Sync to ProjectManager
-            canvasManager.setProyectoActual(proyectoActual); // Sync to canvas manager
+
+            // Importante: mantener sincronizados los tres (UI / ProjectManager / Canvas)
+            projectManager.setProyectoActual(proyecto);
+            canvasManager.setProyectoActual(proyectoActual);
+
             dibujarCanvas();
         });
+
         modeManager.setOnEditExternal(this::abrirEditorExterno);
         modeManager.setOnReload(this::recargarFondo);
+
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
             modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
             dibujarCanvas();
         });
+
         modeManager.setOnCanvasRedraw(this::dibujarCanvas);
         modeManager.setOnEditProject(this::abrirDialogoEditarProyecto);
+
         modeManager.setProjectManager(projectManager);
 
-        // Callbacks para sincronizar estado
+        // -------------------------------------------------
+        // Sincronización Canvas ↔ UI (callbacks del canvas)
+        // -------------------------------------------------
         canvasManager.setOnElementSelected(() -> {
             elementoSeleccionado = canvasManager.getElementoSeleccionado();
             ensurePropertiesPanelVisible();
@@ -189,14 +234,20 @@ public class MainViewController {
 
         canvasManager.setOnCanvasChanged(() -> {
             elementoSeleccionado = canvasManager.getElementoSeleccionado();
+
+            // Fuerza refresco de paneles tras drag/resize u otros cambios en el canvas
             buildEditPanels();
+
             canvasManager.dibujarCanvas();
         });
 
-        // CRÍTICO: Configurar mouse handlers para drag & resize
+        // -------------------------------------------------
+        // Input (mouse y teclado)
+        // -------------------------------------------------
+
+        // Importante: configurar mouse handlers para drag & resize
         canvasManager.setupMouseHandlers();
 
-        // Keyboard events
         canvas.setFocusTraversable(true);
         canvas.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE && elementoSeleccionado != null) {
@@ -204,16 +255,17 @@ public class MainViewController {
             }
         });
 
-        // Inicializar label de zoom con el valor correcto
-        actualizarZoom();
+        // -------------------------------------------------
+        // Zoom / layout (centrado y recorte)
+        // -------------------------------------------------
+        actualizarZoom(); // Inicializa label con el valor correcto y aplica zoom al canvas
 
-        // Initialize width listener for responsive centering
         canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
             adjustCanvasCentering(togglePropiedades.isSelected());
             // Actualizar clip si es necesario (el binding suele ser suficiente)
         });
 
-        // CRÍTICO: Aplicar máscara de recorte (Clip) al contenedor del canvas
+        // Importante: aplicar máscara de recorte (Clip) al contenedor del canvas
         // Esto asegura que si el canvas se mueve a la izquierda, se "meta por debajo"
         // del panel izquierdo (desaparezca) en lugar de montarse encima.
         javafx.scene.shape.Rectangle clipRect = new javafx.scene.shape.Rectangle();
@@ -223,8 +275,9 @@ public class MainViewController {
 
         dibujarCanvas();
     }
-
-    // ========== MODE SWITCHING ==========
+// =====================================================
+// Cambio de modo (Design / Production)
+// =====================================================
 
     @FXML
     private void onModeEdit() {
@@ -236,7 +289,19 @@ public class MainViewController {
         switchMode(AppMode.PRODUCTION);
     }
 
-    // ========== ZOOM CONTROLS ==========
+    private void switchMode(AppMode newMode) {
+        currentMode = newMode;
+
+        // Importante: el CanvasManager debe saber en qué modo estamos (edit/producción)
+        canvasManager.setCurrentMode(newMode);
+
+        // Reconstruye paneles laterales según modo y selección
+        modeManager.switchMode(newMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
+    }
+
+// =====================================================
+// Zoom
+// =====================================================
 
     @FXML
     private void onZoomIn() {
@@ -259,11 +324,13 @@ public class MainViewController {
         canvasManager.setZoomLevel(zoomLevel);
         dibujarCanvas();
 
-        // Re-ajustar centrado porque el ancho visual del canvas ha cambiado
+        // Reajustar centrado porque el ancho visual del canvas ha cambiado
         adjustCanvasCentering(togglePropiedades.isSelected());
     }
 
-    // ========== TOGGLE CONTROLS ==========
+// =====================================================
+// Toggles / opciones visuales
+// =====================================================
 
     @FXML
     private void onToggleGuias() {
@@ -271,30 +338,30 @@ public class MainViewController {
         dibujarCanvas();
     }
 
-    // ========== MODE SWITCHING ==========
-
-    private void switchMode(AppMode newMode) {
-        currentMode = newMode;
-        canvasManager.setCurrentMode(newMode); // CRÍTICO: Sync mode to canvas manager
-        modeManager.switchMode(newMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
-    }
-
-    // ========== BUILD EDIT PANELS ==========
+// =====================================================
+// Refresco de paneles de edición (sin cambiar modo global)
+// =====================================================
 
     private void buildEditPanels() {
+        // Nota: aunque el modo global sea PRODUCTION, aquí forzamos el montaje de paneles
+        // de edición para mantener la UI coherente tras cambios (capas, selección, etc.).
         modeManager.switchMode(AppMode.DESIGN, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
     }
 
-    // ========== CANVAS RENDERING ==========
+// =====================================================
+// Canvas
+// =====================================================
 
-    /**
-     * Dibuja el canvas delegando al EditorCanvasManager
+    /*
+     * Dibuja el canvas delegando en EditorCanvasManager.
      */
     private void dibujarCanvas() {
         canvasManager.dibujarCanvas();
     }
 
-    // ========== HELPER METHODS ==========
+// =====================================================
+// Helpers
+// =====================================================
 
     private void ensurePropertiesPanelVisible() {
         if (togglePropiedades != null && !togglePropiedades.isSelected()) {
@@ -302,27 +369,34 @@ public class MainViewController {
             onTogglePropiedades();
         }
     }
-
-    /**
-     * Muestra un diálogo para seleccionar el modo de ajuste del fondo
+    /*
+     * Muestra un diálogo para elegir cómo se ajusta el fondo a la tarjeta:
+     * - Con sangre (BLEED): cubre CR80 + sangrado (2mm por lado)
+     * - Sin sangre (FINAL): cubre solo el tamaño final CR80
+     *
+     * Si el usuario marca "No volver a preguntar", se guarda la preferencia en el proyecto.
      */
     private FondoFitMode mostrarDialogoFitMode() {
+
         Dialog<FondoFitMode> dialog = new Dialog<>();
         dialog.setTitle("Modo de Ajuste del Fondo");
         dialog.setHeaderText("¿Cómo desea ajustar el fondo a la tarjeta?");
 
+        // -------------------------------------------------
         // Botones
+        // -------------------------------------------------
         ButtonType btnBleed = new ButtonType("Con sangre", ButtonBar.ButtonData.OK_DONE);
         ButtonType btnFinal = new ButtonType("Sin sangre", ButtonBar.ButtonData.OK_DONE);
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(btnBleed, btnFinal, btnCancelar);
 
-        // Contenido
+        // -------------------------------------------------
+        // Contenido visual
+        // -------------------------------------------------
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
 
-        Label lblExplicacion = new Label(
-                "El fondo puede ajustarse de dos formas:");
+        Label lblExplicacion = new Label("El fondo puede ajustarse de dos formas:");
         lblExplicacion.setStyle("-fx-font-size: 13px;");
 
         VBox opcionBleed = new VBox(5);
@@ -346,14 +420,23 @@ public class MainViewController {
         CheckBox chkNoPreguntar = new CheckBox("No volver a preguntar en este proyecto");
         chkNoPreguntar.setStyle("-fx-font-size: 11px;");
 
-        content.getChildren().addAll(lblExplicacion, new Separator(),
-                opcionBleed, new Separator(), opcionFinal, new Separator(), chkNoPreguntar);
+        content.getChildren().addAll(
+                lblExplicacion, new Separator(),
+                opcionBleed, new Separator(),
+                opcionFinal, new Separator(),
+                chkNoPreguntar
+        );
+
         dialog.getDialogPane().setContent(content);
 
-        // Convertir resultado
+        // -------------------------------------------------
+        // Conversión de resultado + guardado de preferencia
+        // -------------------------------------------------
         dialog.setResultConverter(buttonType -> {
+
             if (chkNoPreguntar.isSelected() && proyectoActual != null) {
                 proyectoActual.setNoVolverAPreguntarFondo(true);
+
                 if (buttonType == btnBleed) {
                     proyectoActual.setFondoFitModePreferido(FondoFitMode.BLEED);
                 } else if (buttonType == btnFinal) {
@@ -361,21 +444,24 @@ public class MainViewController {
                 }
             }
 
-            if (buttonType == btnBleed) {
-                return FondoFitMode.BLEED;
-            } else if (buttonType == btnFinal) {
-                return FondoFitMode.FINAL;
-            }
+            if (buttonType == btnBleed) return FondoFitMode.BLEED;
+            if (buttonType == btnFinal) return FondoFitMode.FINAL;
+
             return null;
         });
 
         return dialog.showAndWait().orElse(null);
     }
 
-    /**
-     * Abre la imagen del fondo en el editor externo del sistema
+    /*
+     * Abre el archivo del fondo en el editor externo configurado (si existe),
+     * o en el editor predeterminado del sistema.
+     *
+     * Nota: el lanzamiento se hace desacoplado para evitar problemas al guardar
+     * (por ejemplo, Photoshop "bloqueado" por herencias de handles del proceso Java).
      */
     private void abrirEditorExterno(ImagenFondoElemento fondo) {
+
         if (fondo == null || fondo.getRutaArchivo() == null) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
@@ -385,20 +471,24 @@ public class MainViewController {
             return;
         }
 
-        // 1. Intentar ruta tal cual
+        // -------------------------------------------------
+        // 1) Localizar el archivo real en disco
+        // -------------------------------------------------
         File file = new File(fondo.getRutaArchivo());
 
-        // 2. Si no existe, intentar búsqueda inteligente en carpeta del proyecto
+        // Si la ruta guardada no existe, intentamos localizarla dentro del proyecto (carpeta /Fondos)
         if (!file.exists() && proyectoActual != null && proyectoActual.getMetadata() != null) {
+
             String projectDir = proyectoActual.getMetadata().getCarpetaProyecto();
             if (projectDir != null) {
+
                 File fondosDir = new File(projectDir, "Fondos");
                 String originalName = file.getName();
 
-                // Opción A: Buscar en carpeta Fondos con mismo nombre
+                // Opción A: mismo nombre en /Fondos
                 File optionA = new File(fondosDir, originalName);
 
-                // Opción B: Construir nombre con sufijo _FRENTE o _DORSO
+                // Opción B: nombre con sufijo _FRENTE o _DORSO
                 String nameNoExt = originalName;
                 String ext = "";
                 int dotIndex = originalName.lastIndexOf('.');
@@ -407,7 +497,6 @@ public class MainViewController {
                     ext = originalName.substring(dotIndex); // incluye el punto
                 }
 
-                // Determinar el sufijo correcto comparando con la referencia en el proyecto
                 String suffix = "";
                 if (fondo == proyectoActual.getFondoFrente()) {
                     suffix = "_FRENTE";
@@ -417,10 +506,9 @@ public class MainViewController {
 
                 File optionB = new File(fondosDir, nameNoExt + suffix + ext);
 
-                // Verificar cuál existe
+                // Elegir la ruta que exista y actualizarla en el objeto (para que "Recargar" funcione bien)
                 if (optionB.exists()) {
                     file = optionB;
-                    // Actualizar la ruta en el objeto para que 'Recargar' funcione luego
                     fondo.setRutaArchivo(file.getAbsolutePath());
                 } else if (optionA.exists()) {
                     file = optionA;
@@ -433,12 +521,17 @@ public class MainViewController {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
-            alert.setContentText("El archivo " + file.getName() + " no existe en el disco.\n\n" +
-                    "Buscado en: " + file.getAbsolutePath());
+            alert.setContentText(
+                    "El archivo " + file.getName() + " no existe en el disco.\n\n" +
+                            "Buscado en: " + file.getAbsolutePath()
+            );
             alert.showAndWait();
             return;
         }
 
+        // -------------------------------------------------
+        // 2) Abrir con editor personalizado o predeterminado
+        // -------------------------------------------------
         try {
             SettingsManager settings = new SettingsManager();
             String customEditor = settings.getExternalEditorPath();
@@ -446,48 +539,48 @@ public class MainViewController {
 
             if (customEditor != null) {
                 File editorFile = new File(customEditor);
+
                 if (editorFile.exists()) {
-                    // Mostrar aviso
+
                     Alert aviso = new Alert(Alert.AlertType.INFORMATION);
-                    aviso.setTitle("Editando Externamente");
+                    aviso.setTitle("Editando externamente");
                     aviso.setHeaderText("Abriendo con " + settings.getExternalEditorName() + "...");
                     aviso.setContentText(
                             "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
-                                    "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado.");
+                                    "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado."
+                    );
                     aviso.show();
 
-                    // LANZAMIENTO DESACOPLADO (DETACHED)
-                    // Usamos 'cmd /c start "" "exe" "file"' para romper la herencia de handles
-                    // Esto evita que Photoshop herede bloqueos de Java y falle al guardar
-                    String[] cmd = { "cmd", "/c", "start", "\"\"", customEditor, file.getAbsolutePath() };
+                    // Lanzamiento desacoplado (Windows)
+                    String[] cmd = {"cmd", "/c", "start", "\"\"", customEditor, file.getAbsolutePath()};
                     new ProcessBuilder(cmd).start();
                     opened = true;
                 }
             }
 
             if (!opened) {
-                // Mostrar aviso default
                 Alert aviso = new Alert(Alert.AlertType.INFORMATION);
-                aviso.setTitle("Editando Externamente");
+                aviso.setTitle("Editando externamente");
                 aviso.setHeaderText("Abriendo editor predeterminado...");
                 aviso.setContentText(
                         "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
-                                "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado.");
+                                "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado."
+                );
                 aviso.show();
 
-                // Intentar lanzamiento desacoplado también para el default
+                // Intento desacoplado también para el editor por defecto
                 try {
-                    String[] cmd = { "cmd", "/c", "start", "\"\"", file.getAbsolutePath() };
+                    String[] cmd = {"cmd", "/c", "start", "\"\"", file.getAbsolutePath()};
                     new ProcessBuilder(cmd).start();
                 } catch (Exception e) {
                     // Fallback a Desktop si falla el cmd (raro en Windows)
-                    java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                    desktop.open(file);
+                    java.awt.Desktop.getDesktop().open(file);
                 }
             }
 
         } catch (Exception ex) {
             ex.printStackTrace();
+
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo abrir el editor externo");
@@ -495,11 +588,12 @@ public class MainViewController {
             alert.showAndWait();
         }
     }
-
-    /**
-     * Recarga la imagen del fondo desde el disco
+    /*
+     * Recarga la imagen del fondo desde el disco.
+     * Se usa tras editar el archivo en un programa externo (Photoshop, etc.).
      */
     private void recargarFondo(ImagenFondoElemento fondo) {
+
         if (fondo == null || fondo.getRutaArchivo() == null) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
@@ -516,34 +610,36 @@ public class MainViewController {
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
                     "El archivo " + file.getName() + " no existe en el disco.\n" +
-                            "Se mantendrá la versión anterior en memoria.");
+                            "Se mantendrá la versión anterior en memoria."
+            );
             alert.showAndWait();
             return;
         }
 
         try {
-            // Recargar imagen SIN BLOQUEO
+            // Cargar sin bloquear el archivo (evita problemas tras editar con apps externas)
             Image nuevaImagen = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
             if (nuevaImagen == null) {
-                throw new Exception("No se pudo cargar la imagen (null return)");
+                throw new Exception("No se pudo cargar la imagen (resultado null)");
             }
 
             fondo.setImagen(nuevaImagen);
 
-            // Preguntar modo de ajuste (Sangre vs Final)
-            // Esto permite reajustar si el usuario cambió el tamaño en el editor externo
+            // Preguntar modo de ajuste (sangre vs final).
+            // Esto es útil si el usuario cambió el tamaño / recortó en el editor externo.
             FondoFitMode nuevoModo = mostrarDialogoFitMode();
             if (nuevoModo != null) {
                 fondo.setFitMode(nuevoModo);
             }
 
-            fondo.ajustarATamaño(EditorCanvasManager.CARD_WIDTH, EditorCanvasManager.CARD_HEIGHT,
-                    EditorCanvasManager.BLEED_MARGIN);
+            fondo.ajustarATamaño(
+                    EditorCanvasManager.CARD_WIDTH,
+                    EditorCanvasManager.CARD_HEIGHT,
+                    EditorCanvasManager.BLEED_MARGIN
+            );
 
-            // Redibujar
             dibujarCanvas();
 
-            // Confirmación
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Éxito");
             alert.setHeaderText("Fondo recargado");
@@ -552,21 +648,25 @@ public class MainViewController {
 
         } catch (Exception ex) {
             ex.printStackTrace();
+
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo recargar la imagen");
             alert.setContentText(
                     "Error al cargar el archivo: " + ex.getMessage() + "\n" +
-                            "Se mantendrá la versión anterior en memoria.");
+                            "Se mantendrá la versión anterior en memoria."
+            );
             alert.showAndWait();
         }
     }
 
-    // ========== TOOLBAR ACTIONS ==========
+// =====================================================
+// Acciones de barra superior (Proyectos / exportación)
+// =====================================================
 
     @FXML
     private void onNuevoProyecto() {
-        // Crear proyecto con diálogo completo y estructura de carpetas
+        // Crea un proyecto con diálogo completo y estructura de carpetas
         Proyecto nuevoProyecto = projectManager.nuevoProyecto(canvas.getScene().getWindow());
         if (nuevoProyecto != null && listProyectos != null) {
             listProyectos.getSelectionModel().select(nuevoProyecto);
@@ -575,7 +675,7 @@ public class MainViewController {
 
     @FXML
     private void onAbrirProyecto() {
-        // Abrir proyecto desde archivo .tps
+        // Abre un proyecto desde archivo .tps
         Proyecto proyectoCargado = projectManager.abrirProyecto(canvas.getScene().getWindow());
         if (proyectoCargado != null && listProyectos != null) {
             listProyectos.getSelectionModel().select(proyectoCargado);
@@ -584,7 +684,7 @@ public class MainViewController {
 
     @FXML
     private void onGuardarProyecto() {
-        // Guardar proyecto actual en JSON
+        // Guarda el proyecto actual (JSON / .tps)
         projectManager.guardarProyecto();
     }
 
@@ -595,27 +695,34 @@ public class MainViewController {
 
     @FXML
     private void onToggleFrenteDorso() {
-        if (proyectoActual != null) {
-            proyectoActual.setMostrandoFrente(toggleFrenteDorso.isSelected());
-            toggleFrenteDorso.setText(toggleFrenteDorso.isSelected() ? "Frente" : "Dorso");
-            elementoSeleccionado = null;
-            if (currentMode == AppMode.DESIGN) {
-                buildEditPanels();
-            }
-            dibujarCanvas();
+        if (proyectoActual == null) return;
+
+        proyectoActual.setMostrandoFrente(toggleFrenteDorso.isSelected());
+        toggleFrenteDorso.setText(toggleFrenteDorso.isSelected() ? "Frente" : "Dorso");
+
+        // Cambiar de cara invalida la selección actual
+        elementoSeleccionado = null;
+
+        if (currentMode == AppMode.DESIGN) {
+            buildEditPanels();
         }
+
+        dibujarCanvas();
     }
 
     @FXML
     private void onNuevoCR80() {
-        // Crear proyecto con diálogo completo (mismo que onNuevoProyecto)
+        // Nota: de momento es el mismo flujo que "Nuevo proyecto".
+        // Si más adelante hay formatos (acreditación, XXL...), aquí se diferencia.
         Proyecto nuevoProyecto = projectManager.nuevoProyecto(canvas.getScene().getWindow());
         if (nuevoProyecto != null && listProyectos != null) {
             listProyectos.getSelectionModel().select(nuevoProyecto);
         }
     }
 
-    // ========== EDIT MODE ACTIONS ==========
+// =====================================================
+// Acciones de edición (añadir / eliminar elementos)
+// =====================================================
 
     private void onAñadirTexto() {
         TextoElemento texto = projectManager.añadirTexto();
@@ -644,91 +751,90 @@ public class MainViewController {
     private void onAñadirFondo() {
         ImagenFondoElemento fondo = projectManager.añadirFondo(
                 canvas.getScene().getWindow(),
-                this::mostrarDialogoFitMode);
+                this::mostrarDialogoFitMode
+        );
+
         if (fondo != null) {
             elementoSeleccionado = fondo;
             canvasManager.setElementoSeleccionado(fondo);
         }
     }
 
+// =====================================================
+// Panel de propiedades (mostrar/ocultar)
+// =====================================================
+
     @FXML
     private void onTogglePropiedades() {
         togglePanel(rightPanel, togglePropiedades.isSelected(), false);
-        // Centrar canvas: moverlo a la izquierda cuando el panel está abierto
+
+        // Centrar canvas: al abrir el panel, se desplaza a la izquierda
         adjustCanvasCentering(togglePropiedades.isSelected());
     }
 
-    /**
-     * Anima la visibilidad de un panel lateral (Overlay mode)
+    /*
+     * Anima la visibilidad de un panel lateral (overlay).
+     * show = true  -> aparece con fade + slide
+     * show = false -> desaparece con fade + slide y se desactiva (managed=false)
      */
     private void togglePanel(Region panel, boolean show, boolean isLeft) {
+
         if (show) {
             panel.setVisible(true);
             panel.setManaged(true);
 
-            // Fade in
             FadeTransition fade = new FadeTransition(Duration.millis(200), panel);
             fade.setFromValue(0.0);
             fade.setToValue(1.0);
 
-            // Slide in
             TranslateTransition slide = new TranslateTransition(Duration.millis(200), panel);
             double distance = 50;
             slide.setFromX(isLeft ? -distance : distance);
             slide.setToX(0);
             slide.setInterpolator(Interpolator.EASE_OUT);
 
-            ParallelTransition parallel = new ParallelTransition(fade, slide);
-            parallel.play();
-        } else {
-            // Fade out
-            FadeTransition fade = new FadeTransition(Duration.millis(150), panel);
-            fade.setFromValue(1.0);
-            fade.setToValue(0.0);
-
-            // Slide out
-            TranslateTransition slide = new TranslateTransition(Duration.millis(150), panel);
-            double distance = 50;
-            slide.setFromX(0);
-            slide.setToX(isLeft ? -distance : distance);
-            slide.setInterpolator(Interpolator.EASE_IN);
-
-            ParallelTransition parallel = new ParallelTransition(fade, slide);
-            parallel.setOnFinished(e -> {
-                panel.setVisible(false);
-                panel.setManaged(false);
-            });
-            parallel.play();
+            new ParallelTransition(fade, slide).play();
+            return;
         }
+
+        FadeTransition fade = new FadeTransition(Duration.millis(150), panel);
+        fade.setFromValue(1.0);
+        fade.setToValue(0.0);
+
+        TranslateTransition slide = new TranslateTransition(Duration.millis(150), panel);
+        double distance = 50;
+        slide.setFromX(0);
+        slide.setToX(isLeft ? -distance : distance);
+        slide.setInterpolator(Interpolator.EASE_IN);
+
+        ParallelTransition parallel = new ParallelTransition(fade, slide);
+        parallel.setOnFinished(e -> {
+            panel.setVisible(false);
+            panel.setManaged(false);
+        });
+        parallel.play();
     }
 
-    /**
-     * Ajusta el centrado del canvas cuando se abre/cierra el panel de propiedades
-     */
+    /* Ajusta el centrado del canvas cuando se abre/cierra el panel de propiedades.
+     * Importante: se anima el CANVAS (no el contenedor) para no invadir el panel izquierdo. */
+
     private void adjustCanvasCentering(boolean propertiesPanelVisible) {
-        // Necesitamos el layout actual, si no está listo, esperamos
+
+        // Si el layout aún no está listo, reintentamos en el siguiente frame
         if (canvasContainer.getWidth() <= 0) {
-            // Reintentar un poco más tarde cuando el layout esté listo
             Platform.runLater(() -> adjustCanvasCentering(propertiesPanelVisible));
             return;
         }
 
-        // CRÍTICO: Animamos el CANVAS, no el contenedor.
-        // El contenedor debe quedarse quieto para no invadir el panel izquierdo.
         TranslateTransition transition = new TranslateTransition(Duration.millis(200), canvas);
 
         if (propertiesPanelVisible) {
-            // Queremos centrar visualmente en el espacio restante (mover mitad del panel
-            // derecho)
+            // Centrar visualmente en el espacio restante (mitad del ancho del panel derecho)
             double idealShift = -rightPanel.getPrefWidth() / 2;
 
-            // A diferencia de antes, ahora PERMITIMOS que se mueva más allá del margen
-            // seguro
-            // porque el CLIP se encargará de que no manche el panel izquierdo.
+            // Permitimos que se desplace más, porque el CLIP evita que "manche" el panel izquierdo
             transition.setToX(idealShift);
-
         } else {
-            // Panel cerrado: centrar canvas (volver a 0)
             transition.setToX(0);
         }
 
@@ -736,18 +842,19 @@ public class MainViewController {
         transition.play();
     }
 
-    /**
-     * Abre el diálogo para editar un proyecto existente
-     */
+    /* Abre el diálogo para editar o eliminar un proyecto existente. */
+
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
+
         EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
         java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {
-            // Usuario quiere eliminar el proyecto
             projectManager.eliminarProyecto(proyecto);
-        } else if (resultado.isPresent()) {
-            // Usuario guardó cambios
+            return;
+        }
+
+        if (resultado.isPresent()) {
             ProyectoMetadata nuevaMetadata = resultado.get();
             projectManager.editarProyecto(proyecto, nuevaMetadata);
         }

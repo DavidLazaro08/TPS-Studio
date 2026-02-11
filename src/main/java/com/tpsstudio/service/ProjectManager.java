@@ -3,8 +3,9 @@ package com.tpsstudio.service;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
-import com.tpsstudio.view.managers.EditorCanvasManager;
+import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.view.dialogs.NuevoProyectoDialog;
+import com.tpsstudio.view.managers.EditorCanvasManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
@@ -19,38 +20,43 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
-import com.tpsstudio.util.ImageUtils;
+/* ProjectManager (Service Layer)
+ *
+ * Actúa como punto central de la lógica relacionada con proyectos:
+ * - Crear / abrir / guardar (y más adelante exportar)
+ * - Cargar recientes
+ * - Añadir elementos al proyecto actual (texto, imagen, fondo)
+ *
+ * Nota: la UI se mantiene informada mediante callbacks (onProjectChanged / onElementAdded). */
 
-/**
- * ProjectManager - Director de orquesta del Service Layer.
- * 
- * Se encarga de:
- * 1. Lo gordo: Crear, Guardar, Abrir y Exportar proyectos.
- * 2. Lo fino: Añadir textos, imágenes y fondos al proyecto actual.
- * 3. Lo burocrático: Gestionar diálogos de archivo y estructuras de carpetas.
- */
 public class ProjectManager {
 
-    // Lista observable de proyectos (para que la UI se entere si añadimos uno)
+    // Lista observable de proyectos (la UI se refresca automáticamente)
     private final ObservableList<Proyecto> proyectos = FXCollections.observableArrayList();
+
+    // Proyecto actualmente activo en la app
     private Proyecto proyectoActual;
 
-    // Teléfonos rojos (Callbacks) para avisar al Controller
+    // Callbacks para avisar al Controller
     private Runnable onProjectChanged;
     private Runnable onElementAdded;
 
-    // Sub-gestores especializados
+    // Sub-gestores especializados (IO y recientes)
     private final ProyectoFileManager fileManager;
     private final RecentProjectsManager recentManager;
 
-    // ========== CONSTRUCTOR ==========
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ProjectManager() {
         this.fileManager = new ProyectoFileManager();
         this.recentManager = new RecentProjectsManager();
     }
 
-    // ========== SETTERS (Conexiones) ==========
+    // =====================================================
+    // Conexiones (callbacks)
+    // =====================================================
 
     public void setOnProjectChanged(Runnable callback) {
         this.onProjectChanged = callback;
@@ -60,7 +66,9 @@ public class ProjectManager {
         this.onElementAdded = callback;
     }
 
-    // ========== GETTERS ==========
+    // =====================================================
+    // Getters / setters
+    // =====================================================
 
     public ObservableList<Proyecto> getProyectos() {
         return proyectos;
@@ -72,176 +80,155 @@ public class ProjectManager {
 
     public void setProyectoActual(Proyecto proyecto) {
         this.proyectoActual = proyecto;
-        if (onProjectChanged != null) {
-            onProjectChanged.run();
-        }
+        avisarProyectoCambiado();
     }
 
-    // ========== OPERACIONES DE PROYECTO (CRUD) ==========
+    // =====================================================
+    // Operaciones de proyecto (crear / abrir / guardar / editar / cerrar)
+    // =====================================================
 
-    /**
-     * Crea un proyecto rápido en memoria (sin carpetas ni diálogo).
-     * Útil para pruebas rápidas.
-     */
+    /* Crea un proyecto rápido en memoria (sin carpetas ni diálogo). */
+
     public Proyecto crearNuevoCR80() {
         int numero = proyectos.size() + 1;
+
         Proyecto nuevoProyecto = new Proyecto("Tarjeta CR80 #" + numero);
         proyectos.add(nuevoProyecto);
-        proyectoActual = nuevoProyecto;
 
-        // Avisamos que hay proyecto nuevo
-        if (onProjectChanged != null) {
-            onProjectChanged.run();
-        }
+        proyectoActual = nuevoProyecto;
+        avisarProyectoCambiado();
 
         return nuevoProyecto;
     }
 
-    /**
-     * El "Big Bang": Crea un proyecto completo.
-     * 1. Muestra formulario de datos.
-     * 2. Crea carpetas físicas en disco.
-     * 3. Crea el archivo .tps.
-     * 4. Lo añade a recientes.
-     */
+    /* Crea un proyecto completo:
+     * 1) Pide datos en un diálogo
+     * 2) Genera estructura de carpetas
+     * 3) Crea y guarda el archivo .tps
+     * 4) Lo añade a recientes y a la lista */
+
     public Proyecto nuevoProyecto(Window owner) {
-        // 1. Pedir datos al usuario
+
         NuevoProyectoDialog dialog = new NuevoProyectoDialog();
         Optional<ProyectoMetadata> result = dialog.showAndWait();
-
         if (result.isEmpty()) {
-            return null; // Se echó atrás
+            return null; // cancelado
         }
 
         ProyectoMetadata metadata = result.get();
 
-        // 2. Crear estructura física (Carpetas, assets...)
         if (!fileManager.crearEstructuraCarpetas(metadata)) {
             mostrarError("No se pudo crear la estructura de carpetas.");
             return null;
         }
 
-        // 3. Instanciar objeto Proyecto
         Proyecto nuevoProyecto = new Proyecto(metadata.getNombre());
         nuevoProyecto.setMetadata(metadata);
 
-        // 4. Guardar archivo maestro .tps
         if (!fileManager.guardarProyecto(nuevoProyecto, metadata)) {
             mostrarError("No se pudo guardar el archivo de proyecto.");
             return null;
         }
 
-        // 5. Añadir a la sesión actual
         proyectos.add(nuevoProyecto);
         proyectoActual = nuevoProyecto;
 
-        // 6. Recordar para la próxima (Recientes)
         recentManager.añadirReciente(metadata.getRutaTPS());
-
         ordenarProyectos();
-
-        if (onProjectChanged != null) {
-            onProjectChanged.run();
-        }
+        avisarProyectoCambiado();
 
         return nuevoProyecto;
     }
 
-    /**
-     * Abre un proyecto existente (.tps) buscando en disco.
-     */
+    /* Abre un proyecto existente (.tps). */
+
     public Proyecto abrirProyecto(Window owner) {
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Abrir Proyecto");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
+                new FileChooser.ExtensionFilter("Archivos TPS", "*.tps")
+        );
 
         File file = fileChooser.showOpenDialog(owner);
-        if (file != null) {
-            return cargarProyectoDesdeArchivo(file);
+        if (file == null) {
+            return null;
         }
-        return null;
+
+        return cargarProyectoDesdeArchivo(file);
     }
 
-    /**
-     * Lógica interna de carga de proyecto.
-     */
+    /* Lógica interna de carga del proyecto desde un archivo .tps. */
+
     private Proyecto cargarProyectoDesdeArchivo(File file) {
+
         Proyecto proyecto = fileManager.cargarProyecto(file);
-        if (proyecto != null) {
-            proyectos.add(proyecto);
-            proyectoActual = proyecto;
 
-            // Refrescar en recientes (por si lo movimos, ahora sabemos que existe aquí)
-            if (proyecto.getMetadata() != null) {
-                recentManager.añadirReciente(proyecto.getMetadata().getRutaTPS());
-            }
-
-            ordenarProyectos();
-
-            if (onProjectChanged != null) {
-                onProjectChanged.run();
-            }
-
-            mostrarInfo("Proyecto cargado correctamente.");
-        } else {
+        if (proyecto == null) {
             mostrarError("Error al leer el archivo de proyecto.");
+            return null;
         }
+
+        proyectos.add(proyecto);
+        proyectoActual = proyecto;
+
+        // Refrescar en recientes (por si cambió de ruta y ahora sabemos dónde está)
+        if (proyecto.getMetadata() != null) {
+            recentManager.añadirReciente(proyecto.getMetadata().getRutaTPS());
+        }
+
+        ordenarProyectos();
+        avisarProyectoCambiado();
+        mostrarInfo("Proyecto cargado correctamente.");
+
         return proyecto;
     }
 
-    /**
-     * Resucita los proyectos de la sesión anterior.
-     * 
-     * @param maxProyectos Cuantos cargar (-1 para todos)
-     */
+    /* Carga los proyectos recientes desde el historial.
+     * maxProyectos: 0 = ninguno, -1 = todos, N = N proyectos */
+
     public void cargarProyectosRecientes(int maxProyectos) {
-        if (maxProyectos == 0) {
-            return;
-        }
+
+        if (maxProyectos == 0) return;
 
         List<String> recientes = recentManager.getRecientes();
-        int limite = maxProyectos < 0 ? recientes.size() : Math.min(maxProyectos, recientes.size());
+        int limite = (maxProyectos < 0) ? recientes.size() : Math.min(maxProyectos, recientes.size());
 
         for (int i = 0; i < limite; i++) {
-            String rutaTPS = recientes.get(i);
-            File file = new File(rutaTPS);
-            // Solo cargamos si el archivo sigue existiendo
-            if (file.exists()) {
-                Proyecto proyecto = fileManager.cargarProyecto(file);
-                if (proyecto != null) {
-                    proyectos.add(proyecto);
-                    // NOTA: No lo seleccionamos (proyectoActual) para no abrir de golpe el último
-                }
+            File file = new File(recientes.get(i));
+
+            // Solo cargamos si sigue existiendo
+            if (!file.exists()) continue;
+
+            Proyecto proyecto = fileManager.cargarProyecto(file);
+            if (proyecto != null) {
+                proyectos.add(proyecto);
+                // Nota: no lo seleccionamos como proyectoActual (para no abrir de golpe el último)
             }
         }
 
         ordenarProyectos();
     }
 
-    /**
-     * Mantiene la lista de proyectos ordenada A-Z
-     */
+    /* Mantiene la lista ordenada A-Z (para que no sea una tómbola visual). */
+
     private void ordenarProyectos() {
         FXCollections.sort(proyectos, (p1, p2) -> p1.getNombre().compareToIgnoreCase(p2.getNombre()));
     }
 
-    /**
-     * Borra un proyecto del historial, pero NO del disco.
-     */
+    /* Borra un proyecto del historial de recientes (pero NO del disco). */
+
     public void eliminarDeRecientes(Proyecto proyecto) {
         if (proyecto != null && proyecto.getMetadata() != null) {
             recentManager.eliminarReciente(proyecto.getMetadata().getRutaTPS());
         }
     }
 
-    /**
-     * Actualiza datos del proyecto (Nombre, Cliente, etc).
-     */
+    /* Actualiza datos del proyecto (nombre, cliente, etc.) y re-guarda el .tps. */
+
     public boolean editarProyecto(Proyecto proyecto, ProyectoMetadata nuevaMetadata) {
-        if (proyecto == null || nuevaMetadata == null) {
-            return false;
-        }
+
+        if (proyecto == null || nuevaMetadata == null) return false;
 
         proyecto.setNombre(nuevaMetadata.getNombre());
         proyecto.setMetadata(nuevaMetadata);
@@ -250,26 +237,20 @@ public class ProjectManager {
 
         if (guardado) {
             ordenarProyectos();
-
-            if (onProjectChanged != null) {
-                onProjectChanged.run();
-            }
-
+            avisarProyectoCambiado();
             mostrarInfo("Proyecto actualizado correctamente.");
-        } else {
-            mostrarError("No se pudo actualizar el proyecto.");
+            return true;
         }
 
-        return guardado;
+        mostrarError("No se pudo actualizar el proyecto.");
+        return false;
     }
 
-    /**
-     * Cierra el proyecto de la interfaz (Lista de la izquierda).
-     */
+    /* Cierra el proyecto en la interfaz (lo quita de la lista). No borra archivos del disco. */
+
     public void eliminarProyecto(Proyecto proyecto) {
-        if (proyecto == null) {
-            return;
-        }
+
+        if (proyecto == null) return;
 
         eliminarDeRecientes(proyecto);
         proyectos.remove(proyecto);
@@ -278,17 +259,14 @@ public class ProjectManager {
             proyectoActual = null;
         }
 
-        if (onProjectChanged != null) {
-            onProjectChanged.run();
-        }
-
+        avisarProyectoCambiado();
         mostrarInfo("Proyecto cerrado.");
     }
 
-    /**
-     * Guarda cambios en el proyecto actual.
-     */
+    /* Guarda el proyecto actual en su ruta .tps. */
+
     public boolean guardarProyecto() {
+
         if (proyectoActual == null) {
             mostrarError("No hay proyecto activo para guardar.");
             return false;
@@ -296,250 +274,228 @@ public class ProjectManager {
 
         ProyectoMetadata metadata = proyectoActual.getMetadata();
         if (metadata == null || metadata.getRutaTPS() == null) {
-            mostrarError(
-                    "Este proyecto no tiene ubicación en disco (es volátil).\nUse 'Guardar Como' o cree uno nuevo.");
+            mostrarError("Este proyecto no tiene ubicación en disco.\nCrea uno nuevo o usa 'Guardar como' (pendiente).");
             return false;
         }
 
         if (fileManager.guardarProyecto(proyectoActual, metadata)) {
             mostrarInfo("Proyecto guardado correctamente.");
             return true;
-        } else {
-            mostrarError("Error crítico al guardar proyecto.");
-            return false;
         }
+
+        mostrarError("Error al guardar el proyecto.");
+        return false;
     }
 
     public void exportarProyecto() {
         System.out.println("Funcionalidad de exportación pendiente...");
     }
 
-    // ========== GESTIÓN DE ELEMENTOS (TEXTO/IMAGEN) ==========
+    // =====================================================
+    // Gestión de elementos (texto / imagen / fondo)
+    // =====================================================
 
-    /**
-     * Crea un elemento de texto y lo planta en el canvas.
-     */
+    /* Crea un texto básico y lo añade al proyecto actual. */
+
     public TextoElemento añadirTexto() {
-        if (proyectoActual == null) {
-            return null;
-        }
+
+        if (proyectoActual == null) return null;
 
         int num = proyectoActual.getElementosActuales().size() + 1;
-        TextoElemento texto = new TextoElemento("Texto " + num, 50, 50);
-        texto.setWidth(150); // Ancho generoso para empezar
-        proyectoActual.getElementosActuales().add(texto);
 
-        if (onElementAdded != null) {
-            onElementAdded.run();
-        }
+        TextoElemento texto = new TextoElemento("Texto " + num, 50, 50);
+        texto.setWidth(150);
+
+        proyectoActual.getElementosActuales().add(texto);
+        avisarElementoAñadido();
 
         return texto;
     }
 
-    /**
-     * Importa una imagen externa:
-     * 1. La copia a la carpeta 'Fotos' del proyecto (para portabilidad).
-     * 2. La carga desde esa nueva ubicación.
-     * 3. Crea el elemento en el canvas.
-     */
+    /* Importa una imagen:
+     * - Si el proyecto tiene carpeta /Fotos, se copia allí para que sea portable
+     * - Si no (modo legacy), se referencia desde la ruta original */
+
     public ImagenElemento añadirImagen(Window window) {
-        if (proyectoActual == null) {
-            return null;
-        }
+
+        if (proyectoActual == null) return null;
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Seleccionar Imagen");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
 
         File file = fileChooser.showOpenDialog(window);
-        if (file != null) {
-            try {
-                String rutaImagen;
-                ProyectoMetadata metadata = proyectoActual.getMetadata();
+        if (file == null) return null;
 
-                // Lógica de importación segura
-                if (metadata != null && metadata.getRutaFotos() != null) {
-                    // Copiar físico
-                    String rutaRelativa = fileManager.copiarImagenAProyecto(file, metadata, false);
-                    if (rutaRelativa == null) {
-                        mostrarErrorCargaImagen("Fallo al copiar imagen al repositorio del proyecto.");
-                        return null;
-                    }
-                    rutaImagen = rutaRelativa;
+        try {
+            ProyectoMetadata metadata = proyectoActual.getMetadata();
 
-                    // Cargar memoria (usando Proxy para no bloquear fichero)
-                    Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
-                    Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+            // Proyecto con estructura (portable)
+            if (metadata != null && metadata.getRutaFotos() != null) {
 
-                    int num = proyectoActual.getElementosActuales().size() + 1;
-                    ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50, rutaImagen, img);
-                    proyectoActual.getElementosActuales().add(imgElem);
-
-                    // Auto-guardado de seguridad
-                    fileManager.guardarProyecto(proyectoActual, metadata);
-
-                    if (onElementAdded != null) {
-                        onElementAdded.run();
-                    }
-
-                    return imgElem;
-                } else {
-                    // Fallback para proyectos legacy sin carpetas
-                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
-                    int num = proyectoActual.getElementosActuales().size() + 1;
-                    ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50,
-                            file.getAbsolutePath(), img);
-                    proyectoActual.getElementosActuales().add(imgElem);
-
-                    if (onElementAdded != null) {
-                        onElementAdded.run();
-                    }
-
-                    return imgElem;
+                String rutaRelativa = fileManager.copiarImagenAProyecto(file, metadata, false);
+                if (rutaRelativa == null) {
+                    mostrarErrorCargaImagen("Fallo al copiar imagen al repositorio del proyecto.");
+                    return null;
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                mostrarErrorCargaImagen(ex.getMessage());
-                return null;
+
+                Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
+                Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+
+                int num = proyectoActual.getElementosActuales().size() + 1;
+                ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50, rutaRelativa, img);
+
+                proyectoActual.getElementosActuales().add(imgElem);
+
+                // Auto-guardado (simple y útil)
+                fileManager.guardarProyecto(proyectoActual, metadata);
+
+                avisarElementoAñadido();
+                return imgElem;
             }
-        }
 
-        return null;
-    }
+            // Legacy (sin carpetas)
+            Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
 
-    /**
-     * Establece el FONDO de la tarjeta.
-     * Similar a añadirImagen, pero:
-     * 1. Copia a carpeta 'Fondos'.
-     * 2. Pregunta si quieres Sangrado (Bleed) o ajuste exacto.
-     * 3. Reemplaza cualquier fondo previo.
-     */
-    public ImagenFondoElemento añadirFondo(Window window, FitModeProvider fitModeProvider) {
-        if (proyectoActual == null) {
+            int num = proyectoActual.getElementosActuales().size() + 1;
+            ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50, file.getAbsolutePath(), img);
+
+            proyectoActual.getElementosActuales().add(imgElem);
+            avisarElementoAñadido();
+
+            return imgElem;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            mostrarErrorCargaImagen(ex.getMessage());
             return null;
         }
+    }
 
-        // Si ya hay fondo, preguntar antes de machacar
+    /* Establece el fondo de la tarjeta:
+     * - Se copia a /Fondos (si existe estructura)
+     * - Se pregunta el modo (con sangre / sin sangre) salvo que el proyecto recuerde la preferencia
+     * - Reemplaza el fondo anterior de la cara actual */
+
+    public ImagenFondoElemento añadirFondo(Window window, FitModeProvider fitModeProvider) {
+
+        if (proyectoActual == null) return null;
+
         ImagenFondoElemento fondoExistente = proyectoActual.getFondoActual();
-        if (fondoExistente != null) {
-            if (!confirmarReemplazoFondo()) {
-                return null;
-            }
+        if (fondoExistente != null && !confirmarReemplazoFondo()) {
+            return null;
         }
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Seleccionar Imagen de Fondo");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
 
         File file = fileChooser.showOpenDialog(window);
-        if (file != null) {
-            try {
-                // Decidir modo de ajuste (Bleed vs Final)
-                FondoFitMode fitMode;
-                if (proyectoActual.isNoVolverAPreguntarFondo() &&
-                        proyectoActual.getFondoFitModePreferido() != null) {
-                    fitMode = proyectoActual.getFondoFitModePreferido();
-                } else {
-                    // Preguntar al usuario mediante diálogo externo (inyectado)
-                    fitMode = fitModeProvider.getFitMode();
-                    if (fitMode == null) {
-                        return null; // Cancelado
-                    }
-                }
+        if (file == null) return null;
 
-                String rutaFondo;
-                ProyectoMetadata metadata = proyectoActual.getMetadata();
+        try {
+            // Modo de ajuste (preferencia guardada o diálogo)
+            FondoFitMode fitMode;
 
-                if (metadata != null && metadata.getRutaFondos() != null) {
-                    // Copiar con sufijo FRENTE o DORSO para organización
-                    String sufijo = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
-                    String rutaRelativa = fileManager.copiarImagenAProyecto(file, metadata, true, sufijo);
-                    if (rutaRelativa == null) {
-                        mostrarErrorCargaImagen("Error copiando fondo al proyecto.");
-                        return null;
-                    }
-                    rutaFondo = rutaRelativa;
-
-                    Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
-                    Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
-
-                    ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
-                            rutaFondo, img,
-                            EditorCanvasManager.CARD_WIDTH,
-                            EditorCanvasManager.CARD_HEIGHT,
-                            fitMode);
-
-                    // Ajustar automáticamente al tamaño del canvas
-                    nuevoFondo.ajustarATamaño(
-                            EditorCanvasManager.CARD_WIDTH,
-                            EditorCanvasManager.CARD_HEIGHT,
-                            EditorCanvasManager.BLEED_MARGIN);
-
-                    proyectoActual.setFondoActual(nuevoFondo);
-
-                    fileManager.guardarProyecto(proyectoActual, metadata);
-
-                    if (onElementAdded != null) {
-                        onElementAdded.run();
-                    }
-
-                    return nuevoFondo;
-                } else {
-                    // Legacy mode
-                    Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
-
-                    ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
-                            file.getAbsolutePath(), img,
-                            EditorCanvasManager.CARD_WIDTH,
-                            EditorCanvasManager.CARD_HEIGHT,
-                            fitMode);
-                    nuevoFondo.ajustarATamaño(
-                            EditorCanvasManager.CARD_WIDTH,
-                            EditorCanvasManager.CARD_HEIGHT,
-                            EditorCanvasManager.BLEED_MARGIN);
-
-                    proyectoActual.setFondoActual(nuevoFondo);
-
-                    if (onElementAdded != null) {
-                        onElementAdded.run();
-                    }
-
-                    return nuevoFondo;
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                mostrarErrorCargaImagen(ex.getMessage());
-                return null;
+            if (proyectoActual.isNoVolverAPreguntarFondo() && proyectoActual.getFondoFitModePreferido() != null) {
+                fitMode = proyectoActual.getFondoFitModePreferido();
+            } else {
+                fitMode = fitModeProvider.getFitMode();
+                if (fitMode == null) return null;
             }
-        }
 
-        return null;
+            ProyectoMetadata metadata = proyectoActual.getMetadata();
+
+            // Proyecto con estructura (portable)
+            if (metadata != null && metadata.getRutaFondos() != null) {
+
+                String sufijo = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
+                String rutaRelativa = fileManager.copiarImagenAProyecto(file, metadata, true, sufijo);
+
+                if (rutaRelativa == null) {
+                    mostrarErrorCargaImagen("Error copiando fondo al proyecto.");
+                    return null;
+                }
+
+                Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
+                Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+
+                ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
+                        rutaRelativa, img,
+                        EditorCanvasManager.CARD_WIDTH,
+                        EditorCanvasManager.CARD_HEIGHT,
+                        fitMode
+                );
+
+                nuevoFondo.ajustarATamaño(
+                        EditorCanvasManager.CARD_WIDTH,
+                        EditorCanvasManager.CARD_HEIGHT,
+                        EditorCanvasManager.BLEED_MARGIN
+                );
+
+                proyectoActual.setFondoActual(nuevoFondo);
+
+                // Auto-guardado (igual que imágenes)
+                fileManager.guardarProyecto(proyectoActual, metadata);
+
+                avisarElementoAñadido();
+                return nuevoFondo;
+            }
+
+            // Legacy
+            Image img = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
+
+            ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
+                    file.getAbsolutePath(), img,
+                    EditorCanvasManager.CARD_WIDTH,
+                    EditorCanvasManager.CARD_HEIGHT,
+                    fitMode
+            );
+
+            nuevoFondo.ajustarATamaño(
+                    EditorCanvasManager.CARD_WIDTH,
+                    EditorCanvasManager.CARD_HEIGHT,
+                    EditorCanvasManager.BLEED_MARGIN
+            );
+
+            proyectoActual.setFondoActual(nuevoFondo);
+            avisarElementoAñadido();
+
+            return nuevoFondo;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            mostrarErrorCargaImagen(ex.getMessage());
+            return null;
+        }
     }
 
-    /**
-     * Borra un elemento del canvas y avisa para refrescar.
-     */
+    /* Elimina un elemento del proyecto actual. */
     public boolean eliminarElemento(Elemento elemento) {
-        if (proyectoActual != null && elemento != null) {
-            boolean removed = proyectoActual.getElementosActuales().remove(elemento);
-            if (removed && onProjectChanged != null) {
-                onProjectChanged.run();
-            }
-            return removed;
+        if (proyectoActual == null || elemento == null) return false;
+
+        boolean removed = proyectoActual.getElementosActuales().remove(elemento);
+
+        if (removed) {
+            avisarProyectoCambiado();
         }
-        return false;
+
+        return removed;
     }
 
-    // ========== UTILIDADES Y DIÁLOGOS ==========
+    // =====================================================
+    // Utilidades / diálogos (Alerts)
+    // =====================================================
 
     private boolean confirmarReemplazoFondo() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reemplazar Fondo");
         alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
         alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
-
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
@@ -567,12 +523,26 @@ public class ProjectManager {
         alert.showAndWait();
     }
 
-    // ========== INTERFACES AUXILIARES ==========
+    // =====================================================
+    // Helpers internos (para no repetir ifs por todos lados)
+    // =====================================================
 
-    /**
-     * Interfaz para pedir el modo de ajuste (Bleed vs Final) sin ensuciar
-     * este servicio con lógica de JavaFX Dialogs complejos.
-     */
+    private void avisarProyectoCambiado() {
+        if (onProjectChanged != null) {
+            onProjectChanged.run();
+        }
+    }
+
+    private void avisarElementoAñadido() {
+        if (onElementAdded != null) {
+            onElementAdded.run();
+        }
+    }
+
+    // =====================================================
+    // Interfaces auxiliares
+    // =====================================================
+
     @FunctionalInterface
     public interface FitModeProvider {
         FondoFitMode getFitMode();

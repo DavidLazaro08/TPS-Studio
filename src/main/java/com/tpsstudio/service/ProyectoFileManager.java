@@ -9,6 +9,7 @@ import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
 import com.tpsstudio.util.ImageUtils;
+import com.tpsstudio.view.managers.EditorCanvasManager;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 
@@ -20,9 +21,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Gestor de archivos y carpetas del proyecto
- */
+/* Gestor de archivos y carpetas del proyecto */
+
 public class ProyectoFileManager {
 
     // Adaptador personalizado para LocalDateTime
@@ -53,12 +53,14 @@ public class ProyectoFileManager {
             .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
             .create();
 
-    /**
-     * Crea la estructura de carpetas del proyecto
-     * 
+    private static final DateTimeFormatter CLIENTE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    /* Crea la estructura de carpetas del proyecto
+     *
      * @param metadata Metadatos del proyecto
-     * @return true si se creó correctamente
-     */
+     * @return true si se creó correctamente */
+
     public boolean crearEstructuraCarpetas(ProyectoMetadata metadata) {
         try {
             // Normalizar nombre (quitar caracteres especiales)
@@ -109,15 +111,14 @@ public class ProyectoFileManager {
         }
     }
 
-    /**
-     * Copia una imagen al proyecto y devuelve la ruta relativa
-     * 
+    /* Copia una imagen al proyecto y devuelve la ruta relativa
+     *
      * @param imagenOrigen Archivo de imagen original
      * @param metadata     Metadatos del proyecto
      * @param esFondo      true si es un fondo, false si es una imagen normal
      * @param sufijo       Sufijo opcional para el nombre (ej: "FRENTE", "DORSO")
-     * @return Ruta relativa (ej: "Fotos/logo.png") o null si falla
-     */
+     * @return Ruta relativa (ej: "Fotos/logo.png") o null si falla */
+
     public String copiarImagenAProyecto(File imagenOrigen, ProyectoMetadata metadata, boolean esFondo, String sufijo) {
         try {
             String carpetaDestino = esFondo ? metadata.getRutaFondos() : metadata.getRutaFotos();
@@ -127,7 +128,6 @@ public class ProyectoFileManager {
             String nombreFinal;
 
             if (sufijo != null && !sufijo.isEmpty()) {
-                // Separar nombre y extensión
                 int puntoIndex = nombreOriginal.lastIndexOf('.');
                 if (puntoIndex > 0) {
                     String nombre = nombreOriginal.substring(0, puntoIndex);
@@ -142,10 +142,8 @@ public class ProyectoFileManager {
 
             Path destino = Paths.get(carpetaDestino, nombreFinal);
 
-            // Copiar archivo
             Files.copy(imagenOrigen.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
 
-            // Devolver ruta relativa
             String subcarpeta = esFondo ? "Fondos" : "Fotos";
             return subcarpeta + "/" + nombreFinal;
 
@@ -155,26 +153,23 @@ public class ProyectoFileManager {
         }
     }
 
-    /**
-     * Versión simplificada sin sufijo (para compatibilidad)
-     */
+    /* Versión simplificada sin sufijo (para compatibilidad) */
+
     public String copiarImagenAProyecto(File imagenOrigen, ProyectoMetadata metadata, boolean esFondo) {
         return copiarImagenAProyecto(imagenOrigen, metadata, esFondo, null);
     }
 
-    /**
-     * Guarda el proyecto en formato JSON
-     * 
+    /* Guarda el proyecto en formato JSON
+     *
      * @param proyecto Proyecto a guardar
      * @param metadata Metadatos del proyecto
-     * @return true si se guardó correctamente
-     */
+     * @return true si se guardó correctamente */
+
     public boolean guardarProyecto(Proyecto proyecto, ProyectoMetadata metadata) {
         try {
             System.out.println("[DEBUG] Guardando proyecto: " + proyecto.getNombre());
             System.out.println("[DEBUG] Ruta TPS: " + metadata.getRutaTPS());
 
-            // Actualizar fecha de modificación
             metadata.setFechaModificacion(LocalDateTime.now());
 
             // Re-exportar datos del cliente (para asegurar que no se borre)
@@ -191,11 +186,9 @@ public class ProyectoFileManager {
             dto.setFondoFitModePreferido(proyecto.getFondoFitModePreferido());
             dto.setNoVolverAPreguntarFondo(proyecto.isNoVolverAPreguntarFondo());
 
-            // Convertir elementos
             dto.setElementosFrente(convertirElementosADTO(proyecto.getElementosFrente()));
             dto.setElementosDorso(convertirElementosADTO(proyecto.getElementosDorso()));
 
-            // Convertir fondos (AMBOS: frente y dorso)
             if (proyecto.getFondoFrente() != null) {
                 dto.setFondoFrente(convertirFondoADTO(proyecto.getFondoFrente()));
             }
@@ -203,7 +196,6 @@ public class ProyectoFileManager {
                 dto.setFondoDorso(convertirFondoADTO(proyecto.getFondoDorso()));
             }
 
-            // Escribir a archivo
             String json = gson.toJson(dto);
             Path archivoTPS = Paths.get(metadata.getRutaTPS());
             Files.writeString(archivoTPS, json);
@@ -222,27 +214,43 @@ public class ProyectoFileManager {
         }
     }
 
-    /**
-     * Carga un proyecto desde archivo .tps
-     * 
+    /* Carga un proyecto desde archivo .tps
+     *
      * @param archivoTPS Archivo .tps a cargar
-     * @return Proyecto cargado o null si falla
-     */
+     * @return Proyecto cargado o null si falla */
+
     public Proyecto cargarProyecto(File archivoTPS) {
         try {
-            // Leer JSON
             String json = Files.readString(archivoTPS.toPath());
             ProyectoDTO dto = gson.fromJson(json, ProyectoDTO.class);
 
-            // Reconstruir proyecto
             Proyecto proyecto = new Proyecto(dto.getNombre());
             proyecto.setMetadata(dto.getMetadata());
             proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
 
-            // Reconstruir elementos
             Path carpetaProyecto = archivoTPS.toPath().getParent();
+
+            // --- REHIDRATAR METADATA (por si el proyecto se movió de sitio) ---
+            ProyectoMetadata metadata = proyecto.getMetadata();
+            if (metadata != null && carpetaProyecto != null) {
+
+                metadata.setRutaTPS(archivoTPS.getAbsolutePath());
+                metadata.setRutaFotos(carpetaProyecto.resolve("Fotos").toString());
+                metadata.setRutaFondos(carpetaProyecto.resolve("Fondos").toString());
+
+                // Rehidratar ruta BBDD si existía (siempre dentro de /BBDD)
+                if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
+                    Path bbddNueva = carpetaProyecto.resolve("BBDD")
+                            .resolve(Paths.get(metadata.getRutaBBDD()).getFileName());
+                    if (Files.exists(bbddNueva)) {
+                        metadata.setRutaBBDD(bbddNueva.toString());
+                    }
+                }
+            }
+
+            // Reconstruir elementos
             proyecto.getElementosFrente().addAll(
                     convertirDTOAElementos(dto.getElementosFrente(), carpetaProyecto));
             proyecto.getElementosDorso().addAll(
@@ -256,8 +264,7 @@ public class ProyectoFileManager {
                 proyecto.setFondoDorso(convertirDTOAFondo(dto.getFondoDorso(), carpetaProyecto));
             }
 
-            // Validar integridad de imágenes
-            validarIntegridad(proyecto, dto.getMetadata());
+            validarIntegridad(proyecto, proyecto.getMetadata());
 
             return proyecto;
 
@@ -310,8 +317,7 @@ public class ProyectoFileManager {
 
     private List<Elemento> convertirDTOAElementos(List<ElementoDTO> dtos, Path carpetaProyecto) {
         List<Elemento> elementos = new ArrayList<>();
-        if (dtos == null)
-            return elementos;
+        if (dtos == null || carpetaProyecto == null) return elementos;
 
         for (ElementoDTO dto : dtos) {
             Elemento elem = null;
@@ -329,18 +335,18 @@ public class ProyectoFileManager {
                 elem = texto;
 
             } else if ("imagen".equals(dto.getTipo())) {
-                // Resolver ruta relativa
                 Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
                 if (Files.exists(rutaAbsoluta)) {
-                    // USAR PROXY PARA EVITAR BLOQUEOS
                     javafx.scene.image.Image img = ImageUtils
                             .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+
                     ImagenElemento imagen = new ImagenElemento(
                             dto.getNombre(),
                             dto.getX(),
                             dto.getY(),
                             dto.getRutaImagen(),
                             img);
+
                     imagen.setWidth(dto.getWidth());
                     imagen.setHeight(dto.getHeight());
                     imagen.setMantenerProporcion(dto.isMantenerProporcion());
@@ -358,6 +364,8 @@ public class ProyectoFileManager {
     }
 
     private ImagenFondoElemento convertirDTOAFondo(FondoDTO dto, Path carpetaProyecto) {
+        if (dto == null || carpetaProyecto == null) return null;
+
         Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
         if (!Files.exists(rutaAbsoluta)) {
             return null;
@@ -370,30 +378,32 @@ public class ProyectoFileManager {
         ImagenFondoElemento fondo = new ImagenFondoElemento(
                 dto.getRutaImagen(),
                 img,
-                com.tpsstudio.view.managers.EditorCanvasManager.CARD_WIDTH,
-                com.tpsstudio.view.managers.EditorCanvasManager.CARD_HEIGHT,
+                EditorCanvasManager.CARD_WIDTH,
+                EditorCanvasManager.CARD_HEIGHT,
                 fitMode);
+
         fondo.ajustarATamaño(
-                com.tpsstudio.view.managers.EditorCanvasManager.CARD_WIDTH,
-                com.tpsstudio.view.managers.EditorCanvasManager.CARD_HEIGHT,
-                com.tpsstudio.view.managers.EditorCanvasManager.BLEED_MARGIN);
+                EditorCanvasManager.CARD_WIDTH,
+                EditorCanvasManager.CARD_HEIGHT,
+                EditorCanvasManager.BLEED_MARGIN);
+
         return fondo;
     }
 
-    /**
-     * Valida que todas las imágenes existan
-     */
+    /* Valida que todas las imágenes existan */
+
     private void validarIntegridad(Proyecto proyecto, ProyectoMetadata metadata) {
+        if (metadata == null) return;
+
+        String carpeta = metadata.getCarpetaProyecto();
+        if (carpeta == null || carpeta.isEmpty()) return;
+
         List<String> imagenesFaltantes = new ArrayList<>();
-        Path carpetaProyecto = Paths.get(metadata.getCarpetaProyecto());
+        Path carpetaProyecto = Paths.get(carpeta);
 
-        // Verificar frente
         verificarImagenesElementos(proyecto.getElementosFrente(), carpetaProyecto, imagenesFaltantes);
-
-        // Verificar dorso
         verificarImagenesElementos(proyecto.getElementosDorso(), carpetaProyecto, imagenesFaltantes);
 
-        // Verificar fondos
         if (proyecto.getFondoFrente() != null) {
             verificarImagen(proyecto.getFondoFrente().getRutaArchivo(), carpetaProyecto, imagenesFaltantes);
         }
@@ -401,7 +411,6 @@ public class ProyectoFileManager {
             verificarImagen(proyecto.getFondoDorso().getRutaArchivo(), carpetaProyecto, imagenesFaltantes);
         }
 
-        // Mostrar advertencia si faltan imágenes
         if (!imagenesFaltantes.isEmpty()) {
             Platform.runLater(() -> {
                 Alert alert = new Alert(Alert.AlertType.WARNING);
@@ -423,24 +432,21 @@ public class ProyectoFileManager {
     }
 
     private void verificarImagen(String rutaRelativa, Path carpetaProyecto, List<String> faltantes) {
-        if (rutaRelativa == null)
-            return;
+        if (rutaRelativa == null) return;
         Path rutaAbsoluta = carpetaProyecto.resolve(rutaRelativa);
         if (!Files.exists(rutaAbsoluta)) {
             faltantes.add(rutaRelativa);
         }
     }
 
-    /**
-     * Normaliza el nombre del proyecto para usarlo como nombre de carpeta
-     */
+    /* Normaliza el nombre del proyecto para usarlo como nombre de carpeta */
+
     private String normalizarNombre(String nombre) {
         return nombre.replaceAll("[^a-zA-Z0-9_\\-\\s]", "_").replaceAll("\\s+", "_");
     }
 
-    /**
-     * Exporta los datos del cliente a un archivo de texto
-     */
+    /* Exporta los datos del cliente a un archivo de texto */
+
     private void exportarDatosCliente(Path carpetaProyecto, ClienteInfo cliente) {
         try {
             Path archivoCliente = carpetaProyecto.resolve("datos_cliente.txt");
@@ -472,14 +478,12 @@ public class ProyectoFileManager {
             }
 
             contenido.append("\n===========================================\n");
-            contenido.append("Generado: ").append(LocalDateTime.now().format(
-                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("\n");
+            contenido.append("Generado: ").append(LocalDateTime.now().format(CLIENTE_FORMATTER)).append("\n");
 
             Files.writeString(archivoCliente, contenido.toString());
 
         } catch (IOException e) {
             e.printStackTrace();
-            // No fallar si no se puede exportar, es opcional
         }
     }
 
@@ -496,78 +500,32 @@ public class ProyectoFileManager {
         private FondoDTO fondoFrente;
         private FondoDTO fondoDorso;
 
-        // Getters y Setters
-        public String getNombre() {
-            return nombre;
-        }
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
 
-        public void setNombre(String nombre) {
-            this.nombre = nombre;
-        }
+        public ProyectoMetadata getMetadata() { return metadata; }
+        public void setMetadata(ProyectoMetadata metadata) { this.metadata = metadata; }
 
-        public ProyectoMetadata getMetadata() {
-            return metadata;
-        }
+        public boolean isMostrandoFrente() { return mostrandoFrente; }
+        public void setMostrandoFrente(boolean mostrandoFrente) { this.mostrandoFrente = mostrandoFrente; }
 
-        public void setMetadata(ProyectoMetadata metadata) {
-            this.metadata = metadata;
-        }
+        public FondoFitMode getFondoFitModePreferido() { return fondoFitModePreferido; }
+        public void setFondoFitModePreferido(FondoFitMode fondoFitModePreferido) { this.fondoFitModePreferido = fondoFitModePreferido; }
 
-        public boolean isMostrandoFrente() {
-            return mostrandoFrente;
-        }
+        public boolean isNoVolverAPreguntarFondo() { return noVolverAPreguntarFondo; }
+        public void setNoVolverAPreguntarFondo(boolean noVolverAPreguntarFondo) { this.noVolverAPreguntarFondo = noVolverAPreguntarFondo; }
 
-        public void setMostrandoFrente(boolean mostrandoFrente) {
-            this.mostrandoFrente = mostrandoFrente;
-        }
+        public List<ElementoDTO> getElementosFrente() { return elementosFrente; }
+        public void setElementosFrente(List<ElementoDTO> elementosFrente) { this.elementosFrente = elementosFrente; }
 
-        public FondoFitMode getFondoFitModePreferido() {
-            return fondoFitModePreferido;
-        }
+        public List<ElementoDTO> getElementosDorso() { return elementosDorso; }
+        public void setElementosDorso(List<ElementoDTO> elementosDorso) { this.elementosDorso = elementosDorso; }
 
-        public void setFondoFitModePreferido(FondoFitMode fondoFitModePreferido) {
-            this.fondoFitModePreferido = fondoFitModePreferido;
-        }
+        public FondoDTO getFondoFrente() { return fondoFrente; }
+        public void setFondoFrente(FondoDTO fondoFrente) { this.fondoFrente = fondoFrente; }
 
-        public boolean isNoVolverAPreguntarFondo() {
-            return noVolverAPreguntarFondo;
-        }
-
-        public void setNoVolverAPreguntarFondo(boolean noVolverAPreguntarFondo) {
-            this.noVolverAPreguntarFondo = noVolverAPreguntarFondo;
-        }
-
-        public List<ElementoDTO> getElementosFrente() {
-            return elementosFrente;
-        }
-
-        public void setElementosFrente(List<ElementoDTO> elementosFrente) {
-            this.elementosFrente = elementosFrente;
-        }
-
-        public List<ElementoDTO> getElementosDorso() {
-            return elementosDorso;
-        }
-
-        public void setElementosDorso(List<ElementoDTO> elementosDorso) {
-            this.elementosDorso = elementosDorso;
-        }
-
-        public FondoDTO getFondoFrente() {
-            return fondoFrente;
-        }
-
-        public void setFondoFrente(FondoDTO fondoFrente) {
-            this.fondoFrente = fondoFrente;
-        }
-
-        public FondoDTO getFondoDorso() {
-            return fondoDorso;
-        }
-
-        public void setFondoDorso(FondoDTO fondoDorso) {
-            this.fondoDorso = fondoDorso;
-        }
+        public FondoDTO getFondoDorso() { return fondoDorso; }
+        public void setFondoDorso(FondoDTO fondoDorso) { this.fondoDorso = fondoDorso; }
     }
 
     public static class ElementoDTO {
@@ -577,142 +535,64 @@ public class ProyectoFileManager {
         private double y;
         private boolean locked;
 
-        // Campos de texto
         private String contenido;
         private String fuente;
         private int tamaño;
         private String color;
 
-        // Campos de imagen
         private String rutaImagen;
         private double width;
         private double height;
         private boolean mantenerProporcion;
 
-        // Getters y Setters
-        public String getTipo() {
-            return tipo;
-        }
+        public String getTipo() { return tipo; }
+        public void setTipo(String tipo) { this.tipo = tipo; }
 
-        public void setTipo(String tipo) {
-            this.tipo = tipo;
-        }
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
 
-        public String getNombre() {
-            return nombre;
-        }
+        public double getX() { return x; }
+        public void setX(double x) { this.x = x; }
 
-        public void setNombre(String nombre) {
-            this.nombre = nombre;
-        }
+        public double getY() { return y; }
+        public void setY(double y) { this.y = y; }
 
-        public double getX() {
-            return x;
-        }
+        public boolean isLocked() { return locked; }
+        public void setLocked(boolean locked) { this.locked = locked; }
 
-        public void setX(double x) {
-            this.x = x;
-        }
+        public String getContenido() { return contenido; }
+        public void setContenido(String contenido) { this.contenido = contenido; }
 
-        public double getY() {
-            return y;
-        }
+        public String getFuente() { return fuente; }
+        public void setFuente(String fuente) { this.fuente = fuente; }
 
-        public void setY(double y) {
-            this.y = y;
-        }
+        public int getTamaño() { return tamaño; }
+        public void setTamaño(int tamaño) { this.tamaño = tamaño; }
 
-        public boolean isLocked() {
-            return locked;
-        }
+        public String getColor() { return color; }
+        public void setColor(String color) { this.color = color; }
 
-        public void setLocked(boolean locked) {
-            this.locked = locked;
-        }
+        public String getRutaImagen() { return rutaImagen; }
+        public void setRutaImagen(String rutaImagen) { this.rutaImagen = rutaImagen; }
 
-        public String getContenido() {
-            return contenido;
-        }
+        public double getWidth() { return width; }
+        public void setWidth(double width) { this.width = width; }
 
-        public void setContenido(String contenido) {
-            this.contenido = contenido;
-        }
+        public double getHeight() { return height; }
+        public void setHeight(double height) { this.height = height; }
 
-        public String getFuente() {
-            return fuente;
-        }
-
-        public void setFuente(String fuente) {
-            this.fuente = fuente;
-        }
-
-        public int getTamaño() {
-            return tamaño;
-        }
-
-        public void setTamaño(int tamaño) {
-            this.tamaño = tamaño;
-        }
-
-        public String getColor() {
-            return color;
-        }
-
-        public void setColor(String color) {
-            this.color = color;
-        }
-
-        public String getRutaImagen() {
-            return rutaImagen;
-        }
-
-        public void setRutaImagen(String rutaImagen) {
-            this.rutaImagen = rutaImagen;
-        }
-
-        public double getWidth() {
-            return width;
-        }
-
-        public void setWidth(double width) {
-            this.width = width;
-        }
-
-        public double getHeight() {
-            return height;
-        }
-
-        public void setHeight(double height) {
-            this.height = height;
-        }
-
-        public boolean isMantenerProporcion() {
-            return mantenerProporcion;
-        }
-
-        public void setMantenerProporcion(boolean mantenerProporcion) {
-            this.mantenerProporcion = mantenerProporcion;
-        }
+        public boolean isMantenerProporcion() { return mantenerProporcion; }
+        public void setMantenerProporcion(boolean mantenerProporcion) { this.mantenerProporcion = mantenerProporcion; }
     }
 
     public static class FondoDTO {
         private String rutaImagen;
         private String fitMode;
 
-        public String getRutaImagen() {
-            return rutaImagen;
-        }
+        public String getRutaImagen() { return rutaImagen; }
+        public void setRutaImagen(String rutaImagen) { this.rutaImagen = rutaImagen; }
 
-        public void setRutaImagen(String rutaImagen) {
-            this.rutaImagen = rutaImagen;
-        }
-
-        public String getFitMode() {
-            return fitMode;
-        }
-
-        public void setFitMode(String fitMode) {
-            this.fitMode = fitMode;
-        }
+        public String getFitMode() { return fitMode; }
+        public void setFitMode(String fitMode) { this.fitMode = fitMode; }
     }
 }

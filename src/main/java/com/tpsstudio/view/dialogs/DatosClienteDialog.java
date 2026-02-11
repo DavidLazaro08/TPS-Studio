@@ -2,14 +2,13 @@ package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.ClienteInfo;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 
-/**
- * Diálogo para capturar información del cliente
- */
+/* Diálogo para capturar información del cliente */
 public class DatosClienteDialog extends Dialog<ClienteInfo> {
 
     private TextField txtNombreEmpresa;
@@ -111,19 +110,31 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         getDialogPane().getButtonTypes().addAll(btnGuardar, btnCancelar);
 
-        // Validación en tiempo real
-        txtEmail.textProperty().addListener((obs, old, newVal) -> validarEmail());
-        txtTelefono.textProperty().addListener((obs, old, newVal) -> validarTelefono());
+        // Referencia al botón Guardar para habilitar/deshabilitar (mejora UX)
+        Node btnGuardarNode = getDialogPane().lookupButton(btnGuardar);
 
-        // Cargar datos existentes si los hay
+        // Validación en tiempo real
+        txtEmail.textProperty().addListener((obs, old, newVal) -> {
+            validarEmail();
+            actualizarBotonGuardar(btnGuardarNode);
+        });
+
+        txtTelefono.textProperty().addListener((obs, old, newVal) -> {
+            validarTelefono();
+            actualizarBotonGuardar(btnGuardarNode);
+        });
+
+        // Cargar datos existentes si los hay (robusto ante nulls)
         if (clienteExistente != null) {
             cargarDatos(clienteExistente);
         }
 
+        // Estado inicial del botón Guardar
+        actualizarBotonGuardar(btnGuardarNode);
+
         // Convertir resultado
         setResultConverter(buttonType -> {
             if (buttonType == btnGuardar) {
-                // Validar antes de guardar
                 if (!validarEmail() || !validarTelefono()) {
                     return null;
                 }
@@ -133,11 +144,10 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         });
     }
 
-    /**
-     * Valida el email y muestra error si es inválido
-     */
+    /* Valida el email y muestra error si es inválido */
+
     private boolean validarEmail() {
-        String email = txtEmail.getText().trim();
+        String email = safe(txtEmail.getText());
 
         if (email.isEmpty()) {
             lblEmailError.setVisible(false);
@@ -154,11 +164,10 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         return true;
     }
 
-    /**
-     * Valida el teléfono y muestra error si es inválido
-     */
+    /* Valida el teléfono y muestra error si es inválido */
+
     private boolean validarTelefono() {
-        String telefono = txtTelefono.getText().trim();
+        String telefono = safe(txtTelefono.getText());
 
         if (telefono.isEmpty()) {
             lblTelefonoError.setVisible(false);
@@ -175,27 +184,34 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         return true;
     }
 
-    /**
-     * Carga datos de un ClienteInfo existente
-     */
-    private void cargarDatos(ClienteInfo cliente) {
-        txtNombreEmpresa.setText(cliente.getNombreEmpresa());
-        txtNombreContacto.setText(cliente.getNombreContacto());
-        txtEmail.setText(cliente.getEmail());
-        txtTelefono.setText(cliente.getTelefono());
-        txtObservaciones.setText(cliente.getObservaciones());
+    private void actualizarBotonGuardar(Node btnGuardarNode) {
+        boolean ok = validarEmail() && validarTelefono();
+        btnGuardarNode.setDisable(!ok);
     }
 
-    /**
-     * Crea un objeto ClienteInfo con los datos del formulario
-     */
+    /* Carga datos de un ClienteInfo existente */
+
+    private void cargarDatos(ClienteInfo cliente) {
+        txtNombreEmpresa.setText(safe(cliente.getNombreEmpresa()));
+        txtNombreContacto.setText(safe(cliente.getNombreContacto()));
+        txtEmail.setText(safe(cliente.getEmail()));
+        txtTelefono.setText(safe(cliente.getTelefono()));
+        txtObservaciones.setText(safe(cliente.getObservaciones()));
+    }
+
+    /* Crea un objeto ClienteInfo con los datos del formulario */
+
     private ClienteInfo crearClienteInfo() {
         ClienteInfo cliente = new ClienteInfo();
-        cliente.setNombreEmpresa(txtNombreEmpresa.getText().trim());
-        cliente.setNombreContacto(txtNombreContacto.getText().trim());
-        cliente.setEmail(txtEmail.getText().trim());
-        cliente.setTelefono(txtTelefono.getText().trim());
-        cliente.setObservaciones(txtObservaciones.getText().trim());
+        cliente.setNombreEmpresa(safe(txtNombreEmpresa.getText()));
+        cliente.setNombreContacto(safe(txtNombreContacto.getText()));
+        cliente.setEmail(safe(txtEmail.getText()));
+        cliente.setTelefono(safe(txtTelefono.getText()));
+        cliente.setObservaciones(safe(txtObservaciones.getText()));
         return cliente;
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : s.trim();
     }
 }

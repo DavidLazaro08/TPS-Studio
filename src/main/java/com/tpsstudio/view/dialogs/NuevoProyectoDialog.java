@@ -13,9 +13,8 @@ import javafx.stage.FileChooser;
 import java.io.File;
 import java.util.Optional;
 
-/**
- * Diálogo para crear un nuevo proyecto TPS
- */
+/* Diálogo para crear un nuevo proyecto TPS */
+
 public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
 
     private TextField txtNombre;
@@ -29,11 +28,14 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
 
     private ClienteInfo clienteInfo;
 
+    // Para poder actualizar el label “Se creará la carpeta...”
+    private Label lblUbicacionInfo;
+
     public NuevoProyectoDialog() {
         setTitle("Nuevo Proyecto TPS");
         setHeaderText("Crear nuevo proyecto de diseño de tarjetas");
 
-        // Inicializar cliente info vacío
+        // Inicializar cliente info vacío (siempre no-null)
         clienteInfo = new ClienteInfo();
 
         // Crear grid principal
@@ -53,23 +55,28 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         Label lblUbicacion = new Label("Ubicación:");
         lblUbicacion.setStyle("-fx-font-weight: bold;");
         HBox hboxUbicacion = new HBox(5);
+
         txtUbicacion = new TextField();
         txtUbicacion.setEditable(false);
         txtUbicacion.setPromptText("Seleccione una carpeta...");
         txtUbicacion.setPrefWidth(300);
+
         btnSeleccionarUbicacion = new Button("Examinar...");
         btnSeleccionarUbicacion.setOnAction(e -> seleccionarUbicacion());
+
         hboxUbicacion.getChildren().addAll(txtUbicacion, btnSeleccionarUbicacion);
 
-        Label lblUbicacionInfo = new Label("Se creará la carpeta: TPS_NombreDelProyecto/");
+        lblUbicacionInfo = new Label("Se creará la carpeta: TPS_NombreDelProyecto/");
         lblUbicacionInfo.setStyle("-fx-font-size: 10px; -fx-text-fill: gray;");
 
         // ===== DATOS DEL CLIENTE =====
         Label lblCliente = new Label("Datos del Cliente:");
         lblCliente.setStyle("-fx-font-weight: bold;");
         HBox hboxCliente = new HBox(10);
+
         btnDatosCliente = new Button("📋 Añadir/Editar Datos Cliente");
         btnDatosCliente.setOnAction(e -> abrirDatosCliente());
+
         lblClienteInfo = new Label("(Sin información del cliente)");
         lblClienteInfo.setStyle("-fx-font-size: 10px; -fx-text-fill: gray; -fx-font-style: italic;");
         hboxCliente.getChildren().addAll(btnDatosCliente, lblClienteInfo);
@@ -79,14 +86,17 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         chkVincularBD.setStyle("-fx-font-weight: bold;");
 
         HBox hboxBD = new HBox(5);
+
         txtRutaBD = new TextField();
         txtRutaBD.setEditable(false);
         txtRutaBD.setDisable(true);
         txtRutaBD.setPromptText("Seleccione archivo Excel o Access...");
         txtRutaBD.setPrefWidth(300);
+
         btnSeleccionarBD = new Button("Examinar...");
         btnSeleccionarBD.setDisable(true);
         btnSeleccionarBD.setOnAction(e -> seleccionarBD());
+
         hboxBD.getChildren().addAll(txtRutaBD, btnSeleccionarBD);
 
         Label lblBDInfo = new Label("Para uso futuro con campos variables");
@@ -96,9 +106,7 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         chkVincularBD.selectedProperty().addListener((obs, old, newVal) -> {
             txtRutaBD.setDisable(!newVal);
             btnSeleccionarBD.setDisable(!newVal);
-            if (!newVal) {
-                txtRutaBD.clear();
-            }
+            if (!newVal) txtRutaBD.clear();
         });
 
         // ===== LAYOUT =====
@@ -142,41 +150,42 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         getDialogPane().getButtonTypes().addAll(btnCrear, btnCancelar);
 
-        // ===== VALIDACIÓN =====
+        // ===== VALIDACIÓN BÁSICA (habilitar/deshabilitar) =====
         Node btnCrearNode = getDialogPane().lookupButton(btnCrear);
         btnCrearNode.setDisable(true);
 
-        // Habilitar botón Crear solo si nombre y ubicación están completos
         txtNombre.textProperty().addListener((obs, old, newVal) -> {
             actualizarBotonCrear(btnCrearNode);
-            actualizarInfoUbicacion(lblUbicacionInfo);
+            actualizarInfoUbicacion();
         });
 
         txtUbicacion.textProperty().addListener((obs, old, newVal) -> {
             actualizarBotonCrear(btnCrearNode);
+            actualizarInfoUbicacion();
         });
 
         // ===== CONVERTIR RESULTADO =====
         setResultConverter(buttonType -> {
             if (buttonType == btnCrear) {
+                if (!validarFormulario()) return null;
                 return crearMetadata();
             }
             return null;
         });
+
+        // Estado inicial label cliente + carpeta preview
+        actualizarInfoCliente();
+        actualizarInfoUbicacion();
     }
 
-    /**
-     * Abre el DirectoryChooser para seleccionar ubicación
-     */
+    /* Abre el DirectoryChooser para seleccionar ubicación */
     private void seleccionarUbicacion() {
         DirectoryChooser dirChooser = new DirectoryChooser();
         dirChooser.setTitle("Seleccionar ubicación del proyecto");
 
-        // Intentar usar ubicación de Documentos como inicial
-        String userHome = System.getProperty("user.home");
-        File documentsDir = new File(userHome, "Documents");
-        if (documentsDir.exists()) {
-            dirChooser.setInitialDirectory(documentsDir);
+        File inicial = buscarDirectorioInicial();
+        if (inicial != null && inicial.exists() && inicial.isDirectory()) {
+            dirChooser.setInitialDirectory(inicial);
         }
 
         File dir = dirChooser.showDialog(getDialogPane().getScene().getWindow());
@@ -185,16 +194,39 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         }
     }
 
-    /**
-     * Abre el FileChooser para seleccionar base de datos
-     */
+    /* Intenta encontrar un directorio inicial razonable (Windows ES suele ser "Documentos"). */
+    private File buscarDirectorioInicial() {
+        String userHome = System.getProperty("user.home");
+
+        File docsES = new File(userHome, "Documentos");
+        if (docsES.exists() && docsES.isDirectory()) return docsES;
+
+        File docsEN = new File(userHome, "Documents");
+        if (docsEN.exists() && docsEN.isDirectory()) return docsEN;
+
+        File desktop = new File(userHome, "Desktop");
+        if (desktop.exists() && desktop.isDirectory()) return desktop;
+
+        File home = new File(userHome);
+        if (home.exists() && home.isDirectory()) return home;
+
+        return null;
+    }
+
+    /* Abre el FileChooser para seleccionar base de datos */
     private void seleccionarBD() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Seleccionar Base de Datos");
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"),
                 new FileChooser.ExtensionFilter("Access", "*.accdb", "*.mdb"),
-                new FileChooser.ExtensionFilter("Todos", "*.*"));
+                new FileChooser.ExtensionFilter("Todos", "*.*")
+        );
+
+        File inicial = buscarDirectorioInicial();
+        if (inicial != null && inicial.exists() && inicial.isDirectory()) {
+            fileChooser.setInitialDirectory(inicial);
+        }
 
         File file = fileChooser.showOpenDialog(getDialogPane().getScene().getWindow());
         if (file != null) {
@@ -202,32 +234,35 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         }
     }
 
-    /**
-     * Abre el diálogo de datos del cliente
-     */
+    /* Abre el diálogo de datos del cliente */
     private void abrirDatosCliente() {
+        if (clienteInfo == null) clienteInfo = new ClienteInfo();
+
         DatosClienteDialog dialog = new DatosClienteDialog(clienteInfo);
         Optional<ClienteInfo> result = dialog.showAndWait();
 
         if (result.isPresent()) {
             clienteInfo = result.get();
+            if (clienteInfo == null) clienteInfo = new ClienteInfo();
             actualizarInfoCliente();
         }
     }
 
-    /**
-     * Actualiza el label de información del cliente
-     */
+    /* Actualiza el label de información del cliente */
     private void actualizarInfoCliente() {
-        if (clienteInfo.tieneInformacion()) {
+        if (clienteInfo != null && clienteInfo.tieneInformacion()) {
+            String nombreEmpresa = safe(clienteInfo.getNombreEmpresa());
+            String nombreContacto = safe(clienteInfo.getNombreContacto());
+
             StringBuilder info = new StringBuilder("✓ ");
-            if (!clienteInfo.getNombreEmpresa().isEmpty()) {
-                info.append(clienteInfo.getNombreEmpresa());
-            } else if (!clienteInfo.getNombreContacto().isEmpty()) {
-                info.append(clienteInfo.getNombreContacto());
+            if (!nombreEmpresa.isEmpty()) {
+                info.append(nombreEmpresa);
+            } else if (!nombreContacto.isEmpty()) {
+                info.append(nombreContacto);
             } else {
                 info.append("Datos del cliente añadidos");
             }
+
             lblClienteInfo.setText(info.toString());
             lblClienteInfo.setStyle("-fx-font-size: 10px; -fx-text-fill: green; -fx-font-style: normal;");
         } else {
@@ -236,46 +271,111 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         }
     }
 
-    /**
-     * Actualiza el estado del botón Crear
-     */
+    /* Actualiza el estado del botón Crear */
     private void actualizarBotonCrear(Node btnCrear) {
-        boolean nombreValido = !txtNombre.getText().trim().isEmpty();
-        boolean ubicacionValida = !txtUbicacion.getText().isEmpty();
+        boolean nombreValido = txtNombre.getText() != null && !txtNombre.getText().trim().isEmpty();
+        boolean ubicacionValida = txtUbicacion.getText() != null && !txtUbicacion.getText().trim().isEmpty();
         btnCrear.setDisable(!(nombreValido && ubicacionValida));
     }
 
-    /**
-     * Actualiza el label de información de ubicación
-     */
-    private void actualizarInfoUbicacion(Label lblInfo) {
-        String nombre = txtNombre.getText().trim();
+    /* Actualiza el label de información de ubicación */
+    private void actualizarInfoUbicacion() {
+        String nombre = txtNombre.getText() != null ? txtNombre.getText().trim() : "";
+        String ubicacion = txtUbicacion.getText() != null ? txtUbicacion.getText().trim() : "";
+
+        String nombreCarpeta;
         if (!nombre.isEmpty()) {
-            String nombreCarpeta = "TPS_" + normalizarNombre(nombre);
-            lblInfo.setText("Se creará la carpeta: " + nombreCarpeta + "/");
+            // OJO: aquí queremos ver el comportamiento tipo TPS_____ si hay símbolos raros
+            nombreCarpeta = "TPS_" + normalizarNombre(nombre);
         } else {
-            lblInfo.setText("Se creará la carpeta: TPS_NombreDelProyecto/");
+            nombreCarpeta = "TPS_NombreDelProyecto";
+        }
+
+        if (!ubicacion.isEmpty()) {
+            lblUbicacionInfo.setText("Se creará la carpeta: "
+                    + ubicacion + File.separator + nombreCarpeta + File.separator);
+        } else {
+            lblUbicacionInfo.setText("Se creará la carpeta: " + nombreCarpeta + "/");
         }
     }
 
-    /**
-     * Normaliza el nombre del proyecto para usarlo como nombre de carpeta
+    /*
+     * Normaliza el nombre del proyecto para usarlo como nombre de carpeta.
+     * Versión "clásica": si el nombre son símbolos, se convierte en ____ y listo.
+     * (Sin fallback a "Proyecto")
      */
     private String normalizarNombre(String nombre) {
-        return nombre.replaceAll("[^a-zA-Z0-9_\\-\\s]", "_").replaceAll("\\s+", "_");
+        if (nombre == null) return "";
+
+        // Sustituye caracteres raros por "_" y espacios por "_"
+        return nombre
+                .replaceAll("[^a-zA-Z0-9_\\-\\s]", "_")
+                .replaceAll("\\s+", "_")
+                .trim();
     }
 
-    /**
-     * Crea el objeto ProyectoMetadata con los datos del formulario
-     */
+    /* Validación del formulario con mensajes claros. */
+    private boolean validarFormulario() {
+        String nombre = txtNombre.getText() != null ? txtNombre.getText().trim() : "";
+        String ubicacion = txtUbicacion.getText() != null ? txtUbicacion.getText().trim() : "";
+
+        if (nombre.isEmpty()) {
+            mostrarError("Falta el nombre del proyecto", "Escribe un nombre para el proyecto.");
+            return false;
+        }
+
+        if (ubicacion.isEmpty()) {
+            mostrarError("Falta la ubicación", "Selecciona una carpeta donde se creará el proyecto.");
+            return false;
+        }
+
+        File carpetaBase = new File(ubicacion);
+        if (!carpetaBase.exists() || !carpetaBase.isDirectory()) {
+            mostrarError("Ubicación inválida", "La ubicación seleccionada no es una carpeta válida.");
+            return false;
+        }
+
+        // Validación BD si está activada
+        if (chkVincularBD.isSelected()) {
+            String rutaBD = txtRutaBD.getText() != null ? txtRutaBD.getText().trim() : "";
+            if (!rutaBD.isEmpty()) {
+                File f = new File(rutaBD);
+                if (!f.exists() || !f.isFile()) {
+                    mostrarError("Base de datos inválida", "El archivo seleccionado no existe o no es válido.");
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void mostrarError(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Nuevo Proyecto");
+        alert.setHeaderText(titulo);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /* Crea el objeto ProyectoMetadata con los datos del formulario */
     private ProyectoMetadata crearMetadata() {
         ProyectoMetadata metadata = new ProyectoMetadata();
-        metadata.setNombre(txtNombre.getText().trim());
-        metadata.setUbicacion(txtUbicacion.getText());
-        metadata.setClienteInfo(clienteInfo);
 
-        if (chkVincularBD.isSelected() && !txtRutaBD.getText().isEmpty()) {
-            metadata.setRutaBBDD(txtRutaBD.getText());
+        // Guardamos el nombre tal cual para la UI
+        metadata.setNombre(txtNombre.getText().trim());
+        metadata.setUbicacion(txtUbicacion.getText().trim());
+        metadata.setClienteInfo(clienteInfo != null ? clienteInfo : new ClienteInfo());
+
+        if (chkVincularBD.isSelected()) {
+            String ruta = txtRutaBD.getText() != null ? txtRutaBD.getText().trim() : "";
+            if (!ruta.isEmpty()) {
+                metadata.setRutaBBDD(ruta);
+            }
         }
 
         return metadata;

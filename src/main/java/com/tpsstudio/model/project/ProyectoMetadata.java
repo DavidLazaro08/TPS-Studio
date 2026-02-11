@@ -2,17 +2,16 @@ package com.tpsstudio.model.project;
 
 import java.time.LocalDateTime;
 
-/**
- * Metadatos del proyecto (ubicación, rutas, cliente, etc.)
- */
+/* Metadatos del proyecto (ubicación, rutas, cliente, etc.) */
+
 public class ProyectoMetadata {
 
     private String nombre;
     private String ubicacion; // Carpeta padre donde se creará TPS_NombreProyecto
-    private String rutaTPS; // Ruta completa al archivo proyecto.tps
-    private String rutaFotos; // Ruta a carpeta Fotos/
+    private String rutaTPS;    // Ruta completa al archivo proyecto.tps
+    private String rutaFotos;  // Ruta a carpeta Fotos/
     private String rutaFondos; // Ruta a carpeta Fondos/
-    private String rutaBBDD; // Ruta a base de datos (opcional)
+    private String rutaBBDD;   // Ruta a base de datos (opcional)
     private ClienteInfo clienteInfo; // Información del cliente
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
@@ -23,7 +22,7 @@ public class ProyectoMetadata {
         this.fechaModificacion = LocalDateTime.now();
     }
 
-    // Getters y Setters
+    // ================== GETTERS Y SETTERS ==================
 
     public String getNombre() {
         return nombre;
@@ -97,12 +96,12 @@ public class ProyectoMetadata {
         this.fechaModificacion = fechaModificacion;
     }
 
-    /**
-     * Obtiene la carpeta raíz del proyecto (TPS_NombreProyecto)
-     */
+    /* Obtiene la carpeta raíz del proyecto (TPS_NombreProyecto) */
+
     public String getCarpetaProyecto() {
-        if (rutaTPS == null)
+        if (rutaTPS == null) {
             return null;
+        }
         return new java.io.File(rutaTPS).getParent();
     }
 }
