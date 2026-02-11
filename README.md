@@ -2,11 +2,11 @@
 
 Aplicación de escritorio especializada en el diseño y preimpresión de tarjetas plásticas CR80 (85.60 × 53.98 mm) y acreditaciones profesionales.
 
-## 🎯 Objetivo
+## Objetivo
 
 Proporcionar una herramienta específica para técnicos de preimpresión y diseñadores que trabajan con tarjetas plásticas, automatizando el control de medidas precisas, márgenes de seguridad (3mm) y sangrado de corte (2mm).
 
-## ✨ Características Implementadas
+## Características Implementadas
 
 - **Gestión de Proyectos**: Crear, abrir y guardar proyectos con metadatos de cliente
 - **Editor Visual CR80**: Lienzo con medidas exactas y zoom configurable
@@ -20,7 +20,7 @@ Proporcionar una herramienta específica para técnicos de preimpresión y dise�
 - **Integración Externa**: Edición de fondos en Photoshop u otros editores
 - **Frente/Dorso**: Diseño independiente para ambas caras
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Java 21** + **JavaFX 21.0.4**
 - **Arquitectura MVVM** con separación de responsabilidades
@@ -40,17 +40,17 @@ com.tpsstudio/
 └── util/          # Utilidades (ImageUtils, caché)
 ```
 
-## 🚀 Ejecución
+## Ejecución
 
 ```bash
 mvn clean javafx:run
 ```
 
-## 📚 Documentación
+## Documentación
 
 Para más detalles sobre requisitos, casos de uso y arquitectura, consulta la [documentación inicial](../DOCUMENTACIÓN%20PROYECTO/TPS_STUDIO-%20Documentación_InicialV2.pdf).
 
-## 📌 Estado Actual
+## Estado Actual
 
 **Versión:** 0.1.0 (Primera Iteración)  
 **Fase:** Desarrollo activo - Core funcional implementado
