@@ -66,9 +66,11 @@
 
                     <Separator orientation="VERTICAL" />
                     
-                    <!-- Toggle Propiedades -->
-                    <ToggleButton fx:id="togglePropiedades" text="Propiedades" onAction="#onTogglePropiedades" 
+                    <!-- Toggle Propiedades y BD -->
+                    <ToggleButton fx:id="togglePropiedades" text="⚙ Propiedades" onAction="#onTogglePropiedades" 
                                   styleClass="toolbar-toggle" selected="true" />
+                    <ToggleButton fx:id="toggleDatosVariables" text="📊 Datos Variables" onAction="#onToggleDatosVariables" 
+                                  styleClass="toolbar-toggle" />
                 </HBox>
             </VBox>
         </top>
@@ -89,7 +91,7 @@
 
     <!-- CAPA 1: PANEL DERECHO (Overlay) -->
     <VBox fx:id="rightPanel" styleClass="side-panel" 
-          prefWidth="260" minWidth="260" maxWidth="260" 
+          prefWidth="290" minWidth="290" maxWidth="290" 
           StackPane.alignment="CENTER_RIGHT" />
     
 </StackPane>

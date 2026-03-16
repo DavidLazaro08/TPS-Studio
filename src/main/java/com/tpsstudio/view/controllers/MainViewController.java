@@ -65,6 +65,8 @@ public class MainViewController {
     private ToggleButton btnModeExport;
     @FXML
     private ToggleButton togglePropiedades;
+    @FXML
+    private ToggleButton toggleDatosVariables;
 
     // =====================================================
     // Estado
@@ -99,7 +101,7 @@ public class MainViewController {
 
         projectManager.cargarProyectosRecientes(8);
 
-        Platform.runLater(() -> adjustCanvasCentering(true));
+        Platform.runLater(this::adjustCanvasCentering);
     }
 
     private void initUI() {
@@ -110,12 +112,17 @@ public class MainViewController {
 
         rightPanel.setEffect(shadow);
 
-        // Estado inicial del panel de propiedades (según el toggle)
-        togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+        // Estado inicial del panel (oculto, hasta que el usuario decida)
+        togglePropiedades.setSelected(false);
+        if (toggleDatosVariables != null) {
+            toggleDatosVariables.setSelected(false);
+        }
+        togglePanel(rightPanel, false, false);
     }
 
     private void initProjectList() {
-        if (listProyectos == null) return;
+        if (listProyectos == null)
+            return;
 
         listProyectos.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
@@ -137,6 +144,11 @@ public class MainViewController {
         projectManager.setOnProjectChanged(() -> {
             proyectoActual = projectManager.getProyectoActual();
             canvasManager.setProyectoActual(proyectoActual);
+            // Reconstruir paneles para que el panel de Datos Variables aparezca/desaparezca
+            // según corresponda
+            if (currentMode == AppMode.DESIGN) {
+                buildEditPanels();
+            }
             dibujarCanvas();
         });
 
@@ -160,12 +172,12 @@ public class MainViewController {
         // -------------------------------------------------
         propertiesPanelController = new PropertiesPanelController(canvas);
 
-        propertiesPanelController.setOnPropertyChanged(() ->
-                modeManager.switchMode(currentMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos())
-        );
+        propertiesPanelController.setOnPropertyChanged(() -> modeManager.switchMode(currentMode, proyectoActual,
+                elementoSeleccionado, projectManager.getProyectos()));
 
         propertiesPanelController.setOnCanvasRedrawNeeded(() -> {
-            // SOLO refrescar lista de capas y redibujar canvas (evita perder foco en propiedades)
+            // SOLO refrescar lista de capas y redibujar canvas (evita perder foco en
+            // propiedades)
             if (currentMode == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(proyectoActual, elementoSeleccionado);
             }
@@ -261,7 +273,7 @@ public class MainViewController {
         actualizarZoom(); // Inicializa label con el valor correcto y aplica zoom al canvas
 
         canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
-            adjustCanvasCentering(togglePropiedades.isSelected());
+            adjustCanvasCentering();
             // Actualizar clip si es necesario (el binding suele ser suficiente)
         });
 
@@ -275,9 +287,9 @@ public class MainViewController {
 
         dibujarCanvas();
     }
-// =====================================================
-// Cambio de modo (Design / Production)
-// =====================================================
+    // =====================================================
+    // Cambio de modo (Design / Production)
+    // =====================================================
 
     @FXML
     private void onModeEdit() {
@@ -299,9 +311,9 @@ public class MainViewController {
         modeManager.switchMode(newMode, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
     }
 
-// =====================================================
-// Zoom
-// =====================================================
+    // =====================================================
+    // Zoom
+    // =====================================================
 
     @FXML
     private void onZoomIn() {
@@ -325,12 +337,12 @@ public class MainViewController {
         dibujarCanvas();
 
         // Reajustar centrado porque el ancho visual del canvas ha cambiado
-        adjustCanvasCentering(togglePropiedades.isSelected());
+        adjustCanvasCentering();
     }
 
-// =====================================================
-// Toggles / opciones visuales
-// =====================================================
+    // =====================================================
+    // Toggles / opciones visuales
+    // =====================================================
 
     @FXML
     private void onToggleGuias() {
@@ -338,19 +350,21 @@ public class MainViewController {
         dibujarCanvas();
     }
 
-// =====================================================
-// Refresco de paneles de edición (sin cambiar modo global)
-// =====================================================
+    // =====================================================
+    // Refresco de paneles de edición (sin cambiar modo global)
+    // =====================================================
 
     private void buildEditPanels() {
-        // Nota: aunque el modo global sea PRODUCTION, aquí forzamos el montaje de paneles
-        // de edición para mantener la UI coherente tras cambios (capas, selección, etc.).
+        // Nota: aunque el modo global sea PRODUCTION, aquí forzamos el montaje de
+        // paneles
+        // de edición para mantener la UI coherente tras cambios (capas, selección,
+        // etc.).
         modeManager.switchMode(AppMode.DESIGN, proyectoActual, elementoSeleccionado, projectManager.getProyectos());
     }
 
-// =====================================================
-// Canvas
-// =====================================================
+    // =====================================================
+    // Canvas
+    // =====================================================
 
     /*
      * Dibuja el canvas delegando en EditorCanvasManager.
@@ -359,22 +373,27 @@ public class MainViewController {
         canvasManager.dibujarCanvas();
     }
 
-// =====================================================
-// Helpers
-// =====================================================
+    // =====================================================
+    // Helpers
+    // =====================================================
 
     private void ensurePropertiesPanelVisible() {
         if (togglePropiedades != null && !togglePropiedades.isSelected()) {
             togglePropiedades.setSelected(true);
+            if (toggleDatosVariables != null) {
+                toggleDatosVariables.setSelected(false);
+            }
             onTogglePropiedades();
         }
     }
+
     /*
      * Muestra un diálogo para elegir cómo se ajusta el fondo a la tarjeta:
      * - Con sangre (BLEED): cubre CR80 + sangrado (2mm por lado)
      * - Sin sangre (FINAL): cubre solo el tamaño final CR80
      *
-     * Si el usuario marca "No volver a preguntar", se guarda la preferencia en el proyecto.
+     * Si el usuario marca "No volver a preguntar", se guarda la preferencia en el
+     * proyecto.
      */
     private FondoFitMode mostrarDialogoFitMode() {
 
@@ -424,8 +443,7 @@ public class MainViewController {
                 lblExplicacion, new Separator(),
                 opcionBleed, new Separator(),
                 opcionFinal, new Separator(),
-                chkNoPreguntar
-        );
+                chkNoPreguntar);
 
         dialog.getDialogPane().setContent(content);
 
@@ -444,8 +462,10 @@ public class MainViewController {
                 }
             }
 
-            if (buttonType == btnBleed) return FondoFitMode.BLEED;
-            if (buttonType == btnFinal) return FondoFitMode.FINAL;
+            if (buttonType == btnBleed)
+                return FondoFitMode.BLEED;
+            if (buttonType == btnFinal)
+                return FondoFitMode.FINAL;
 
             return null;
         });
@@ -458,7 +478,8 @@ public class MainViewController {
      * o en el editor predeterminado del sistema.
      *
      * Nota: el lanzamiento se hace desacoplado para evitar problemas al guardar
-     * (por ejemplo, Photoshop "bloqueado" por herencias de handles del proceso Java).
+     * (por ejemplo, Photoshop "bloqueado" por herencias de handles del proceso
+     * Java).
      */
     private void abrirEditorExterno(ImagenFondoElemento fondo) {
 
@@ -476,7 +497,8 @@ public class MainViewController {
         // -------------------------------------------------
         File file = new File(fondo.getRutaArchivo());
 
-        // Si la ruta guardada no existe, intentamos localizarla dentro del proyecto (carpeta /Fondos)
+        // Si la ruta guardada no existe, intentamos localizarla dentro del proyecto
+        // (carpeta /Fondos)
         if (!file.exists() && proyectoActual != null && proyectoActual.getMetadata() != null) {
 
             String projectDir = proyectoActual.getMetadata().getCarpetaProyecto();
@@ -506,7 +528,8 @@ public class MainViewController {
 
                 File optionB = new File(fondosDir, nameNoExt + suffix + ext);
 
-                // Elegir la ruta que exista y actualizarla en el objeto (para que "Recargar" funcione bien)
+                // Elegir la ruta que exista y actualizarla en el objeto (para que "Recargar"
+                // funcione bien)
                 if (optionB.exists()) {
                     file = optionB;
                     fondo.setRutaArchivo(file.getAbsolutePath());
@@ -523,8 +546,7 @@ public class MainViewController {
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
                     "El archivo " + file.getName() + " no existe en el disco.\n\n" +
-                            "Buscado en: " + file.getAbsolutePath()
-            );
+                            "Buscado en: " + file.getAbsolutePath());
             alert.showAndWait();
             return;
         }
@@ -547,12 +569,11 @@ public class MainViewController {
                     aviso.setHeaderText("Abriendo con " + settings.getExternalEditorName() + "...");
                     aviso.setContentText(
                             "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
-                                    "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado."
-                    );
+                                    "Cuando guardes los cambios en el editor, pulsa 'Recargar' aquí para ver el resultado.");
                     aviso.show();
 
                     // Lanzamiento desacoplado (Windows)
-                    String[] cmd = {"cmd", "/c", "start", "\"\"", customEditor, file.getAbsolutePath()};
+                    String[] cmd = { "cmd", "/c", "start", "\"\"", customEditor, file.getAbsolutePath() };
                     new ProcessBuilder(cmd).start();
                     opened = true;
                 }
@@ -564,13 +585,12 @@ public class MainViewController {
                 aviso.setHeaderText("Abriendo editor predeterminado...");
                 aviso.setContentText(
                         "Puedes editar la imagen mientras TPS Studio permanece abierto.\n" +
-                                "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado."
-                );
+                                "Cuando guardes los cambios, pulsa 'Recargar' aquí para ver el resultado.");
                 aviso.show();
 
                 // Intento desacoplado también para el editor por defecto
                 try {
-                    String[] cmd = {"cmd", "/c", "start", "\"\"", file.getAbsolutePath()};
+                    String[] cmd = { "cmd", "/c", "start", "\"\"", file.getAbsolutePath() };
                     new ProcessBuilder(cmd).start();
                 } catch (Exception e) {
                     // Fallback a Desktop si falla el cmd (raro en Windows)
@@ -588,6 +608,7 @@ public class MainViewController {
             alert.showAndWait();
         }
     }
+
     /*
      * Recarga la imagen del fondo desde el disco.
      * Se usa tras editar el archivo en un programa externo (Photoshop, etc.).
@@ -610,14 +631,14 @@ public class MainViewController {
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
                     "El archivo " + file.getName() + " no existe en el disco.\n" +
-                            "Se mantendrá la versión anterior en memoria."
-            );
+                            "Se mantendrá la versión anterior en memoria.");
             alert.showAndWait();
             return;
         }
 
         try {
-            // Cargar sin bloquear el archivo (evita problemas tras editar con apps externas)
+            // Cargar sin bloquear el archivo (evita problemas tras editar con apps
+            // externas)
             Image nuevaImagen = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
             if (nuevaImagen == null) {
                 throw new Exception("No se pudo cargar la imagen (resultado null)");
@@ -635,8 +656,7 @@ public class MainViewController {
             fondo.ajustarATamaño(
                     EditorCanvasManager.CARD_WIDTH,
                     EditorCanvasManager.CARD_HEIGHT,
-                    EditorCanvasManager.BLEED_MARGIN
-            );
+                    EditorCanvasManager.BLEED_MARGIN);
 
             dibujarCanvas();
 
@@ -654,15 +674,14 @@ public class MainViewController {
             alert.setHeaderText("No se pudo recargar la imagen");
             alert.setContentText(
                     "Error al cargar el archivo: " + ex.getMessage() + "\n" +
-                            "Se mantendrá la versión anterior en memoria."
-            );
+                            "Se mantendrá la versión anterior en memoria.");
             alert.showAndWait();
         }
     }
 
-// =====================================================
-// Acciones de barra superior (Proyectos / exportación)
-// =====================================================
+    // =====================================================
+    // Acciones de barra superior (Proyectos / exportación)
+    // =====================================================
 
     @FXML
     private void onNuevoProyecto() {
@@ -695,7 +714,8 @@ public class MainViewController {
 
     @FXML
     private void onToggleFrenteDorso() {
-        if (proyectoActual == null) return;
+        if (proyectoActual == null)
+            return;
 
         proyectoActual.setMostrandoFrente(toggleFrenteDorso.isSelected());
         toggleFrenteDorso.setText(toggleFrenteDorso.isSelected() ? "Frente" : "Dorso");
@@ -720,9 +740,9 @@ public class MainViewController {
         }
     }
 
-// =====================================================
-// Acciones de edición (añadir / eliminar elementos)
-// =====================================================
+    // =====================================================
+    // Acciones de edición (añadir / eliminar elementos)
+    // =====================================================
 
     private void onAñadirTexto() {
         TextoElemento texto = projectManager.añadirTexto();
@@ -751,8 +771,7 @@ public class MainViewController {
     private void onAñadirFondo() {
         ImagenFondoElemento fondo = projectManager.añadirFondo(
                 canvas.getScene().getWindow(),
-                this::mostrarDialogoFitMode
-        );
+                this::mostrarDialogoFitMode);
 
         if (fondo != null) {
             elementoSeleccionado = fondo;
@@ -760,21 +779,53 @@ public class MainViewController {
         }
     }
 
-// =====================================================
-// Panel de propiedades (mostrar/ocultar)
-// =====================================================
+    // =====================================================
+    // Panel de propiedades (mostrar/ocultar)
+    // =====================================================
 
     @FXML
     private void onTogglePropiedades() {
-        togglePanel(rightPanel, togglePropiedades.isSelected(), false);
+        if (togglePropiedades.isSelected()) {
+            if (toggleDatosVariables != null) {
+                toggleDatosVariables.setSelected(false);
+            }
+            modeManager.setRightPanelTabActiva(true); // true = propiedades
 
-        // Centrar canvas: al abrir el panel, se desplaza a la izquierda
-        adjustCanvasCentering(togglePropiedades.isSelected());
+            if (!rightPanel.isVisible()) {
+                togglePanel(rightPanel, true, false);
+            }
+        } else {
+            // Si ninguno está pulsado, cerramos
+            if (toggleDatosVariables == null || !toggleDatosVariables.isSelected()) {
+                togglePanel(rightPanel, false, false);
+            }
+        }
+        adjustCanvasCentering();
+    }
+
+    @FXML
+    private void onToggleDatosVariables() {
+        if (toggleDatosVariables.isSelected()) {
+            if (togglePropiedades != null) {
+                togglePropiedades.setSelected(false);
+            }
+            modeManager.setRightPanelTabActiva(false); // false = datos variables
+
+            if (!rightPanel.isVisible()) {
+                togglePanel(rightPanel, true, false);
+            }
+        } else {
+            // Si ninguno está pulsado, cerramos
+            if (togglePropiedades == null || !togglePropiedades.isSelected()) {
+                togglePanel(rightPanel, false, false);
+            }
+        }
+        adjustCanvasCentering();
     }
 
     /*
      * Anima la visibilidad de un panel lateral (overlay).
-     * show = true  -> aparece con fade + slide
+     * show = true -> aparece con fade + slide
      * show = false -> desaparece con fade + slide y se desactiva (managed=false)
      */
     private void togglePanel(Region panel, boolean show, boolean isLeft) {
@@ -815,24 +866,31 @@ public class MainViewController {
         parallel.play();
     }
 
-    /* Ajusta el centrado del canvas cuando se abre/cierra el panel de propiedades.
-     * Importante: se anima el CANVAS (no el contenedor) para no invadir el panel izquierdo. */
+    /*
+     * Ajusta el centrado del canvas cuando se abre/cierra el panel de propiedades.
+     * Importante: se anima el CANVAS (no el contenedor) para no invadir el panel
+     * izquierdo.
+     */
 
-    private void adjustCanvasCentering(boolean propertiesPanelVisible) {
+    private void adjustCanvasCentering() {
+        boolean propertiesPanelVisible = (togglePropiedades != null && togglePropiedades.isSelected()) ||
+                (toggleDatosVariables != null && toggleDatosVariables.isSelected());
 
         // Si el layout aún no está listo, reintentamos en el siguiente frame
         if (canvasContainer.getWidth() <= 0) {
-            Platform.runLater(() -> adjustCanvasCentering(propertiesPanelVisible));
+            Platform.runLater(this::adjustCanvasCentering);
             return;
         }
 
         TranslateTransition transition = new TranslateTransition(Duration.millis(200), canvas);
 
         if (propertiesPanelVisible) {
-            // Centrar visualmente en el espacio restante (mitad del ancho del panel derecho)
+            // Centrar visualmente en el espacio restante (mitad del ancho del panel
+            // derecho)
             double idealShift = -rightPanel.getPrefWidth() / 2;
 
-            // Permitimos que se desplace más, porque el CLIP evita que "manche" el panel izquierdo
+            // Permitimos que se desplace más, porque el CLIP evita que "manche" el panel
+            // izquierdo
             transition.setToX(idealShift);
         } else {
             transition.setToX(0);
@@ -857,6 +915,12 @@ public class MainViewController {
         if (resultado.isPresent()) {
             ProyectoMetadata nuevaMetadata = resultado.get();
             projectManager.editarProyecto(proyecto, nuevaMetadata);
+
+            // Si la BD vinculada cambió, recargar la fuente de datos y reconstruir paneles
+            projectManager.cargarFuenteDatos(nuevaMetadata.getRutaBBDD());
+            if (currentMode == AppMode.DESIGN) {
+                buildEditPanels();
+            }
         }
     }
 }

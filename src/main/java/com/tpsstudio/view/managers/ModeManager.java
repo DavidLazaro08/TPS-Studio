@@ -4,13 +4,17 @@ import com.tpsstudio.model.elements.Elemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.enums.AppMode;
 import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
 import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.util.Optional;
@@ -55,8 +59,17 @@ public class ModeManager {
 
     private Runnable onCanvasRedraw;
 
-    // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el panel izquierdo
+    // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el
+    // panel izquierdo
     private VBox layersPanel;
+
+    // Panel de datos variables (null si no hay fuente de datos activa)
+    private VBox datosPanel;
+
+    // Indicador de qué "pestaña" del panel derecho está activa
+    private boolean isPropertiesActive = true;
+    private javafx.scene.Node propertiesNode;
+    private javafx.scene.Node datosNode;
 
     public ModeManager(VBox leftPanel, VBox rightPanel, PropertiesPanelController propertiesPanelController) {
         this.leftPanel = leftPanel;
@@ -129,7 +142,8 @@ public class ModeManager {
      * Cambia el modo de la interfaz y reconstruye los paneles laterales.
      * Nota: el canvas se repinta al final para evitar inconsistencias visuales.
      */
-    public void switchMode(AppMode newMode, Proyecto proyecto, Elemento selectedElement, ObservableList<Proyecto> projects) {
+    public void switchMode(AppMode newMode, Proyecto proyecto, Elemento selectedElement,
+            ObservableList<Proyecto> projects) {
         this.currentMode = newMode;
 
         // Limpieza completa de paneles
@@ -151,22 +165,60 @@ public class ModeManager {
 
     // ===================== MODO DISEÑO =====================
 
+    public void setRightPanelTabActiva(boolean isProperties) {
+        this.isPropertiesActive = isProperties;
+        if (currentMode == AppMode.DESIGN) {
+            if (isPropertiesActive && propertiesNode != null) {
+                rightPanel.getChildren().setAll(propertiesNode);
+            } else if (!isPropertiesActive && datosNode != null) {
+                rightPanel.getChildren().setAll(datosNode);
+            }
+        }
+    }
+
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
         // Panel izquierdo: herramientas + capas
         VBox toolbox = buildToolboxPanel();
         layersPanel = buildLayersPanel(proyecto, selectedElement);
         leftPanel.getChildren().addAll(toolbox, new Separator(), layersPanel);
 
-        // Panel derecho: propiedades del elemento seleccionado (o vacío si no hay selección)
+        // Panel derecho: Nodos para "Propiedades" y "Datos Variables"
+
+        // 1. Nodo de Propiedades
         VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
-        rightPanel.getChildren().setAll(properties);
+        ScrollPane scrollProps = new ScrollPane(properties);
+        scrollProps.setFitToWidth(true);
+        scrollProps.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-border-color: transparent;");
+        this.propertiesNode = scrollProps;
+
+        // 2. Nodo de Datos Variables
+        if (projectManager != null && projectManager.getFuenteDatos() != null) {
+            datosPanel = buildDatosVariablesPanel(projectManager.getFuenteDatos(), proyecto);
+            ScrollPane scrollDatos = new ScrollPane(datosPanel);
+            scrollDatos.setFitToWidth(true);
+            scrollDatos
+                    .setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-border-color: transparent;");
+            this.datosNode = scrollDatos;
+        } else {
+            datosPanel = buildEmptyDatosVariablesPanel(proyecto);
+            this.datosNode = datosPanel;
+        }
+
+        // Mostrar el nodo activo según el botón clickeado
+        if (isPropertiesActive) {
+            rightPanel.getChildren().setAll(propertiesNode);
+        } else {
+            rightPanel.getChildren().setAll(datosNode);
+        }
     }
 
     /**
-     * Refresca solo el panel de capas. Útil cuando se añaden/eliminan elementos o cambia el lado (frente/dorso).
+     * Refresca solo el panel de capas. Útil cuando se añaden/eliminan elementos o
+     * cambia el lado (frente/dorso).
      */
     public void refreshLayersPanel(Proyecto proyecto, Elemento selectedElement) {
-        if (layersPanel == null) return;
+        if (layersPanel == null)
+            return;
 
         VBox newLayers = buildLayersPanel(proyecto, selectedElement);
 
@@ -188,21 +240,24 @@ public class ModeManager {
         btnTexto.setMaxWidth(Double.MAX_VALUE);
         btnTexto.getStyleClass().add("toolbox-btn");
         btnTexto.setOnAction(e -> {
-            if (onAddText != null) onAddText.run();
+            if (onAddText != null)
+                onAddText.run();
         });
 
         Button btnImagen = new Button("🖼 Imagen");
         btnImagen.setMaxWidth(Double.MAX_VALUE);
         btnImagen.getStyleClass().add("toolbox-btn");
         btnImagen.setOnAction(e -> {
-            if (onAddImage != null) onAddImage.run();
+            if (onAddImage != null)
+                onAddImage.run();
         });
 
         Button btnFondo = new Button("🎨 Fondo");
         btnFondo.setMaxWidth(Double.MAX_VALUE);
         btnFondo.getStyleClass().add("toolbox-btn");
         btnFondo.setOnAction(e -> {
-            if (onAddBackground != null) onAddBackground.run();
+            if (onAddBackground != null)
+                onAddBackground.run();
         });
 
         // Reservado para futuro (formas)
@@ -221,7 +276,8 @@ public class ModeManager {
     }
 
     /**
-     * Construye la lista de capas (fondo + elementos). El fondo se muestra arriba si existe.
+     * Construye la lista de capas (fondo + elementos). El fondo se muestra arriba
+     * si existe.
      */
     private VBox buildLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         VBox panel = new VBox(8);
@@ -239,7 +295,8 @@ public class ModeManager {
 
             // Fondo (si hay) + elementos del lado actual
             ImagenFondoElemento fondo = proyecto.getFondoActual();
-            if (fondo != null) allElements.add(fondo);
+            if (fondo != null)
+                allElements.add(fondo);
             allElements.addAll(proyecto.getElementosActuales());
 
             listCapas.setItems(allElements);
@@ -269,18 +326,22 @@ public class ModeManager {
                     if (item instanceof ImagenFondoElemento) {
                         MenuItem menuEditar = new MenuItem("Editar imagen externa...");
                         menuEditar.setOnAction(e -> {
-                            if (onEditExternal != null) onEditExternal.accept((ImagenFondoElemento) item);
+                            if (onEditExternal != null)
+                                onEditExternal.accept((ImagenFondoElemento) item);
                         });
 
                         MenuItem menuRecargar = new MenuItem("Recargar desde disco");
                         menuRecargar.setOnAction(e -> {
-                            if (onReload != null) onReload.accept((ImagenFondoElemento) item);
+                            if (onReload != null)
+                                onReload.accept((ImagenFondoElemento) item);
                         });
 
                         MenuItem menuLock = new MenuItem(item.isLocked() ? "Desbloquear" : "Bloquear");
                         menuLock.setOnAction(e -> {
-                            if (onToggleLock != null) onToggleLock.accept(item);
-                            // Esto ayuda a que el icono 🔒 se vea actualizado sin tener que reconstruir paneles
+                            if (onToggleLock != null)
+                                onToggleLock.accept(item);
+                            // Esto ayuda a que el icono 🔒 se vea actualizado sin tener que reconstruir
+                            // paneles
                             listCapas.refresh();
                         });
 
@@ -292,7 +353,8 @@ public class ModeManager {
                             proyecto.getElementosActuales().remove(item);
 
                             // Si borramos lo seleccionado, limpiamos selección en UI
-                            if (onElementSelected != null) onElementSelected.accept(null);
+                            if (onElementSelected != null)
+                                onElementSelected.accept(null);
 
                             // Refrescamos la lista (y normalmente el canvas se repinta vía controller)
                             listCapas.refresh();
@@ -307,12 +369,110 @@ public class ModeManager {
 
             // Selección de capas -> se lo comunicamos al controlador
             listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-                if (onElementSelected != null) onElementSelected.accept(newVal);
+                if (onElementSelected != null)
+                    onElementSelected.accept(newVal);
             });
         }
 
         panel.getChildren().addAll(lblCapas, listCapas);
         return panel;
+    }
+
+    /* Construye el panel de navegación por registros de la fuente de datos. */
+    private VBox buildDatosVariablesPanel(FuenteDatos datos, Proyecto proyecto) {
+        VBox panel = new VBox(15); // Espaciado mayor para que respire
+        panel.setPadding(new Insets(20));
+
+        // Cabecera con nombre del archivo y botón para cambiar BD
+        Label lblTitulo = new Label(datos.getNombreArchivo());
+        lblTitulo.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+
+        Button btnCambiarBD = new Button("⚙ Cambiar BD...");
+        btnCambiarBD.getStyleClass().add("toolbox-btn");
+        btnCambiarBD.setOnAction(e -> {
+            if (onEditProject != null && proyecto != null) {
+                onEditProject.accept(proyecto);
+            }
+        });
+
+        HBox topBox = new HBox(10, lblTitulo);
+        topBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(lblTitulo, Priority.ALWAYS);
+        lblTitulo.setMaxWidth(Double.MAX_VALUE);
+
+        VBox headerBox = new VBox(5, topBox, btnCambiarBD);
+
+        Label lblContador = new Label(calcularContador(datos));
+        lblContador.setStyle("-fx-text-fill: #a8a4a6; -fx-font-size: 12px;");
+
+        // Botones de navegación
+        Button btnAnterior = new Button("◀ Anterior");
+        btnAnterior.getStyleClass().add("toolbox-btn");
+        btnAnterior.setDisable(!datos.tieneRegistros() || datos.getIndiceActual() <= 0);
+
+        Button btnSiguiente = new Button("Siguiente ▶");
+        btnSiguiente.getStyleClass().add("toolbox-btn");
+        btnSiguiente.setDisable(!datos.tieneRegistros() || datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
+
+        HBox navBox = new HBox(8, btnAnterior, btnSiguiente);
+        navBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(btnAnterior, Priority.ALWAYS);
+        HBox.setHgrow(btnSiguiente, Priority.ALWAYS);
+        btnAnterior.setMaxWidth(Double.MAX_VALUE);
+        btnSiguiente.setMaxWidth(Double.MAX_VALUE);
+
+        btnAnterior.setOnAction(e -> {
+            datos.anterior();
+            lblContador.setText(calcularContador(datos));
+            btnAnterior.setDisable(datos.getIndiceActual() <= 0);
+            btnSiguiente.setDisable(datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
+            if (onCanvasRedraw != null)
+                onCanvasRedraw.run();
+        });
+
+        btnSiguiente.setOnAction(e -> {
+            datos.siguiente();
+            lblContador.setText(calcularContador(datos));
+            btnAnterior.setDisable(datos.getIndiceActual() <= 0);
+            btnSiguiente.setDisable(datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
+            if (onCanvasRedraw != null)
+                onCanvasRedraw.run();
+        });
+
+        // Lista de columnas disponibles (informativo, para la siguiente fase de enlace)
+        String camposTexto = String.join(" · ", datos.getColumnas());
+        Label lblCampos = new Label(camposTexto);
+        lblCampos.setStyle("-fx-text-fill: #847e82; -fx-font-size: 10px;");
+        lblCampos.setWrapText(true);
+
+        panel.getChildren().addAll(headerBox, new Separator(), lblContador, navBox, new Separator(), lblCampos);
+        return panel;
+    }
+
+    private VBox buildEmptyDatosVariablesPanel(Proyecto proyecto) {
+        VBox panel = new VBox(15);
+        panel.setPadding(new Insets(30));
+        panel.setAlignment(Pos.CENTER);
+
+        Label lblMensaje = new Label("No hay base de datos vinculada");
+        lblMensaje.setStyle("-fx-text-fill: #a8a4a6; -fx-font-size: 13px;");
+
+        Button btnVincular = new Button("+ Vincular Base de Datos");
+        btnVincular.getStyleClass().add("primary-btn");
+        btnVincular.setOnAction(e -> {
+            if (onEditProject != null && proyecto != null) {
+                onEditProject.accept(proyecto);
+            }
+        });
+
+        panel.getChildren().addAll(lblMensaje, btnVincular);
+        return panel;
+    }
+
+    private String calcularContador(FuenteDatos datos) {
+        if (!datos.tieneRegistros())
+            return "(sin registros)";
+        return "Registro " + datos.getPosicionActual() + " / " + datos.getTotalRegistros();
     }
 
     // ===================== MODO PRODUCCIÓN =====================
@@ -352,7 +512,8 @@ public class ModeManager {
         }
 
         listProyectos.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-            if (newVal != null && onProjectSelected != null) onProjectSelected.accept(newVal);
+            if (newVal != null && onProjectSelected != null)
+                onProjectSelected.accept(newVal);
         });
 
         // Doble click para editar
@@ -364,7 +525,8 @@ public class ModeManager {
                         // Lo normal: que el MainViewController gestione el flujo
                         onEditProject.accept(seleccionado);
                     } else {
-                        // Alternativa: si no hay callback, tiramos del helper interno (si hay projectManager)
+                        // Alternativa: si no hay callback, tiramos del helper interno (si hay
+                        // projectManager)
                         abrirDialogoEditarProyecto(seleccionado);
                     }
                 }
@@ -375,7 +537,8 @@ public class ModeManager {
         btnNuevoCR80.getStyleClass().add("primary-btn");
         btnNuevoCR80.setMaxWidth(Double.MAX_VALUE);
         btnNuevoCR80.setOnAction(e -> {
-            if (onNewCR80 != null) onNewCR80.run();
+            if (onNewCR80 != null)
+                onNewCR80.run();
         });
 
         projectPanel.getChildren().addAll(lblTrabajos, listProyectos, btnNuevoCR80);
@@ -387,7 +550,8 @@ public class ModeManager {
      * Si usas callbacks (lo ideal), este método puede quedarse sin usar.
      */
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
-        if (projectManager == null) return;
+        if (projectManager == null)
+            return;
 
         EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
         Optional<ProyectoMetadata> resultado = dialog.showAndWait();
@@ -403,7 +567,8 @@ public class ModeManager {
     }
 
     /**
-     * Panel de exportación. De momento son placeholders, pero deja el hueco preparado.
+     * Panel de exportación. De momento son placeholders, pero deja el hueco
+     * preparado.
      */
     private VBox buildExportPanel() {
         VBox exportPanel = new VBox(15);
@@ -429,7 +594,8 @@ public class ModeManager {
         btnDoExport.getStyleClass().add("success-btn");
         btnDoExport.setMaxWidth(200.0);
         btnDoExport.setOnAction(e -> {
-            if (onExport != null) onExport.run();
+            if (onExport != null)
+                onExport.run();
         });
 
         exportPanel.getChildren().addAll(
@@ -439,8 +605,7 @@ public class ModeManager {
                 lblGuias,
                 lblSide,
                 new Separator(),
-                btnDoExport
-        );
+                btnDoExport);
 
         return exportPanel;
     }
