@@ -2,8 +2,29 @@ package com.tpsstudio.model.project;
 
 import java.time.LocalDateTime;
 
-/* Metadatos del proyecto (ubicación, rutas, cliente, etc.) */
-
+/**
+ * Metadatos asociados a un {@link Proyecto}.
+ *
+ * <p>Separa la información descriptiva y de persistencia del modelo de dominio puro.
+ * Contiene rutas de recursos en disco, información del cliente y marcas de tiempo,
+ * que no forman parte del diseño gráfico en sí pero son necesarias para gestionar
+ * el ciclo de vida del proyecto.</p>
+ *
+ * <p><b>Rutas gestionadas:</b></p>
+ * <ul>
+ *   <li>{@code rutaTPS} — Archivo principal del proyecto ({@code .tps}).</li>
+ *   <li>{@code rutaFotos} — Subcarpeta de fotografías de personas/elementos variables.</li>
+ *   <li>{@code rutaFondos} — Subcarpeta de imágenes de fondo de tarjeta.</li>
+ *   <li>{@code rutaBBDD} — Archivo de base de datos CSV/XLSX para mail-merge (opcional).</li>
+ * </ul>
+ *
+ * <p>Las rutas son rehidratadas al cargar el proyecto para soportar proyectos
+ * que hayan sido movidos de ubicación en disco.</p>
+ *
+ * @see Proyecto
+ * @see ClienteInfo
+ * @see com.tpsstudio.service.ProyectoFileManager
+ */
 public class ProyectoMetadata {
 
     private String nombre;

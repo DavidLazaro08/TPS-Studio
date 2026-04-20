@@ -1,0 +1,136 @@
+/* =====================================================
+   TPS Studio — Estilos de Diálogos
+   Aplica a Dialog<?> y sus contenidos.
+   Se carga por código en cada Dialog: getDialogPane().getStylesheets().add(...)
+
+   IMPORTANT: Estas reglas sobreescriben el .root oscuro de app.css
+   que se hereda al llamar initOwner() con la ventana principal.
+   ===================================================== */
+
+/* Fondo claro del cuerpo del diálogo */
+.dialog-pane {
+    -fx-background-color: #f2f0f1;
+}
+
+/* Zona de botones al pie */
+.dialog-pane > .button-bar > .container {
+    -fx-background-color: #f2f0f1;
+}
+
+/* Cabecera (título y header-text) */
+.dialog-pane > .header-panel {
+    -fx-background-color: #e6e4e5;
+}
+
+/* Todos los labels dentro del diálogo: texto oscuro sobre fondo claro */
+.dialog-pane .label {
+    -fx-text-fill: #2a2628;
+}
+
+/* CheckBox: texto oscuro */
+.dialog-pane .check-box {
+    -fx-text-fill: #2a2628;
+}
+
+/* RadioButton: texto oscuro */
+.dialog-pane .radio-button {
+    -fx-text-fill: #2a2628;
+}
+
+/* TextField y TextArea: asegurar contraste */
+.dialog-pane .text-field,
+.dialog-pane .text-area {
+    -fx-text-fill: #2a2628;
+    -fx-prompt-text-fill: #888888;
+}
+
+/* Separadores en diálogos: línea gris discreta */
+.dialog-pane .separator *.line {
+    -fx-border-color: #d0ced0;
+    -fx-border-width: 1 0 0 0;
+}
+
+
+
+/* --- Labels de sección (negrita, encabezado de campo) --- */
+.lbl-section {
+    -fx-font-weight: bold;
+}
+
+/* --- Hints: texto pequeño gris informativo --- */
+.lbl-hint {
+    -fx-font-size: 10px;
+    -fx-text-fill: #888888;
+}
+
+/* --- Hint con estado OK (verde) --- */
+.lbl-hint-ok {
+    -fx-font-size: 10px;
+    -fx-text-fill: #2d9e6e;
+    -fx-font-style: normal;
+}
+
+/* --- Hint con estado neutro/vacío (gris itálica) --- */
+.lbl-hint-empty {
+    -fx-font-size: 10px;
+    -fx-text-fill: #888888;
+    -fx-font-style: italic;
+}
+
+/* --- Texto de explicación normal (12-13px) --- */
+.lbl-explain {
+    -fx-font-size: 13px;
+}
+
+/* --- Texto de info pequeño (azul/verde tenue) --- */
+.lbl-info-link {
+    -fx-font-size: 10px;
+    -fx-text-fill: #5a8599;
+}
+
+/* --- Botón de acción destructiva (eliminar) --- */
+.btn-danger {
+    -fx-background-color: #c0392b;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #a93226;
+}
+
+.btn-danger:pressed {
+    -fx-background-color: #922b21;
+}
+
+/* --- Opciones de ajuste de fondo (diálogo FitMode) --- */
+.fitmode-option-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.fitmode-option-desc {
+    -fx-font-size: 11px;
+    -fx-text-fill: gray;
+}
+
+.fitmode-option-usage {
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+}
+
+.fitmode-explain {
+    -fx-font-size: 13px;
+}
+
+.fitmode-nopedir {
+    -fx-font-size: 11px;
+}
+
+/* --- Error de validación (rojo pequeño) --- */
+.lbl-error {
+    -fx-text-fill: #c0392b;
+    -fx-font-size: 10px;
+}

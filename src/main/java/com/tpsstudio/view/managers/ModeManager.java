@@ -17,15 +17,35 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Gestiona qué se muestra en los paneles laterales según el modo activo
- * (Diseño / Producción).
+ * Gestor del modo de la interfaz de usuario (Diseño / Producción).
  *
- * - Diseño: herramientas + capas (izquierda) y propiedades (derecha)
- * - Producción: lista de proyectos (izquierda) y exportación (derecha)
+ * <p>Controla qué contenido se muestra en los paneles laterales izquierdo y derecho
+ * en función del modo {@link com.tpsstudio.model.enums.AppMode} activo:</p>
+ * <ul>
+ *   <li><b>DESIGN</b>: herramientas + capas en el panel izquierdo; propiedades
+ *       del elemento seleccionado o datos variables en el panel derecho.</li>
+ *   <li><b>PRODUCTION</b>: lista de proyectos recientes en el panel izquierdo;
+ *       opciones de exportación en el panel derecho.</li>
+ * </ul>
+ *
+ * <p><b>Patrón de comunicación:</b><br/>
+ * Para mantener el desacoplamiento con {@link com.tpsstudio.view.controllers.MainViewController},
+ * usa callbacks ({@link Runnable}, {@link java.util.function.Consumer}) que el
+ * controlador principal registra mediante los métodos {@code setOn...()}.
+ * Esto evita referencias circulares y facilita la trazabilidad del flujo de eventos.</p>
+ *
+ * <p><b>Animaciones:</b><br/>
+ * Al cambiar de modo, aplica {@link javafx.animation.FadeTransition} sobre los paneles
+ * para una transición visual fluida, mejorando la experiencia de usuario.</p>
+ *
+ * @see com.tpsstudio.view.controllers.MainViewController
+ * @see com.tpsstudio.model.enums.AppMode
+ * @see PropertiesPanelController
  */
 public class ModeManager {
 
@@ -157,6 +177,17 @@ public class ModeManager {
             buildProductionModePanels(projects, proyecto);
         }
 
+        // Animación suave de transición
+        javafx.animation.FadeTransition fadeLeft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(550), leftPanel);
+        fadeLeft.setFromValue(0.3);
+        fadeLeft.setToValue(1.0);
+        fadeLeft.play();
+
+        javafx.animation.FadeTransition fadeRight = new javafx.animation.FadeTransition(javafx.util.Duration.millis(550), rightPanel);
+        fadeRight.setFromValue(0.3);
+        fadeRight.setToValue(1.0);
+        fadeRight.play();
+
         // Repintado final (por seguridad)
         if (onCanvasRedraw != null) {
             onCanvasRedraw.run();
@@ -166,12 +197,20 @@ public class ModeManager {
     // ===================== MODO DISEÑO =====================
 
     public void setRightPanelTabActiva(boolean isProperties) {
+        if (this.isPropertiesActive == isProperties) return; // Evitar disparar animaciones si no cambia
+        
         this.isPropertiesActive = isProperties;
         if (currentMode == AppMode.DESIGN) {
-            if (isPropertiesActive && propertiesNode != null) {
-                rightPanel.getChildren().setAll(propertiesNode);
-            } else if (!isPropertiesActive && datosNode != null) {
-                rightPanel.getChildren().setAll(datosNode);
+            javafx.scene.Node targetNode = isPropertiesActive ? propertiesNode : datosNode;
+            
+            if (targetNode != null) {
+                // Animación suave de cambio de pestaña (Cross-fade)
+                javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(350), rightPanel);
+                fade.setFromValue(0.4);
+                fade.setToValue(1.0);
+                
+                rightPanel.getChildren().setAll(targetNode);
+                fade.play();
             }
         }
     }
@@ -188,17 +227,16 @@ public class ModeManager {
         VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
         ScrollPane scrollProps = new ScrollPane(properties);
         scrollProps.setFitToWidth(true);
-        scrollProps.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-border-color: transparent;");
+        scrollProps.getStyleClass().add("panel-scroll-view");
         this.propertiesNode = scrollProps;
 
         // 2. Nodo de Datos Variables
         if (projectManager != null && projectManager.getFuenteDatos() != null) {
             datosPanel = buildDatosVariablesPanel(projectManager.getFuenteDatos(), proyecto);
-            ScrollPane scrollDatos = new ScrollPane(datosPanel);
-            scrollDatos.setFitToWidth(true);
-            scrollDatos
-                    .setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-border-color: transparent;");
-            this.datosNode = scrollDatos;
+            // Sin ScrollPane extra: el VBox tiene vgrow=ALWAYS y la TextArea lleva scroll
+            // interno
+            VBox.setVgrow(datosPanel, Priority.ALWAYS);
+            this.datosNode = datosPanel;
         } else {
             datosPanel = buildEmptyDatosVariablesPanel(proyecto);
             this.datosNode = datosPanel;
@@ -234,7 +272,7 @@ public class ModeManager {
         toolbox.setPadding(new Insets(12));
 
         Label lblToolbox = new Label("Herramientas");
-        lblToolbox.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblToolbox.getStyleClass().add("panel-title");
 
         Button btnTexto = new Button("T Texto");
         btnTexto.setMaxWidth(Double.MAX_VALUE);
@@ -284,7 +322,7 @@ public class ModeManager {
         panel.setPadding(new Insets(12));
 
         Label lblCapas = new Label("Capas");
-        lblCapas.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblCapas.getStyleClass().add("panel-title");
 
         ListView<Elemento> listCapas = new ListView<>();
         listCapas.getStyleClass().add("project-list");
@@ -378,54 +416,62 @@ public class ModeManager {
         return panel;
     }
 
-    /* Construye el panel de navegación por registros de la fuente de datos. */
+    /* Construye el panel de navegación y vista del registro activo. */
     private VBox buildDatosVariablesPanel(FuenteDatos datos, Proyecto proyecto) {
-        VBox panel = new VBox(15); // Espaciado mayor para que respire
-        panel.setPadding(new Insets(20));
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(16));
+        VBox.setVgrow(panel, Priority.ALWAYS);
 
-        // Cabecera con nombre del archivo y botón para cambiar BD
+        // Cabecera
         Label lblTitulo = new Label(datos.getNombreArchivo());
-        lblTitulo.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblTitulo.getStyleClass().add("panel-title");
+        lblTitulo.setMaxWidth(Double.MAX_VALUE);
+        lblTitulo.setWrapText(false);
 
         Button btnCambiarBD = new Button("⚙ Cambiar BD...");
         btnCambiarBD.getStyleClass().add("toolbox-btn");
+        btnCambiarBD.setMaxWidth(Double.MAX_VALUE);
         btnCambiarBD.setOnAction(e -> {
-            if (onEditProject != null && proyecto != null) {
+            if (onEditProject != null && proyecto != null)
                 onEditProject.accept(proyecto);
-            }
         });
 
-        HBox topBox = new HBox(10, lblTitulo);
-        topBox.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(lblTitulo, Priority.ALWAYS);
-        lblTitulo.setMaxWidth(Double.MAX_VALUE);
-
-        VBox headerBox = new VBox(5, topBox, btnCambiarBD);
-
+        // Contador
         Label lblContador = new Label(calcularContador(datos));
-        lblContador.setStyle("-fx-text-fill: #a8a4a6; -fx-font-size: 12px;");
+        lblContador.getStyleClass().add("toolbar-label");
 
-        // Botones de navegación
-        Button btnAnterior = new Button("◀ Anterior");
+        // Navegación
+        Button btnAnterior = new Button("◄ Anterior");
         btnAnterior.getStyleClass().add("toolbox-btn");
+        btnAnterior.setMaxWidth(Double.MAX_VALUE);
         btnAnterior.setDisable(!datos.tieneRegistros() || datos.getIndiceActual() <= 0);
 
-        Button btnSiguiente = new Button("Siguiente ▶");
+        Button btnSiguiente = new Button("Siguiente ►");
         btnSiguiente.getStyleClass().add("toolbox-btn");
+        btnSiguiente.setMaxWidth(Double.MAX_VALUE);
         btnSiguiente.setDisable(!datos.tieneRegistros() || datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
 
         HBox navBox = new HBox(8, btnAnterior, btnSiguiente);
         navBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(btnAnterior, Priority.ALWAYS);
         HBox.setHgrow(btnSiguiente, Priority.ALWAYS);
-        btnAnterior.setMaxWidth(Double.MAX_VALUE);
-        btnSiguiente.setMaxWidth(Double.MAX_VALUE);
+
+        // Vista de registro: pares COLUMNA → VALOR dentro de un ScrollPane
+        VBox vistaRegistro = construirVistaRegistro(datos);
+
+        ScrollPane scrollRegistro = new ScrollPane(vistaRegistro);
+        scrollRegistro.setFitToWidth(true);
+        scrollRegistro.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollRegistro.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollRegistro.getStyleClass().add("panel-scroll-view");
+        VBox.setVgrow(scrollRegistro, Priority.ALWAYS);
 
         btnAnterior.setOnAction(e -> {
             datos.anterior();
             lblContador.setText(calcularContador(datos));
             btnAnterior.setDisable(datos.getIndiceActual() <= 0);
             btnSiguiente.setDisable(datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
+            actualizarVistaRegistro(vistaRegistro, datos);
             if (onCanvasRedraw != null)
                 onCanvasRedraw.run();
         });
@@ -435,18 +481,70 @@ public class ModeManager {
             lblContador.setText(calcularContador(datos));
             btnAnterior.setDisable(datos.getIndiceActual() <= 0);
             btnSiguiente.setDisable(datos.getIndiceActual() >= datos.getTotalRegistros() - 1);
+            actualizarVistaRegistro(vistaRegistro, datos);
             if (onCanvasRedraw != null)
                 onCanvasRedraw.run();
         });
 
-        // Lista de columnas disponibles (informativo, para la siguiente fase de enlace)
-        String camposTexto = String.join(" · ", datos.getColumnas());
-        Label lblCampos = new Label(camposTexto);
-        lblCampos.setStyle("-fx-text-fill: #847e82; -fx-font-size: 10px;");
-        lblCampos.setWrapText(true);
+        panel.getChildren().addAll(
+                lblTitulo,
+                btnCambiarBD,
+                new Separator(),
+                lblContador,
+                navBox,
+                new Separator(),
+                scrollRegistro);
 
-        panel.getChildren().addAll(headerBox, new Separator(), lblContador, navBox, new Separator(), lblCampos);
         return panel;
+    }
+
+    /* Crea el contenedor de pares COLUMNA/VALOR para el registro inicial. */
+    private VBox construirVistaRegistro(FuenteDatos datos) {
+        VBox contenedor = new VBox(6);
+        contenedor.setPadding(new Insets(4, 0, 4, 0));
+        rellenarVistaRegistro(contenedor, datos);
+        return contenedor;
+    }
+
+    /* Limpia y vuelve a dibujar los pares tras un cambio de registro. */
+    private void actualizarVistaRegistro(VBox contenedor, FuenteDatos datos) {
+        contenedor.getChildren().clear();
+        rellenarVistaRegistro(contenedor, datos);
+    }
+
+    /*
+     * Añade al contenedor un bloque por cada columna con su valor en el registro
+     * actual.
+     */
+    private void rellenarVistaRegistro(VBox contenedor, FuenteDatos datos) {
+        Map<String, String> registro = datos.getRegistroActual();
+
+        if (registro == null) {
+            Label lblVacio = new Label("(sin registros)");
+            lblVacio.getStyleClass().add("panel-placeholder");
+            contenedor.getChildren().add(lblVacio);
+            return;
+        }
+
+        for (String columna : datos.getColumnas()) {
+            String valor = registro.getOrDefault(columna, "");
+
+            Label lblColumna = new Label(columna);
+            lblColumna.getStyleClass().add("dato-columna");
+            lblColumna.setMaxWidth(Double.MAX_VALUE);
+
+            Label lblValor = new Label(valor.isEmpty() ? "—" : valor);
+            lblValor.getStyleClass().add("dato-valor");
+            lblValor.setMaxWidth(Double.MAX_VALUE);
+            lblValor.setWrapText(true);
+
+            VBox campo = new VBox(2, lblColumna, lblValor);
+            campo.setPadding(new Insets(6, 10, 6, 10));
+            campo.getStyleClass().add("dato-campo");
+            campo.setMaxWidth(Double.MAX_VALUE);
+
+            contenedor.getChildren().add(campo);
+        }
     }
 
     private VBox buildEmptyDatosVariablesPanel(Proyecto proyecto) {
@@ -455,7 +553,7 @@ public class ModeManager {
         panel.setAlignment(Pos.CENTER);
 
         Label lblMensaje = new Label("No hay base de datos vinculada");
-        lblMensaje.setStyle("-fx-text-fill: #a8a4a6; -fx-font-size: 13px;");
+        lblMensaje.getStyleClass().add("panel-placeholder");
 
         Button btnVincular = new Button("+ Vincular Base de Datos");
         btnVincular.getStyleClass().add("primary-btn");
@@ -482,13 +580,13 @@ public class ModeManager {
         leftPanel.getChildren().add(projectPanel);
 
         VBox exportPanel = buildExportPanel();
-        exportPanel.setStyle("-fx-background-color: #1e1b1c;");
+        exportPanel.getStyleClass().add("panel-dark-bg");
 
         ScrollPane scrollPane = new ScrollPane(exportPanel);
         scrollPane.setFitToWidth(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setStyle("-fx-background: #1e1b1c; -fx-background-color: #1e1b1c; -fx-padding: 0;");
+        scrollPane.getStyleClass().add("panel-scroll-view");
         scrollPane.setPadding(Insets.EMPTY);
 
         rightPanel.getChildren().add(scrollPane);
@@ -499,7 +597,7 @@ public class ModeManager {
         projectPanel.setPadding(new Insets(12));
 
         Label lblTrabajos = new Label("Trabajos");
-        lblTrabajos.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblTrabajos.getStyleClass().add("panel-title");
 
         ListView<Proyecto> listProyectos = new ListView<>();
         listProyectos.setItems(projects);
@@ -553,7 +651,7 @@ public class ModeManager {
         if (projectManager == null)
             return;
 
-        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto);
+        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, null);
         Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {
@@ -576,19 +674,19 @@ public class ModeManager {
         exportPanel.setFillWidth(true);
 
         Label lblExport = new Label("Exportación");
-        lblExport.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblExport.getStyleClass().add("panel-title");
 
         Label lblInfoExp = new Label("Formato: PNG/PDF (pendiente)");
-        lblInfoExp.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblInfoExp.getStyleClass().add("panel-placeholder");
 
         Label lblDpi = new Label("DPI: 300 (pendiente)");
-        lblDpi.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblDpi.getStyleClass().add("panel-placeholder");
 
         Label lblGuias = new Label("Incluir guías: No (pendiente)");
-        lblGuias.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblGuias.getStyleClass().add("panel-placeholder");
 
         Label lblSide = new Label("Exportar: Frente (pendiente)");
-        lblSide.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblSide.getStyleClass().add("panel-placeholder");
 
         Button btnDoExport = new Button("Exportar");
         btnDoExport.getStyleClass().add("success-btn");

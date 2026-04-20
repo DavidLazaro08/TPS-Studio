@@ -9,10 +9,11 @@ public class ImagenElemento extends Elemento {
 
     private String rutaArchivo;
     private Image imagen;
-    private double opacity; // 0.0 - 1.0
+    private double opacity;
     private boolean mantenerProporcion;
     private double originalWidth;
     private double originalHeight;
+    private String columnaVinculada; // null = elemento fijo; valor = columna del Excel vinculada
 
     public ImagenElemento(String nombre, double x, double y, String rutaArchivo, Image imagen) {
         super(nombre, x, y, 100, 100); // Tamaño por defecto
@@ -93,5 +94,13 @@ public class ImagenElemento extends Elemento {
 
     public double getOriginalHeight() {
         return originalHeight;
+    }
+
+    public String getColumnaVinculada() {
+        return columnaVinculada;
+    }
+
+    public void setColumnaVinculada(String columnaVinculada) {
+        this.columnaVinculada = columnaVinculada;
     }
 }

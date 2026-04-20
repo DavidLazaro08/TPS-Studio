@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import com.tpsstudio.dao.ProyectoDAO;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
@@ -21,9 +22,25 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/* Gestor de archivos y carpetas del proyecto */
-
-public class ProyectoFileManager {
+/**
+ * Implementación del patrón DAO para la persistencia de proyectos en disco.
+ *
+ * <p>Implementa {@link ProyectoDAO} mediante serialización JSON (Gson) a archivos
+ * con extensión {@code .tps}. Cada proyecto se almacena en su propia carpeta con
+ * subcarpetas dedicadas a recursos (Fotos, Fondos, Base de Datos).</p>
+ *
+ * <p><b>Responsabilidades:</b></p>
+ * <ul>
+ *   <li>Crear y mantener la estructura de carpetas del proyecto.</li>
+ *   <li>Serializar/deserializar el modelo {@link Proyecto} completo.</li>
+ *   <li>Copiar recursos externos (imágenes) al directorio del proyecto.</li>
+ *   <li>Rehidratar rutas al cargar proyectos movidos de ubicación.</li>
+ * </ul>
+ *
+ * @see ProyectoDAO
+ * @see com.tpsstudio.service.ProjectManager
+ */
+public class ProyectoFileManager implements ProyectoDAO {
 
     // Adaptador personalizado para LocalDateTime
     private static class LocalDateTimeAdapter extends TypeAdapter<LocalDateTime> {
@@ -71,9 +88,9 @@ public class ProyectoFileManager {
             Files.createDirectories(carpetaProyecto);
 
             // Crear subcarpetas
-            Path carpetaFotos = carpetaProyecto.resolve("Fotos");
+            Path carpetaFotos  = carpetaProyecto.resolve("Fotos");
             Path carpetaFondos = carpetaProyecto.resolve("Fondos");
-            Path carpetaBBDD = carpetaProyecto.resolve("BBDD");
+            Path carpetaBBDD   = carpetaProyecto.resolve("Base de Datos (BBDD)");
 
             Files.createDirectories(carpetaFotos);
             Files.createDirectories(carpetaFondos);
@@ -90,10 +107,12 @@ public class ProyectoFileManager {
                 metadata.setFechaCreacion(LocalDateTime.now());
             }
 
-            // Si hay BD, copiarla
+            // Si hay BD, copiarla a la carpeta del proyecto con nombre normalizado
             if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
                 Path bdOrigen = Paths.get(metadata.getRutaBBDD());
-                Path bdDestino = carpetaBBDD.resolve(bdOrigen.getFileName());
+                String ext = obtenerExtension(bdOrigen.getFileName().toString());
+                String nombreBD = "BD_" + normalizarNombre(metadata.getNombre()) + ext;
+                Path bdDestino = carpetaBBDD.resolve(nombreBD);
                 Files.copy(bdOrigen, bdDestino, StandardCopyOption.REPLACE_EXISTING);
                 metadata.setRutaBBDD(bdDestino.toString());
             }
@@ -240,13 +259,21 @@ public class ProyectoFileManager {
                 metadata.setRutaFotos(carpetaProyecto.resolve("Fotos").toString());
                 metadata.setRutaFondos(carpetaProyecto.resolve("Fondos").toString());
 
-                // Rehidratar ruta BBDD si existía (siempre dentro de /BBDD)
+                // Rehidratar ruta BBDD (nueva carpeta "Base de Datos (BBDD)", fallback a "BBDD")
                 if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
-                    Path bbddNueva = carpetaProyecto.resolve("BBDD")
-                            .resolve(Paths.get(metadata.getRutaBBDD()).getFileName());
+                    String nombreArchivoGuardado = Paths.get(metadata.getRutaBBDD()).getFileName().toString();
+
+                    // Primero buscamos en la carpeta nueva
+                    Path bbddNueva = carpetaProyecto.resolve("Base de Datos (BBDD)").resolve(nombreArchivoGuardado);
+                    // Fallback: carpeta antigua (proyectos creados antes del cambio)
+                    Path bbddLegacy = carpetaProyecto.resolve("BBDD").resolve(nombreArchivoGuardado);
+
                     if (Files.exists(bbddNueva)) {
                         metadata.setRutaBBDD(bbddNueva.toString());
+                    } else if (Files.exists(bbddLegacy)) {
+                        metadata.setRutaBBDD(bbddLegacy.toString());
                     }
+                    // Si no existe en ninguna, se mantiene la ruta guardada (el usuario la buscará)
                 }
             }
 
@@ -293,6 +320,7 @@ public class ProyectoFileManager {
                 dto.setTamaño((int) texto.getFontSize());
                 dto.setColor(texto.getColor());
                 dto.setWidth(texto.getWidth());
+                dto.setColumnaVinculada(texto.getColumnaVinculada());
 
             } else if (elem instanceof ImagenElemento) {
                 ImagenElemento imagen = (ImagenElemento) elem;
@@ -301,6 +329,7 @@ public class ProyectoFileManager {
                 dto.setWidth(imagen.getWidth());
                 dto.setHeight(imagen.getHeight());
                 dto.setMantenerProporcion(imagen.isMantenerProporcion());
+                dto.setColumnaVinculada(imagen.getColumnaVinculada());
             }
 
             dtos.add(dto);
@@ -332,26 +361,28 @@ public class ProyectoFileManager {
                 texto.setFontSize(dto.getTamaño());
                 texto.setColor(dto.getColor());
                 texto.setWidth(dto.getWidth());
+                texto.setColumnaVinculada(dto.getColumnaVinculada());
                 elem = texto;
 
             } else if ("imagen".equals(dto.getTipo())) {
-                Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
-                if (Files.exists(rutaAbsoluta)) {
-                    javafx.scene.image.Image img = ImageUtils
-                            .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+                ImagenElemento imagen;
 
-                    ImagenElemento imagen = new ImagenElemento(
-                            dto.getNombre(),
-                            dto.getX(),
-                            dto.getY(),
-                            dto.getRutaImagen(),
-                            img);
-
-                    imagen.setWidth(dto.getWidth());
-                    imagen.setHeight(dto.getHeight());
-                    imagen.setMantenerProporcion(dto.isMantenerProporcion());
-                    elem = imagen;
+                if (dto.getRutaImagen() == null || dto.getRutaImagen().isBlank()) {
+                    // Placeholder (sin imagen asignada todav\u00eda)
+                    imagen = new ImagenElemento(dto.getNombre(), dto.getX(), dto.getY(), null, null);
+                } else {
+                    Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
+                    javafx.scene.image.Image img = Files.exists(rutaAbsoluta)
+                            ? ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString())
+                            : null;
+                    imagen = new ImagenElemento(dto.getNombre(), dto.getX(), dto.getY(), dto.getRutaImagen(), img);
                 }
+
+                imagen.setWidth(dto.getWidth());
+                imagen.setHeight(dto.getHeight());
+                imagen.setMantenerProporcion(dto.isMantenerProporcion());
+                imagen.setColumnaVinculada(dto.getColumnaVinculada());
+                elem = imagen;
             }
 
             if (elem != null) {
@@ -443,6 +474,43 @@ public class ProyectoFileManager {
 
     private String normalizarNombre(String nombre) {
         return nombre.replaceAll("[^a-zA-Z0-9_\\-\\s]", "_").replaceAll("\\s+", "_");
+    }
+
+    /* Extrae la extensión de un nombre de archivo, incluyendo el punto. Ej: ".xlsx" */
+
+    private String obtenerExtension(String nombreArchivo) {
+        int idx = nombreArchivo.lastIndexOf('.');
+        return (idx > 0) ? nombreArchivo.substring(idx) : "";
+    }
+
+    /**
+     * Copia un archivo de base de datos a la carpeta "Base de Datos (BBDD)" del proyecto
+     * y devuelve la ruta absoluta del archivo copiado.
+     * Se llama al editar el proyecto y cambiar la BD vinculada.
+     *
+     * @return ruta absoluta del archivo destino, o null si falla o si la BD ya estaba en ese sitio
+     */
+    public String copiarBDAlProyecto(File bdOrigen, ProyectoMetadata metadata) {
+        try {
+            if (metadata == null || metadata.getCarpetaProyecto() == null) return null;
+
+            Path carpetaBBDD = Paths.get(metadata.getCarpetaProyecto()).resolve("Base de Datos (BBDD)");
+            Files.createDirectories(carpetaBBDD); // por si acaso no existe (proyectos legacy)
+
+            String ext = obtenerExtension(bdOrigen.getName());
+            String nombreBD = "BD_" + normalizarNombre(metadata.getNombre()) + ext;
+            Path destino = carpetaBBDD.resolve(nombreBD);
+
+            // Si la BD ya está en la carpeta del proyecto, no la copiamos de nuevo
+            if (bdOrigen.toPath().equals(destino)) return destino.toString();
+
+            Files.copy(bdOrigen.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
+            return destino.toString();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /* Exporta los datos del cliente a un archivo de texto */
@@ -544,6 +612,7 @@ public class ProyectoFileManager {
         private double width;
         private double height;
         private boolean mantenerProporcion;
+        private String columnaVinculada;
 
         public String getTipo() { return tipo; }
         public void setTipo(String tipo) { this.tipo = tipo; }
@@ -583,6 +652,9 @@ public class ProyectoFileManager {
 
         public boolean isMantenerProporcion() { return mantenerProporcion; }
         public void setMantenerProporcion(boolean mantenerProporcion) { this.mantenerProporcion = mantenerProporcion; }
+
+        public String getColumnaVinculada() { return columnaVinculada; }
+        public void setColumnaVinculada(String columnaVinculada) { this.columnaVinculada = columnaVinculada; }
     }
 
     public static class FondoDTO {

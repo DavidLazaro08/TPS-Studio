@@ -6,10 +6,12 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
-import javafx.scene.paint.Color;
 
 /* Diálogo para capturar información del cliente */
 public class DatosClienteDialog extends Dialog<ClienteInfo> {
+
+    private static final String CSS = DatosClienteDialog.class
+            .getResource("/css/dialogs.css").toExternalForm();
 
     private TextField txtNombreEmpresa;
     private TextField txtNombreContacto;
@@ -27,6 +29,7 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
     public DatosClienteDialog(ClienteInfo clienteExistente) {
         setTitle("Datos del Cliente");
         setHeaderText("Información del cliente que solicita el trabajo");
+        getDialogPane().getStylesheets().add(CSS);
 
         // Crear grid
         GridPane grid = new GridPane();
@@ -50,8 +53,7 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         txtEmail = new TextField();
         txtEmail.setPromptText("Ej: contacto@empresa.com");
         lblEmailError = new Label();
-        lblEmailError.setTextFill(Color.RED);
-        lblEmailError.setStyle("-fx-font-size: 10px;");
+        lblEmailError.getStyleClass().add("lbl-error");
         lblEmailError.setVisible(false);
 
         // Teléfono
@@ -59,8 +61,7 @@ public class DatosClienteDialog extends Dialog<ClienteInfo> {
         txtTelefono = new TextField();
         txtTelefono.setPromptText("Ej: +34 600 123 456");
         lblTelefonoError = new Label();
-        lblTelefonoError.setTextFill(Color.RED);
-        lblTelefonoError.setStyle("-fx-font-size: 10px;");
+        lblTelefonoError.getStyleClass().add("lbl-error");
         lblTelefonoError.setVisible(false);
 
         // Observaciones

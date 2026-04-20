@@ -1,14 +1,24 @@
 package com.tpsstudio.service;
 
+import com.tpsstudio.dao.SettingsDAO;
 import java.io.File;
 import java.util.prefs.Preferences;
 
 /**
- * Gestor de configuración de la aplicación
- * Permite guardar preferencias como el editor externo y otras opciones
- * globales.
+ * Implementación del patrón DAO para la configuración de la aplicación.
+ *
+ * <p>Implementa {@link SettingsDAO} usando {@link java.util.prefs.Preferences}
+ * del sistema operativo para persistir preferencias del usuario entre sesiones
+ * de forma nativa en cada plataforma (registro en Windows, plist en macOS).</p>
+ *
+ * <p><b>Preferencias gestionadas:</b></p>
+ * <ul>
+ *   <li>Ruta al editor externo de imágenes (Photoshop, GIMP, etc.).</li>
+ * </ul>
+ *
+ * @see SettingsDAO
  */
-public class SettingsManager {
+public class SettingsManager implements SettingsDAO {
 
     private static final String PREF_EDITOR_PATH = "external_editor_path";
 

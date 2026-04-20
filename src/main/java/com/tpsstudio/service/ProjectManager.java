@@ -1,5 +1,6 @@
 package com.tpsstudio.service;
 
+import com.tpsstudio.dao.ProyectoDAO;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
@@ -13,26 +14,35 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import javafx.application.Platform;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
-/* ProjectManager (Service Layer)
+/**
+ * Servicio principal de gestión de proyectos (capa Service).
  *
- * Actúa como punto central de la lógica relacionada con proyectos:
- * - Crear / abrir / guardar (y más adelante exportar)
- * - Cargar recientes
- * - Añadir elementos al proyecto actual (texto, imagen, fondo)
+ * <p>Actúa como punto de entrada único para toda la lógica relacionada con
+ * el ciclo de vida de los proyectos: crear, abrir, guardar, exportar, etc.
+ * Delega las operaciones de persistencia al {@link ProyectoDAO} correspondiente.</p>
  *
- * Nota: la UI se mantiene informada mediante callbacks (onProjectChanged / onElementAdded). */
-
+ * <p><b>Patrón de comunicación con la Vista:</b><br/>
+ * En lugar de depender de clases JavaFX directamente, utiliza callbacks
+ * ({@link Runnable}, {@link java.util.function.BiConsumer}) para notificar
+ * cambios a la capa superior, manteniendo el desacoplamiento Vista-Servicio.</p>
+ *
+ * @see ProyectoDAO
+ * @see com.tpsstudio.service.ProyectoFileManager
+ * @see com.tpsstudio.view.controllers.MainViewController
+ */
 public class ProjectManager {
 
     // Lista observable de proyectos (la UI se refresca automáticamente)
-    private final ObservableList<Proyecto> proyectos = FXCollections.observableArrayList();
+    private final javafx.collections.ObservableList<Proyecto> proyectos = javafx.collections.FXCollections.observableArrayList();
 
     // Proyecto actualmente activo en la app
     private Proyecto proyectoActual;
@@ -40,9 +50,12 @@ public class ProjectManager {
     // Callbacks para avisar al Controller
     private Runnable onProjectChanged;
     private Runnable onElementAdded;
+    /** Callback para notificaciones (tipo: "info" | "error", mensaje). */
+    private BiConsumer<String, String> onNotificacion;
 
     // Sub-gestores especializados (IO y recientes)
-    private final ProyectoFileManager fileManager;
+    /** Implementación DAO usada para persistir proyectos en disco. */
+    private final ProyectoDAO fileManager;
     private final RecentProjectsManager recentManager;
     private final DatosVariablesManager datosVariablesManager;
 
@@ -69,6 +82,11 @@ public class ProjectManager {
 
     public void setOnElementAdded(Runnable callback) {
         this.onElementAdded = callback;
+    }
+
+    /** Registrar callback de notificaciones (para mostrar toasts en la UI). */
+    public void setOnNotificacion(BiConsumer<String, String> callback) {
+        this.onNotificacion = callback;
     }
 
     // =====================================================
@@ -114,22 +132,14 @@ public class ProjectManager {
     }
 
     /*
-     * Crea un proyecto completo:
-     * 1) Pide datos en un diálogo
-     * 2) Genera estructura de carpetas
-     * 3) Crea y guarda el archivo .tps
-     * 4) Lo añade a recientes y a la lista
+     * Crea un proyecto completo desde los metadatos proporcionados por la UI:
+     * 1) Genera estructura de carpetas
+     * 2) Crea y guarda el archivo .tps
+     * 3) Lo añade a recientes y a la lista
      */
 
-    public Proyecto nuevoProyecto(Window owner) {
-
-        NuevoProyectoDialog dialog = new NuevoProyectoDialog();
-        Optional<ProyectoMetadata> result = dialog.showAndWait();
-        if (result.isEmpty()) {
-            return null; // cancelado
-        }
-
-        ProyectoMetadata metadata = result.get();
+    public Proyecto crearProyectoDesdeMetadata(ProyectoMetadata metadata) {
+        if (metadata == null) return null;
 
         if (!fileManager.crearEstructuraCarpetas(metadata)) {
             mostrarError("No se pudo crear la estructura de carpetas.");
@@ -157,26 +167,12 @@ public class ProjectManager {
         return nuevoProyecto;
     }
 
-    /* Abre un proyecto existente (.tps). */
+    /* Abre un proyecto existente desde un archivo .tps ya seleccionado por la UI. */
 
-    public Proyecto abrirProyecto(Window owner) {
-
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Abrir Proyecto");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
-
-        File file = fileChooser.showOpenDialog(owner);
+    public Proyecto abrirProyectoDesdeArchivo(File file) {
         if (file == null) {
             return null;
         }
-
-        return cargarProyectoDesdeArchivo(file);
-    }
-
-    /* Lógica interna de carga del proyecto desde un archivo .tps. */
-
-    private Proyecto cargarProyectoDesdeArchivo(File file) {
 
         Proyecto proyecto = fileManager.cargarProyecto(file);
 
@@ -279,6 +275,18 @@ public class ProjectManager {
         proyecto.setNombre(nuevaMetadata.getNombre());
         proyecto.setMetadata(nuevaMetadata);
 
+        // Si la BD vinculada es un archivo externo al proyecto, copiarlo dentro
+        String rutaBD = nuevaMetadata.getRutaBBDD();
+        if (rutaBD != null && !rutaBD.isBlank()) {
+            File bdFile = new File(rutaBD);
+            if (bdFile.exists() && !esBDDentroDelProyecto(bdFile, nuevaMetadata)) {
+                String rutaCopiada = fileManager.copiarBDAlProyecto(bdFile, nuevaMetadata);
+                if (rutaCopiada != null) {
+                    nuevaMetadata.setRutaBBDD(rutaCopiada);
+                }
+            }
+        }
+
         boolean guardado = fileManager.guardarProyecto(proyecto, nuevaMetadata);
 
         if (guardado) {
@@ -364,24 +372,9 @@ public class ProjectManager {
         return texto;
     }
 
-    /*
-     * Importa una imagen:
-     * - Si el proyecto tiene carpeta /Fotos, se copia allí para que sea portable
-     * - Si no (modo legacy), se referencia desde la ruta original
-     */
+    public ImagenElemento añadirImagenDesdeArchivo(File file) {
 
-    public ImagenElemento añadirImagen(Window window) {
-
-        if (proyectoActual == null)
-            return null;
-
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Seleccionar Imagen");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
-        File file = fileChooser.showOpenDialog(window);
-        if (file == null)
+        if (proyectoActual == null || file == null)
             return null;
 
         try {
@@ -430,44 +423,48 @@ public class ProjectManager {
     }
 
     /*
-     * Establece el fondo de la tarjeta:
-     * - Se copia a /Fondos (si existe estructura)
-     * - Se pregunta el modo (con sangre / sin sangre) salvo que el proyecto
-     * recuerde la preferencia
-     * - Reemplaza el fondo anterior de la cara actual
+     * Crea una ImagenElemento vac\u00eda (placeholder gris) sin abrir FileChooser.
+     * Si hay FuenteDatos activa, detecta autom\u00e1ticamente columnas de foto.
      */
-
-    public ImagenFondoElemento añadirFondo(Window window, FitModeProvider fitModeProvider) {
+    public ImagenElemento a\u00f1adirImagenPlaceholder() {
 
         if (proyectoActual == null)
             return null;
 
-        ImagenFondoElemento fondoExistente = proyectoActual.getFondoActual();
-        if (fondoExistente != null && !confirmarReemplazoFondo()) {
-            return null;
+        int num = proyectoActual.getElementosActuales().size() + 1;
+        ImagenElemento imgElem = new ImagenElemento("Imagen " + num, 50, 50, null, null);
+        imgElem.setWidth(82); // proporción carnet ~35x45mm, tamaño cómodo sin ocupar demasiado
+        imgElem.setHeight(106);
+
+        // Auto-detecci\u00f3n de columna de foto si hay Excel vinculado
+        if (fuenteDatosActual != null) {
+            for (String columna : fuenteDatosActual.getColumnas()) {
+                String upper = columna.toUpperCase();
+                if (upper.equals("FOTO") || upper.equals("FOTOS")
+                        || upper.equals("IMAGEN") || upper.equals("IMAGENES")) {
+                    imgElem.setColumnaVinculada(columna);
+                    break;
+                }
+            }
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Seleccionar Imagen de Fondo");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+        proyectoActual.getElementosActuales().add(imgElem);
+        avisarElementoA\u00f1adido();
 
-        File file = fileChooser.showOpenDialog(window);
-        if (file == null)
+        return imgElem;
+    }
+
+    /*
+     * Establece el fondo de la tarjeta desde un archivo.
+     * Se espera que el controlador ya haya confirmado el reemplazo si hiciera falta.
+     */
+
+    public ImagenFondoElemento añadirFondoDesdeArchivo(File file, FondoFitMode fitMode) {
+
+        if (proyectoActual == null || file == null || fitMode == null)
             return null;
 
         try {
-            // Modo de ajuste (preferencia guardada o diálogo)
-            FondoFitMode fitMode;
-
-            if (proyectoActual.isNoVolverAPreguntarFondo() && proyectoActual.getFondoFitModePreferido() != null) {
-                fitMode = proyectoActual.getFondoFitModePreferido();
-            } else {
-                fitMode = fitModeProvider.getFitMode();
-                if (fitMode == null)
-                    return null;
-            }
-
             ProyectoMetadata metadata = proyectoActual.getMetadata();
 
             // Proyecto con estructura (portable)
@@ -565,19 +562,23 @@ public class ProjectManager {
     }
 
     private void mostrarError(String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText("Algo salió mal");
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        if (onNotificacion != null) {
+            onNotificacion.accept("error", mensaje);
+        } else {
+            // Fallback si no hay callback aún (durante inicialización)
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Algo salió mal");
+            alert.setContentText(mensaje);
+            alert.showAndWait();
+        }
     }
 
     private void mostrarInfo(String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Información");
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        if (onNotificacion != null) {
+            onNotificacion.accept("info", mensaje);
+        }
+        // Si no hay callback registrado, silencioso (la UI lo gestiona)
     }
 
     // =====================================================
@@ -603,5 +604,12 @@ public class ProjectManager {
     @FunctionalInterface
     public interface FitModeProvider {
         FondoFitMode getFitMode();
+    }
+
+    /** Comprueba si el archivo de BD ya está dentro de la carpeta del proyecto. */
+    private boolean esBDDentroDelProyecto(File bdFile, ProyectoMetadata metadata) {
+        if (metadata.getCarpetaProyecto() == null)
+            return false;
+        return bdFile.getAbsolutePath().startsWith(metadata.getCarpetaProyecto());
     }
 }

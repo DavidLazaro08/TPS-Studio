@@ -8,10 +8,12 @@ public class TextoElemento extends Elemento {
     private String contenido;
     private double fontSize;
     private String fontFamily;
-    private String color; // Formato hex: #RRGGBB
-    private String alineacion; // "LEFT", "CENTER", "RIGHT"
+    private String color;
+    private String alineacion;
     private boolean negrita;
     private boolean cursiva;
+    private Boolean saltoLinea; // Usamos Boolean para que GSON lo deje a null en proyectos viejos
+    private String columnaVinculada; // null = elemento fijo; valor = columna del Excel vinculada
 
     public TextoElemento(String nombre, double x, double y) {
         super(nombre, x, y, 100, 30); // Tamaño por defecto
@@ -22,6 +24,7 @@ public class TextoElemento extends Elemento {
         this.alineacion = "LEFT";
         this.negrita = false;
         this.cursiva = false;
+        this.saltoLinea = true;
     }
 
     // Getters y setters
@@ -79,5 +82,21 @@ public class TextoElemento extends Elemento {
 
     public void setCursiva(boolean cursiva) {
         this.cursiva = cursiva;
+    }
+
+    public String getColumnaVinculada() {
+        return columnaVinculada;
+    }
+
+    public void setColumnaVinculada(String columnaVinculada) {
+        this.columnaVinculada = columnaVinculada;
+    }
+
+    public boolean isSaltoLinea() {
+        return saltoLinea == null ? true : saltoLinea; // Default a true para proyectos viejos
+    }
+
+    public void setSaltoLinea(boolean saltoLinea) {
+        this.saltoLinea = saltoLinea;
     }
 }

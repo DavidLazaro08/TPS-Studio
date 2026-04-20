@@ -8,7 +8,6 @@
    ROOT — Fondo casi negro con degradado mínimo
    ----------------------------------------------------- */
 .root {
-    /* Degradado muy sutil: negro puro → negro con tinte berenjena */
     -fx-background-color:
         radial-gradient(center 30% 25%, radius 70%, rgba(40, 30, 35, 0.08), transparent),
         linear-gradient(to bottom right, #0a0809, #120e10);
@@ -28,8 +27,7 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 25, 0, 0, 5);
 }
 
-
-/* CAJA 2: Panel interior — Gris neutro-cálido (NO rosado) */
+/* CAJA 2: Panel interior — Gris neutro-cálido */
 .login-inner {
     -fx-background-color: #1e1a1c;
     -fx-padding: 35 40;
@@ -69,10 +67,8 @@
     -fx-background-color: #2a2628;
     -fx-text-fill: #e8e6e7;
     -fx-prompt-text-fill: #6a6568;
-
     -fx-font-size: 14px;
     -fx-padding: 10 12;
-
     -fx-background-radius: 6;
     -fx-border-radius: 6;
     -fx-border-width: 1;
@@ -87,18 +83,15 @@
 
 
 /* -----------------------------------------------------
-   BOTÓN PRINCIPAL — Burdeos profundo casi negro (NO rosa)
+   BOTÓN PRINCIPAL — Burdeos profundo
    ----------------------------------------------------- */
 .success-btn {
     -fx-background-color: #3d1f28;
     -fx-text-fill: #e8e6e7;
-
     -fx-font-size: 15px;
     -fx-font-weight: bold;
-
     -fx-padding: 12 24;
     -fx-background-radius: 6;
-
     -fx-cursor: hand;
 }
 
@@ -152,7 +145,6 @@
     -fx-background-color: #2a2628;
     -fx-border-color: #3d3739;
     -fx-border-width: 1.5;
-
     -fx-background-radius: 4;
     -fx-border-radius: 4;
 }
@@ -166,7 +158,6 @@
     -fx-border-color: #4a6b7c;
 }
 
-/* Tick blanco visible */
 .remember-checkbox:selected .mark {
     -fx-background-color: #e8e6e7;
     -fx-shape: "M 0 4 L 3 7 L 8 0";
@@ -176,7 +167,7 @@
 
 
 /* -----------------------------------------------------
-   TEXTO DE ERROR — Rojo desaturado, no agresivo
+   TEXTO DE ERROR — Rojo desaturado
    ----------------------------------------------------- */
 .error-text {
     -fx-text-fill: #d48a8a;
@@ -186,7 +177,7 @@
 
 
 /* -----------------------------------------------------
-   LINK — Solicitar acceso (Azul petróleo discreto)
+   LINK — Solicitar acceso
    ----------------------------------------------------- */
 .link-text {
     -fx-text-fill: #5a8599;
@@ -202,7 +193,7 @@
 
 
 /* =====================================================
-   MAIN VIEW (BASE, PARA MÁS ADELANTE)
+   MAIN VIEW
    ===================================================== */
 .primary-btn {
     -fx-background-color: #4a6b7c;
@@ -374,53 +365,119 @@
 .separator:horizontal .line {
     -fx-border-color: #2a2628;
     -fx-border-width: 1 0 0 0;
-}/ *   M o d e   t o g g l e   b u t t o n s   ( E d i t / E x p o r t )   * /  
- . m o d e - t o g g l e   {  
-         - f x - b a c k g r o u n d - c o l o r :   t r a n s p a r e n t ;  
-         - f x - t e x t - f i l l :   # c 4 c 0 c 2 ;  
-         - f x - f o n t - s i z e :   1 4 p x ;  
-         - f x - f o n t - w e i g h t :   b o l d ;  
-         - f x - p a d d i n g :   8   1 6 ;  
-         - f x - b a c k g r o u n d - r a d i u s :   6 ;  
-         - f x - c u r s o r :   h a n d ;  
-         - f x - b o r d e r - c o l o r :   # 4 a 6 b 7 c ;  
-         - f x - b o r d e r - w i d t h :   2 ;  
-         - f x - b o r d e r - r a d i u s :   6 ;  
- }  
-  
- . m o d e - t o g g l e : s e l e c t e d   {  
-         - f x - b a c k g r o u n d - c o l o r :   # 4 a 6 b 7 c ;  
-         - f x - t e x t - f i l l :   # e 8 e 6 e 7 ;  
- }  
-  
- . m o d e - t o g g l e : h o v e r   {  
-         - f x - b a c k g r o u n d - c o l o r :   # 2 a 2 6 2 8 ;  
- }  
-  
- / *   T o o l b o x   b u t t o n s   * /  
- . t o o l b o x - b t n   {  
-         - f x - b a c k g r o u n d - c o l o r :   # 2 a 2 6 2 8 ;  
-         - f x - t e x t - f i l l :   # c 4 c 0 c 2 ;  
-         - f x - f o n t - s i z e :   1 3 p x ;  
-         - f x - p a d d i n g :   1 0   1 2 ;  
-         - f x - b a c k g r o u n d - r a d i u s :   6 ;  
-         - f x - c u r s o r :   h a n d ;  
-         - f x - b o r d e r - c o l o r :   # 3 d 3 7 3 9 ;  
-         - f x - b o r d e r - w i d t h :   1 ;  
-         - f x - b o r d e r - r a d i u s :   6 ;  
- }  
-  
- . t o o l b o x - b t n : h o v e r   {  
-         - f x - b a c k g r o u n d - c o l o r :   # 3 2 2 e 3 0 ;  
-         - f x - t e x t - f i l l :   # e 8 e 6 e 7 ;  
-         - f x - b o r d e r - c o l o r :   # 4 a 6 b 7 c ;  
- }  
-  
- . t o o l b o x - b t n : p r e s s e d   {  
-         - f x - b a c k g r o u n d - c o l o r :   # 1 e 1 a 1 c ;  
- }  
-  
- . t o o l b o x - b t n : d i s a b l e d   {  
-         - f x - o p a c i t y :   0 . 4 ;  
- }  
- 
+}
+
+/* Mode toggle buttons (Edit/Export) */
+.mode-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-color: #4a6b7c;
+    -fx-border-width: 2;
+    -fx-border-radius: 6;
+}
+
+.mode-toggle:selected {
+    -fx-background-color: #4a6b7c;
+    -fx-text-fill: #e8e6e7;
+}
+
+.mode-toggle:hover {
+    -fx-background-color: #2a2628;
+}
+
+/* Toolbox buttons */
+.toolbox-btn {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+    -fx-padding: 10 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-color: #3d3739;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+.toolbox-btn:hover {
+    -fx-background-color: #322e30;
+    -fx-text-fill: #e8e6e7;
+    -fx-border-color: #4a6b7c;
+}
+
+.toolbox-btn:pressed {
+    -fx-background-color: #1e1a1c;
+}
+
+.toolbox-btn:disabled {
+    -fx-opacity: 0.4;
+}
+
+/* =====================================================
+   PANEL DATOS VARIABLES — Campos columna/valor
+   ===================================================== */
+
+/* Nombre de la columna (cabecera gris pequeña) */
+.dato-columna {
+    -fx-text-fill: #847e82;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+/* Valor del campo (texto claro destacado) */
+.dato-valor {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 12px;
+}
+
+/* Contenedor de cada par columna/valor */
+.dato-campo {
+    -fx-background-color: #252122;
+    -fx-background-radius: 4;
+}
+
+/* =====================================================
+   PANEL DE PROPIEDADES
+   ===================================================== */
+
+/* Label de sección media (12px, gris claro) */
+.prop-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
+}
+
+/* Label pequeño de campo (11px) */
+.prop-label-small {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+/* RadioButton en paneles de propiedades */
+.prop-radio {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* =====================================================
+   ESTILOS INTERNOS DE PANELES (Reemplazo de inline)
+   ===================================================== */
+
+/* ScrollPane interno (datos, propiedades) sin bordes */
+.panel-scroll-view {
+    -fx-background: #1e1b1c;
+    -fx-background-color: #1e1b1c;
+    -fx-border-color: transparent;
+}
+
+/* Contenedor con fondo oscuro liso */
+.panel-dark-bg {
+    -fx-background-color: #1e1b1c;
+}

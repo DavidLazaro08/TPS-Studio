@@ -5,7 +5,9 @@ import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.enums.AppMode;
+import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.util.ImageUtils;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -14,15 +16,59 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
-/* Encargado del Canvas del editor:
- * - Dibuja tarjeta, guías y elementos.
- * - Gestiona selección, mover y redimensionar con el ratón.
+/**
+ * Gestor del canvas de edición de tarjetas CR80.
  *
- * Esta lógica antes estaba en MainViewController y se movió aquí para aislarla. */
-
+ * <p>Encapsula toda la lógica de renderizado y de interacción con el ratón
+ * sobre el {@link javafx.scene.canvas.Canvas} central de la aplicación.
+ * Este manager fue extraído de {@link com.tpsstudio.view.controllers.MainViewController}
+ * para cumplir el principio de responsabilidad única (SRP).</p>
+ *
+ * <p><b>Responsabilidades:</b></p>
+ * <ul>
+ *   <li><b>Renderizado:</b> dibuja el fondo de tarjeta, guías de sangrado,
+ *       elementos gráficos (texto, imagen) y la cabecera de información de proyecto.</li>
+ *   <li><b>Interacción:</b> gestiona selección, arrastre y redimensionado de elementos
+ *       mediante eventos de ratón ({@code onMousePressed}, {@code onMouseDragged}, etc.).</li>
+ *   <li><b>HUD contextual:</b> muestra información de proyecto/cliente en modo Producción,
+ *       con animación de opacidad para no interferir con el trabajo de diseño.</li>
+ * </ul>
+ *
+ * <p><b>Constantes de referencia:</b><br/>
+ * Las constantes públicas {@link #CARD_WIDTH}, {@link #CARD_HEIGHT},
+ * {@link #CR80_WIDTH_MM}, {@link #CR80_HEIGHT_MM} y {@link #BLEED_MARGIN}
+ * representan las dimensiones estándar de la tarjeta CR80 en px y mm,
+ * y son compartidas con {@link com.tpsstudio.service.PDFExportService} para
+ * garantizar coherencia entre vista y exportación.</p>
+ *
+ * <p><b>Callbacks:</b><br/>
+ * Se comunica con el controlador principal mediante callbacks inyectados
+ * ({@link #setOnElementSelected(Runnable)}, {@link #setOnCanvasChanged(Runnable)})
+ * manteniendo el desacoplamiento con la capa de vista.</p>
+ *
+ * @see com.tpsstudio.view.controllers.MainViewController
+ * @see com.tpsstudio.service.PDFExportService
+ * @see com.tpsstudio.model.project.Proyecto
+ */
 public class EditorCanvasManager {
+
+    /* Imágen de silueta para el placeholder. Se carga una vez desde recursos. */
+    private static Image imagenSilueta = null;
+
+    static {
+        try (var stream = EditorCanvasManager.class.getResourceAsStream("/img/silueta.png")) {
+            if (stream != null) {
+                imagenSilueta = new Image(stream);
+            }
+        } catch (Exception ignored) {
+            // sin silueta personalizada: se usará el rectángulo gris
+        }
+    }
 
     /* Qué estamos haciendo durante el drag.
      * En texto solo se permite estirar el ancho (E). */
@@ -51,15 +97,26 @@ public class EditorCanvasManager {
     private double zoomLevel;
     private boolean mostrarGuias;
     private AppMode currentMode;
+    private FuenteDatos fuenteDatos;
 
     // Estado interno de drag
     private DragMode currentDragMode = DragMode.NONE;
     private double dragStartX, dragStartY;
     private double elementStartX, elementStartY, elementStartW, elementStartH;
+    private boolean wasDragged = false;
 
     // Callbacks (avisos hacia fuera)
     private Runnable onElementSelected;
     private Runnable onCanvasChanged;
+    private Runnable onElementTransformed;
+    private Runnable onClientDataRequested;
+
+    // Campos figurados
+    private javafx.geometry.BoundingBox btnClienteHitbox;
+
+    public void setOnClientDataRequested(Runnable callback) {
+        this.onClientDataRequested = callback;
+    }
 
     public EditorCanvasManager(Canvas canvas) {
         this.canvas = canvas;
@@ -88,8 +145,48 @@ public class EditorCanvasManager {
         this.mostrarGuias = mostrar;
     }
 
+    private double hudOpacity = 0.0;
+    private javafx.animation.Timeline hudFadeTimeline;
+
     public void setCurrentMode(AppMode mode) {
-        this.currentMode = mode;
+        if (this.currentMode != mode) {
+            this.currentMode = mode;
+            
+            if (hudFadeTimeline != null) {
+                hudFadeTimeline.stop();
+            }
+            
+            double targetOpacity = (mode == AppMode.PRODUCTION) ? 1.0 : 0.0;
+            
+            hudFadeTimeline = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, 
+                    new javafx.animation.KeyValue(hudOpacityProperty(), hudOpacity, javafx.animation.Interpolator.EASE_BOTH)),
+                new javafx.animation.KeyFrame(javafx.util.Duration.millis(550), 
+                    new javafx.animation.KeyValue(hudOpacityProperty(), targetOpacity, javafx.animation.Interpolator.EASE_BOTH))
+            );
+            
+            hudFadeTimeline.play();
+        } else {
+            // Inicialización directa si no hay cambio
+            hudOpacity = (mode == AppMode.PRODUCTION) ? 1.0 : 0.0;
+            if (hudOpacityProp != null) hudOpacityProp.set(hudOpacity);
+        }
+    }
+
+    private javafx.beans.property.DoubleProperty hudOpacityProp;
+    private javafx.beans.property.DoubleProperty hudOpacityProperty() {
+        if (hudOpacityProp == null) {
+            hudOpacityProp = new javafx.beans.property.SimpleDoubleProperty(hudOpacity);
+            hudOpacityProp.addListener((obs, oldVal, newVal) -> {
+                hudOpacity = newVal.doubleValue();
+                dibujarCanvas();
+            });
+        }
+        return hudOpacityProp;
+    }
+
+    public void setFuenteDatos(FuenteDatos fuenteDatos) {
+        this.fuenteDatos = fuenteDatos;
     }
 
     // ===================== CALLBACKS =====================
@@ -100,6 +197,10 @@ public class EditorCanvasManager {
 
     public void setOnCanvasChanged(Runnable callback) {
         this.onCanvasChanged = callback;
+    }
+
+    public void setOnElementTransformed(Runnable callback) {
+        this.onElementTransformed = callback;
     }
 
     // ===================== RATÓN =====================
@@ -193,26 +294,161 @@ public class EditorCanvasManager {
 
                 gc.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * zoomLevel));
 
-                // Alineación del texto dentro de su caja
-                double textX = ex;
-                javafx.scene.text.Text tempText = new javafx.scene.text.Text(texto.getContenido());
-                tempText.setFont(gc.getFont());
-                double textWidth = tempText.getLayoutBounds().getWidth();
-
-                if ("CENTER".equals(texto.getAlineacion())) {
-                    textX = ex + (ew - textWidth) / 2;
-                } else if ("RIGHT".equals(texto.getAlineacion())) {
-                    textX = ex + ew - textWidth;
+                // Si hay columna vinculada, mostrar el valor del registro actual
+                String contenidoFinal = texto.getContenido();
+                if (texto.getColumnaVinculada() != null && fuenteDatos != null) {
+                    String valorVariable = fuenteDatos.getValor(texto.getColumnaVinculada());
+                    if (valorVariable != null) contenidoFinal = valorVariable;
                 }
 
-                gc.fillText(texto.getContenido(), textX, ey + (texto.getFontSize() * zoomLevel));
+                // Procesamiento multi-linea y auto-wrap
+                java.util.List<String> rawLines = java.util.Arrays.asList(contenidoFinal.split("\n"));
+                java.util.List<String> finalLines = new java.util.ArrayList<>();
+
+                if (texto.isSaltoLinea()) {
+                    javafx.scene.text.Text helper = new javafx.scene.text.Text();
+                    helper.setFont(gc.getFont());
+                    for (String raw : rawLines) {
+                        if (raw.isEmpty()) {
+                            finalLines.add("");
+                            continue;
+                        }
+                        String[] words = raw.split(" ", -1);
+                        StringBuilder currentLine = new StringBuilder();
+                        
+                        for (String word : words) {
+                            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
+                            helper.setText(testLine);
+                            
+                            if (helper.getLayoutBounds().getWidth() > ew) {
+                                // Si ya había algo en la línea, lo guardamos y bajamos
+                                if (currentLine.length() > 0) {
+                                    finalLines.add(currentLine.toString());
+                                    currentLine = new StringBuilder();
+                                }
+                                
+                                // Evaluamos si la palabra por sí sola supera el ancho
+                                helper.setText(word);
+                                if (helper.getLayoutBounds().getWidth() > ew) {
+                                    // Palabra mega-larga (ej: textooooooooooooo)
+                                    // La partimos letra a letra forzosamente
+                                    StringBuilder partialWord = new StringBuilder();
+                                    for (int i = 0; i < word.length(); i++) {
+                                        char c = word.charAt(i);
+                                        helper.setText(partialWord.toString() + c);
+                                        if (helper.getLayoutBounds().getWidth() > ew && partialWord.length() > 0) {
+                                            finalLines.add(partialWord.toString());
+                                            partialWord = new StringBuilder().append(c);
+                                        } else {
+                                            partialWord.append(c);
+                                        }
+                                    }
+                                    currentLine = partialWord;
+                                } else {
+                                    currentLine = new StringBuilder(word);
+                                }
+                            } else {
+                                currentLine = new StringBuilder(testLine);
+                            }
+                        }
+                        if (currentLine.length() > 0) {
+                            finalLines.add(currentLine.toString());
+                        }
+                    }
+                } else {
+                    finalLines.addAll(rawLines);
+                }
+
+                // =======================================================
+                // Auto-ajuste Inteligente de Dimensiones de Caja
+                // =======================================================
+                double lineHeight = texto.getFontSize() * zoomLevel * 1.2;
+                double maxLineWidth = 0;
+
+                for (String line : finalLines) {
+                    javafx.scene.text.Text tempText = new javafx.scene.text.Text(line);
+                    tempText.setFont(gc.getFont());
+                    double lw = tempText.getLayoutBounds().getWidth();
+                    if (lw > maxLineWidth) maxLineWidth = lw;
+                }
+
+                // Cómputo de la dimensión exacta en espacio "puro/real" sin zoom
+                double requiredWidth = (maxLineWidth / zoomLevel) + 2.0; // Ligero margen
+                double requiredHeight = (finalLines.size() * (texto.getFontSize() * 1.2)) + (texto.getFontSize() * 0.3);
+
+                boolean dimensionsChanged = false;
+
+                // Si NO hay auto-wrap, la caja se debe estirar al Ancho de la palabra infinita
+                if (!texto.isSaltoLinea()) {
+                    if (Math.abs(texto.getWidth() - requiredWidth) > 1.0) {
+                        texto.setWidth(requiredWidth);
+                        ew = requiredWidth * zoomLevel; // Actualiza variable local de render
+                        dimensionsChanged = true;
+                    }
+                }
+
+                // El Alto SIEMPRE se ajusta dinámicamente para que quepan todos los saltos de línea
+                if (Math.abs(texto.getHeight() - requiredHeight) > 1.0) {
+                    texto.setHeight(requiredHeight);
+                    dimensionsChanged = true;
+                }
+
+                if (dimensionsChanged && elementoSeleccionado == texto && onElementTransformed != null) {
+                    onElementTransformed.run(); // Refresca las cifras laterales en tiempo real
+                }
+
+                // Renderizado de las líneas calculadas
+                double currentY = ey + (texto.getFontSize() * zoomLevel);
+                
+                for (String line : finalLines) {
+                    double textX = ex;
+                    javafx.scene.text.Text tempText = new javafx.scene.text.Text(line);
+                    tempText.setFont(gc.getFont());
+                    double textWidth = tempText.getLayoutBounds().getWidth();
+
+                    if ("CENTER".equals(texto.getAlineacion())) {
+                        textX = ex + (ew - textWidth) / 2;
+                    } else if ("RIGHT".equals(texto.getAlineacion())) {
+                        textX = ex + ew - textWidth;
+                    }
+
+                    gc.fillText(line, textX, currentY);
+                    currentY += lineHeight;
+                }
 
             } else if (elem instanceof ImagenElemento imgElem) {
                 Image img = imgElem.getImagen();
+
+                // Si hay columna vinculada, intentar cargar la imagen del registro actual
+                if (imgElem.getColumnaVinculada() != null && fuenteDatos != null) {
+                    String nombreArchivo = fuenteDatos.getValor(imgElem.getColumnaVinculada());
+                    img = resolverImagenVariable(nombreArchivo);
+                    if (img == null) img = imgElem.getImagen(); // fallback sin romper
+                }
+
                 if (img != null) {
                     gc.setGlobalAlpha(imgElem.getOpacity());
                     gc.drawImage(img, ex, ey, ew, eh);
                     gc.setGlobalAlpha(1.0);
+                } else {
+                    // Placeholder cuando no hay imagen cargada
+                    if (imagenSilueta != null) {
+                        gc.setGlobalAlpha(0.35);
+                        gc.drawImage(imagenSilueta, ex, ey, ew, eh);
+                        gc.setGlobalAlpha(1.0);
+                    } else {
+                        // Fallback gris si no hay silueta en recursos
+                        gc.setFill(Color.web("#3a3637"));
+                        gc.fillRect(ex, ey, ew, eh);
+                        gc.setStroke(Color.web("#6a6568"));
+                        gc.setLineWidth(1);
+                        gc.setLineDashes(4, 4);
+                        gc.strokeRect(ex, ey, ew, eh);
+                        gc.setLineDashes();
+                        gc.setFill(Color.web("#6a6568"));
+                        gc.setFont(Font.font("Arial", 11));
+                        gc.fillText("🖼 Imagen", ex + 6, ey + ew / 2);
+                    }
                 }
             }
 
@@ -260,13 +496,77 @@ public class EditorCanvasManager {
             }
         }
 
-        // 6) Texto informativo
+        // 6) Texto informativo de la UI
         gc.setLineDashes();
+        
+        // --- 6.1: FRENTE / DORSO a la izquierda ---
         gc.setFill(Color.web("#e8e6e7"));
-        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 14));
-
+        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 16));
         String lado = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
-        gc.fillText(lado, cardX, cardY - 25);
+        gc.fillText(lado, cardX, cardY - 30);
+
+        // --- 6.2: PROYECTO y CLIENTE CENTRADOS DE FORMA ESTÁTICA ARRIBA ---
+        // (Se animan suavemente por código leyendo hudOpacity, entre modo diseño y producción)
+        if (hudOpacity > 0.0) {
+            gc.save();
+            gc.setGlobalAlpha(hudOpacity);
+            
+            String pName = "PROYECTO | " + (proyectoActual.getNombre() != null ? proyectoActual.getNombre() : "S/N");
+            String cName = "Cliente: ";
+            if (proyectoActual.getMetadata() != null && proyectoActual.getMetadata().getClienteInfo() != null 
+                && proyectoActual.getMetadata().getClienteInfo().getNombreEmpresa() != null
+                && !proyectoActual.getMetadata().getClienteInfo().getNombreEmpresa().isBlank()) {
+                cName += proyectoActual.getMetadata().getClienteInfo().getNombreEmpresa();
+            } else {
+                cName += "Sin Asignar";
+            }
+
+            double centroX = canvas.getWidth() / 2;
+            double staticTopY = 35; // Fijo 35px desde el tope superior absoluto de la ventana
+
+            // Render "PROYECTO | NOMBRE"
+            gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.NORMAL, 18));
+            javafx.scene.text.Text tP = new javafx.scene.text.Text(pName);
+            tP.setFont(gc.getFont());
+            double wP = tP.getLayoutBounds().getWidth();
+            
+            gc.setFill(Color.web("#e8e6e7"));
+            gc.fillText(pName, centroX - (wP / 2), staticTopY);
+
+            // Render "Cliente: xxx" y Botón
+            gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.NORMAL, 14));
+            javafx.scene.text.Text tC = new javafx.scene.text.Text(cName);
+            tC.setFont(gc.getFont());
+            double wC = tC.getLayoutBounds().getWidth();
+            
+            String btnTxt = "  ✎ Editar datos";
+            javafx.scene.text.Text tB = new javafx.scene.text.Text(btnTxt);
+            tB.setFont(gc.getFont());
+            double wB = tB.getLayoutBounds().getWidth();
+
+            double totalW = wC + wB;
+            double startCX = centroX - (totalW / 2);
+
+            gc.setFill(Color.web("#9a9598"));
+            gc.fillText(cName, startCX, staticTopY + 25);
+
+            gc.setFill(Color.web("#7ca4d0")); // Azul botón
+            gc.fillText(btnTxt, startCX + wC, staticTopY + 25);
+            
+            // Registrar hit box para el click de Editar datos (solamente si es clickeable)
+            if (hudOpacity >= 0.95) {
+                this.btnClienteHitbox = new javafx.geometry.BoundingBox(
+                        startCX + wC, staticTopY + 10, wB, 22
+                );
+            } else {
+                this.btnClienteHitbox = null;
+            }
+            
+            gc.restore();
+        } else {
+            // Desregistrar hit box si no estamos en producción para evitar clicks fantasma
+            this.btnClienteHitbox = null;
+        }
 
         gc.setFill(Color.web("#9a9598"));
         gc.setFont(Font.font("Arial", 11));
@@ -286,6 +586,14 @@ public class EditorCanvasManager {
     // ===================== EVENTOS DE RATÓN =====================
 
     private void onCanvasMousePressed(MouseEvent e) {
+        wasDragged = false;
+        
+        // Interpretar click en el botón figurado de Cliente
+        if (btnClienteHitbox != null && btnClienteHitbox.contains(e.getX(), e.getY())) {
+            if (onClientDataRequested != null) onClientDataRequested.run();
+            return;
+        }
+
         if (proyectoActual == null || currentMode != AppMode.DESIGN) return;
 
         double scaledWidth = CARD_WIDTH * zoomLevel;
@@ -357,6 +665,8 @@ public class EditorCanvasManager {
         if (elementoSeleccionado == null) return;
         if (currentDragMode == DragMode.NONE) return;
         if (elementoSeleccionado.isLocked()) return;
+        
+        wasDragged = true;
 
         double dx = (e.getX() - dragStartX) / zoomLevel;
         double dy = (e.getY() - dragStartY) / zoomLevel;
@@ -458,7 +768,7 @@ public class EditorCanvasManager {
             }
         }
 
-        if (onCanvasChanged != null) onCanvasChanged.run();
+        if (onElementTransformed != null) onElementTransformed.run();
         dibujarCanvas();
     }
 
@@ -507,7 +817,11 @@ public class EditorCanvasManager {
 
     private void onCanvasMouseReleased(MouseEvent e) {
         // Al soltar, se cierra el drag sí o sí
+        if (wasDragged) {
+            if (onCanvasChanged != null) onCanvasChanged.run();
+        }
         currentDragMode = DragMode.NONE;
+        wasDragged = false;
     }
 
     // ===================== AUXILIARES =====================
@@ -546,5 +860,25 @@ public class EditorCanvasManager {
 
     public Elemento getElementoSeleccionado() {
         return elementoSeleccionado;
+    }
+
+    /* Intenta cargar la imagen cuyo nombre de archivo viene del Excel.
+     * Busca en la carpeta Fotos/ del proyecto.
+     * Devuelve null si el archivo no existe o si no hay metadata de proyecto. */
+    private Image resolverImagenVariable(String nombreArchivo) {
+        if (nombreArchivo == null || nombreArchivo.isBlank()) return null;
+        if (proyectoActual == null || proyectoActual.getMetadata() == null) return null;
+
+        String rutaFotos = proyectoActual.getMetadata().getRutaFotos();
+        if (rutaFotos == null) return null;
+
+        Path rutaAbsoluta = Paths.get(rutaFotos, nombreArchivo);
+        if (!Files.exists(rutaAbsoluta)) return null;
+
+        try {
+            return ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

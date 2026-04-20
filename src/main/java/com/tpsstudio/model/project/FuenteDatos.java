@@ -6,10 +6,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/*
- * Representa una fuente de datos cargada en memoria (Excel o CSV).
- * Guarda las columnas (cabecera), todos los registros y el índice de navegación actual.
- * Es un modelo puro: sin lógica de lectura ni de UI.
+/**
+ * Modelo de datos en memoria para la función de combinación de correspondencia (mail-merge).
+ *
+ * <p>Encapsula una fuente de datos tabulares cargada desde un archivo Excel
+ * o CSV, almacenando las columnas (cabecera) y todos los registros (filas)
+ * disponibles para la generación de PDFs personalizados.</p>
+ *
+ * <p><b>Diseño de modelo puro:</b><br/>
+ * Esta clase no contiene lógica de lectura de archivos ni de presentación en
+ * la interfaz — es responsabilidad de {@link com.tpsstudio.service.DatosVariablesManager}
+ * parsear el archivo y construir instancias de esta clase.</p>
+ *
+ * <p><b>Navegación de registros:</b><br/>
+ * Mantiene un índice {@code indiceActual} para permitir la previsualización
+ * registro a registro en el canvas del editor sin modificar la lista de datos.</p>
+ *
+ * @see com.tpsstudio.service.DatosVariablesManager
+ * @see com.tpsstudio.model.project.ProyectoMetadata
  */
 public class FuenteDatos {
 
