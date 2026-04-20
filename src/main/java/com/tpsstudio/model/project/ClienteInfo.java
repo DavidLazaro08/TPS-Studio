@@ -3,7 +3,19 @@ package com.tpsstudio.model.project;
 import java.util.regex.Pattern;
 
 /**
- * Información del cliente que solicita el trabajo
+ * Datos de contacto del cliente que solicita el trabajo de impresión.
+ *
+ * <p>Forma parte de los metadatos del proyecto ({@link ProyectoMetadata}) y se
+ * persiste junto al archivo {@code .tps}. También se exporta como un archivo de
+ * texto independiente dentro de la carpeta del proyecto para facilitar
+ * el acceso rápido sin abrir la aplicación.</p>
+ *
+ * <p><b>Validación incluida:</b><br/>
+ * Los métodos {@link #isEmailValido()} y {@link #isTelefonoValido()} aplican
+ * expresiones regulares para validar el formato de los datos sin depender
+ * de bibliotecas externas.</p>
+ *
+ * @see ProyectoMetadata
  */
 public class ClienteInfo {
 

@@ -1,0 +1,50 @@
+/* =====================================================
+   TPS Studio — Estilos de Toast Notifications
+   Cargado por TPSToast.java en la Scene de cada toast.
+   ===================================================== */
+
+/* Contenedor raíz */
+.toast-root {
+    -fx-background-color: #201d1f;
+    -fx-background-radius: 9;
+    -fx-padding: 13 20 13 14;
+    -fx-border-radius: 9;
+    -fx-border-width: 1.2;
+    -fx-cursor: hand;
+}
+
+/* Badge de icono lateral */
+.toast-icon {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-padding: 7 10 7 10;
+    -fx-min-width: 36;
+    -fx-alignment: center;
+}
+
+/* Texto principal */
+.toast-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+/* Subtexto */
+.toast-subtitle {
+    -fx-text-fill: #9e9c9d;
+    -fx-font-size: 11px;
+}
+
+/* Borde por tipo */
+.toast-exito { -fx-border-color: #2d9e6e; }
+.toast-info  { -fx-border-color: #3a7fd5; }
+.toast-aviso { -fx-border-color: #c8a02a; }
+.toast-error { -fx-border-color: #c84040; }
+
+/* Color del badge por tipo */
+.toast-icon-exito { -fx-background-color: #1a6e4a; }
+.toast-icon-info  { -fx-background-color: #1e4d8c; }
+.toast-icon-aviso { -fx-background-color: #8a6a10; }
+.toast-icon-error { -fx-background-color: #8a1a1a; }

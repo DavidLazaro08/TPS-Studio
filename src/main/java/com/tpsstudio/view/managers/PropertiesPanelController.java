@@ -5,9 +5,11 @@ import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.ImageUtils;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
@@ -19,6 +21,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -38,6 +42,12 @@ public class PropertiesPanelController {
     private Runnable onCanvasRedrawNeeded;
     private Consumer<ImagenFondoElemento> onEditExternal;
     private Consumer<ImagenFondoElemento> onReload;
+
+    // Referencias a campos de posición para actualizaciones en tiempo real
+    private TextField txtX, txtY, txtW, txtH;
+
+    // Fuente de datos activa (puede ser null si no hay Excel vinculado)
+    private FuenteDatos fuenteDatos;
 
     public PropertiesPanelController(Canvas canvas) {
         this.canvas = canvas;
@@ -59,6 +69,10 @@ public class PropertiesPanelController {
         this.onReload = callback;
     }
 
+    public void setFuenteDatos(FuenteDatos fuenteDatos) {
+        this.fuenteDatos = fuenteDatos;
+    }
+
     /**
      * Construye el panel completo en función del elemento seleccionado.
      * Nota: ahora mismo "proyecto" no se usa, pero lo dejamos por si luego hace falta.
@@ -70,11 +84,11 @@ public class PropertiesPanelController {
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
 
         Label lblProps = new Label("Propiedades");
-        lblProps.setStyle("-fx-text-fill: #e8e6e7; -fx-font-size: 14px; -fx-font-weight: bold;");
+        lblProps.getStyleClass().add("panel-title");
 
         if (elemento == null) {
             Label placeholder = new Label("Seleccione un elemento");
-            placeholder.setStyle("-fx-text-fill: #6a6568; -fx-font-size: 12px; -fx-font-style: italic;");
+            placeholder.getStyleClass().add("panel-placeholder");
             props.getChildren().addAll(lblProps, placeholder);
             return props;
         }
@@ -118,21 +132,53 @@ public class PropertiesPanelController {
      * Añade al VBox el bloque de "Posición y Tamaño" (X, Y, Ancho, Alto).
      * Sirve tanto para TextoElemento como para ImagenElemento.
      */
-    private void addPositionSizeControls(VBox props,
-                                         double x, Consumer<Double> setX,
-                                         double y, Consumer<Double> setY,
-                                         double w, Consumer<Double> setW,
-                                         double h, Consumer<Double> setH) {
+    private void addPositionSizeControls(VBox props, Elemento elemento) {
 
         Label lblPos = new Label("Posición y Tamaño");
-        lblPos.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblPos.getStyleClass().add("prop-label");
 
-        TextField txtX = createNumberField(x, "X", setX);
-        TextField txtY = createNumberField(y, "Y", setY);
-        TextField txtW = createNumberField(w, "Ancho", setW);
-        TextField txtH = createNumberField(h, "Alto", setH);
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(8);
+        grid.setVgap(8);
 
-        props.getChildren().addAll(lblPos, txtX, txtY, txtW, txtH);
+        Label lblX = new Label("X:");
+        lblX.getStyleClass().add("prop-label-small");
+        txtX = createNumberField(elemento.getX(), "X", elemento::setX);
+        txtX.setPrefWidth(65);
+
+        Label lblY = new Label("Y:");
+        lblY.getStyleClass().add("prop-label-small");
+        txtY = createNumberField(elemento.getY(), "Y", elemento::setY);
+        txtY.setPrefWidth(65);
+
+        Label lblW = new Label("Ancho:");
+        lblW.getStyleClass().add("prop-label-small");
+        txtW = createNumberField(elemento.getWidth(), "Ancho", elemento::setWidth);
+        txtW.setPrefWidth(65);
+
+        Label lblH = new Label("Alto:");
+        lblH.getStyleClass().add("prop-label-small");
+        txtH = createNumberField(elemento.getHeight(), "Alto", elemento::setHeight);
+        txtH.setPrefWidth(65);
+
+        grid.add(lblX, 0, 0); grid.add(txtX, 1, 0);
+        grid.add(lblW, 2, 0); grid.add(txtW, 3, 0);
+
+        grid.add(lblY, 0, 1); grid.add(txtY, 1, 1);
+        grid.add(lblH, 2, 1); grid.add(txtH, 3, 1);
+
+        props.getChildren().addAll(lblPos, grid);
+    }
+    
+    /**
+     * Actualiza los campos de texto con los valores recientes (para arrastrar en tiempo real)
+     */
+    public void updatePositionFields(Elemento elemento) {
+        if (elemento == null) return;
+        if (txtX != null && !txtX.isFocused()) txtX.setText(String.format(java.util.Locale.US, "%.0f", elemento.getX()));
+        if (txtY != null && !txtY.isFocused()) txtY.setText(String.format(java.util.Locale.US, "%.0f", elemento.getY()));
+        if (txtW != null && !txtW.isFocused()) txtW.setText(String.format(java.util.Locale.US, "%.0f", elemento.getWidth()));
+        if (txtH != null && !txtH.isFocused()) txtH.setText(String.format(java.util.Locale.US, "%.0f", elemento.getHeight()));
     }
 
     /**
@@ -141,7 +187,7 @@ public class PropertiesPanelController {
      */
     private void addEtiquetaControl(VBox props, String etiquetaActual, Consumer<String> setEtiqueta, String prompt) {
         Label lblEtiqueta = new Label("Etiqueta (opcional):");
-        lblEtiqueta.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblEtiqueta.getStyleClass().add("prop-label");
 
         TextField txtEtiqueta = new TextField(etiquetaActual != null ? etiquetaActual : "");
         txtEtiqueta.setPromptText(prompt);
@@ -159,29 +205,29 @@ public class PropertiesPanelController {
 
     private void buildBackgroundPanel(VBox props, Label lblProps, ImagenFondoElemento fondo) {
         Label lblInfo = new Label("Fondo de la tarjeta");
-        lblInfo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px; -fx-font-style: italic;");
+        lblInfo.getStyleClass().add("prop-label");
 
         Label lblDim = new Label(String.format("Dimensiones: %.0f × %.0f px", fondo.getWidth(), fondo.getHeight()));
-        lblDim.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblDim.getStyleClass().add("prop-label-small");
         lblDim.setMaxWidth(MAX_CONTROL_WIDTH);
         lblDim.setWrapText(true);
 
         Label lblModo = new Label("Modo de ajuste:");
-        lblModo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblModo.getStyleClass().add("prop-label");
 
         ToggleGroup modoGroup = new ToggleGroup();
 
         RadioButton rbBleed = new RadioButton("Con sangre (CR80 + sangrado)");
         rbBleed.setToggleGroup(modoGroup);
         rbBleed.setSelected(fondo.getFitMode() == FondoFitMode.BLEED);
-        rbBleed.setStyle("-fx-text-fill: #e8e6e7;");
+        rbBleed.getStyleClass().add("prop-radio");
         rbBleed.setMaxWidth(MAX_CONTROL_WIDTH);
         rbBleed.setWrapText(true);
 
         RadioButton rbFinal = new RadioButton("Sin sangre (CR80 final)");
         rbFinal.setToggleGroup(modoGroup);
         rbFinal.setSelected(fondo.getFitMode() == FondoFitMode.FINAL);
-        rbFinal.setStyle("-fx-text-fill: #e8e6e7;");
+        rbFinal.getStyleClass().add("prop-radio");
         rbFinal.setMaxWidth(MAX_CONTROL_WIDTH);
         rbFinal.setWrapText(true);
 
@@ -315,30 +361,40 @@ public class PropertiesPanelController {
         // Etiqueta del elemento (nombre lógico)
         addEtiquetaControl(props, texto.getEtiqueta(), texto::setEtiqueta, "Ej: NOMBRE, Nº SOCIO...");
 
+        // Sección Datos Variables (justo después de la etiqueta, antes de posición)
+        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
+            addSeccionDatosVariablesTexto(props, texto);
+            props.getChildren().add(new Separator());
+        }
+
         // Posición / Tamaño (X/Y/W/H)
-        addPositionSizeControls(
-                props,
-                texto.getX(), texto::setX,
-                texto.getY(), texto::setY,
-                texto.getWidth(), texto::setWidth,
-                texto.getHeight(), texto::setHeight
-        );
+        addPositionSizeControls(props, texto);
 
         props.getChildren().add(new Separator());
 
         Label lblTexto = new Label("Texto");
-        lblTexto.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
+        lblTexto.getStyleClass().add("prop-label");
 
-        TextField txtContenido = new TextField(texto.getContenido());
+        TextArea txtContenido = new TextArea(texto.getContenido());
         txtContenido.setPromptText("Contenido");
         txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtContenido.setPrefRowCount(3);
+        txtContenido.setWrapText(true);
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             texto.setContenido(newVal);
             notifyCanvasRedraw();
         });
 
+        CheckBox chkSaltoLinea = new CheckBox("Pasar a la línea inferior si no cabe");
+        chkSaltoLinea.setSelected(texto.isSaltoLinea());
+        chkSaltoLinea.getStyleClass().add("prop-checkbox");
+        chkSaltoLinea.selectedProperty().addListener((obs, old, newVal) -> {
+            texto.setSaltoLinea(newVal);
+            notifyCanvasRedraw();
+        });
+
         Label lblFuente = new Label("Fuente:");
-        lblFuente.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblFuente.getStyleClass().add("prop-label-small");
 
         ComboBox<String> cmbFuente = new ComboBox<>();
         cmbFuente.getItems().addAll(javafx.scene.text.Font.getFamilies());
@@ -352,7 +408,7 @@ public class PropertiesPanelController {
         });
 
         Label lblTamaño = new Label("Tamaño:");
-        lblTamaño.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblTamaño.getStyleClass().add("prop-label-small");
 
         Spinner<Integer> spnTamaño = new Spinner<>(8, 72, (int) texto.getFontSize());
         spnTamaño.setEditable(true);
@@ -365,7 +421,7 @@ public class PropertiesPanelController {
         });
 
         Label lblColor = new Label("Color:");
-        lblColor.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblColor.getStyleClass().add("prop-label-small");
 
         ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
         cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
@@ -379,7 +435,7 @@ public class PropertiesPanelController {
         });
 
         Label lblAlineacion = new Label("Alineación:");
-        lblAlineacion.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblAlineacion.getStyleClass().add("prop-label-small");
 
         ComboBox<String> cmbAlineacion = new ComboBox<>();
         cmbAlineacion.getItems().addAll("Izquierda", "Centro", "Derecha");
@@ -404,11 +460,11 @@ public class PropertiesPanelController {
         });
 
         Label lblEstilo = new Label("Estilo:");
-        lblEstilo.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
+        lblEstilo.getStyleClass().add("prop-label-small");
 
         CheckBox chkNegrita = new CheckBox("Negrita");
         chkNegrita.setSelected(texto.isNegrita());
-        chkNegrita.setStyle("-fx-text-fill: #e8e6e7;");
+        chkNegrita.getStyleClass().add("prop-checkbox");
         chkNegrita.setMaxWidth(MAX_CONTROL_WIDTH);
         chkNegrita.selectedProperty().addListener((obs, old, newVal) -> {
             texto.setNegrita(newVal);
@@ -417,7 +473,7 @@ public class PropertiesPanelController {
 
         CheckBox chkCursiva = new CheckBox("Cursiva");
         chkCursiva.setSelected(texto.isCursiva());
-        chkCursiva.setStyle("-fx-text-fill: #e8e6e7;");
+        chkCursiva.getStyleClass().add("prop-checkbox");
         chkCursiva.setMaxWidth(MAX_CONTROL_WIDTH);
         chkCursiva.selectedProperty().addListener((obs, old, newVal) -> {
             texto.setCursiva(newVal);
@@ -425,7 +481,7 @@ public class PropertiesPanelController {
         });
 
         props.getChildren().addAll(
-                lblTexto, txtContenido,
+                lblTexto, txtContenido, chkSaltoLinea,
                 lblFuente, cmbFuente,
                 lblTamaño, spnTamaño,
                 lblColor, cpColor,
@@ -442,48 +498,13 @@ public class PropertiesPanelController {
         // Etiqueta del elemento (nombre lógico)
         addEtiquetaControl(props, imagen.getEtiqueta(), imagen::setEtiqueta, "Ej: FOTO, LOGO...");
 
-        // Posición / Tamaño (X/Y/W/H)
-        addPositionSizeControls(
-                props,
-                imagen.getX(), imagen::setX,
-                imagen.getY(), imagen::setY,
-                imagen.getWidth(), imagen::setWidth,
-                imagen.getHeight(), imagen::setHeight
-        );
+        // Sección Datos Variables (justo después de la etiqueta)
+        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
+            addSeccionDatosVariablesImagen(props, imagen);
+            props.getChildren().add(new Separator());
+        }
 
-        props.getChildren().add(new Separator());
-
-        Label lblImagen = new Label("Imagen");
-        lblImagen.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
-
-        Label lblDimOrig = new Label(String.format("Original: %.0f × %.0f px",
-                imagen.getOriginalWidth(), imagen.getOriginalHeight()));
-        lblDimOrig.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 11px;");
-        lblDimOrig.setMaxWidth(MAX_CONTROL_WIDTH);
-        lblDimOrig.setWrapText(true);
-
-        Label lblOpacidad = new Label("Opacidad:");
-        lblOpacidad.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 12px;");
-
-        Slider sldOpacidad = new Slider(0, 100, imagen.getOpacity() * 100);
-        sldOpacidad.setShowTickLabels(true);
-        sldOpacidad.setShowTickMarks(true);
-        sldOpacidad.setMajorTickUnit(25);
-        sldOpacidad.setMaxWidth(MAX_CONTROL_WIDTH);
-        sldOpacidad.valueProperty().addListener((obs, old, newVal) -> {
-            imagen.setOpacity(newVal.doubleValue() / 100.0);
-            notifyCanvasRedraw();
-        });
-
-        CheckBox chkProporcion = new CheckBox("Mantener proporción");
-        chkProporcion.setSelected(imagen.isMantenerProporcion());
-        chkProporcion.setStyle("-fx-text-fill: #e8e6e7;");
-        chkProporcion.setMaxWidth(MAX_CONTROL_WIDTH);
-        chkProporcion.selectedProperty().addListener((obs, old, newVal) -> {
-            imagen.setMantenerProporcion(newVal);
-            notifyCanvasRedraw();
-        });
-
+        // Reemplazar Imagen (justo debajo de Datos Variables)
         Button btnReemplazar = new Button("Reemplazar Imagen");
         btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
         btnReemplazar.getStyleClass().add("toolbox-btn");
@@ -511,12 +532,102 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(
-                lblImagen, lblDimOrig,
-                lblOpacidad, sldOpacidad,
-                chkProporcion,
-                btnReemplazar
-        );
+        props.getChildren().addAll(btnReemplazar, new Separator());
+
+        // Posición / Tamaño (X/Y/W/H)
+        addPositionSizeControls(props, imagen);
+
+        props.getChildren().add(new Separator());
+
+        Label lblOpacidad = new Label("Opacidad:");
+        lblOpacidad.getStyleClass().add("prop-label");
+
+        Slider sldOpacidad = new Slider(0, 100, imagen.getOpacity() * 100);
+        sldOpacidad.setShowTickLabels(true);
+        sldOpacidad.setShowTickMarks(true);
+        sldOpacidad.setMajorTickUnit(25);
+        sldOpacidad.setMaxWidth(MAX_CONTROL_WIDTH);
+        sldOpacidad.valueProperty().addListener((obs, old, newVal) -> {
+            imagen.setOpacity(newVal.doubleValue() / 100.0);
+            notifyCanvasRedraw();
+        });
+
+        CheckBox chkProporcion = new CheckBox("Mantener proporción");
+        chkProporcion.setSelected(imagen.isMantenerProporcion());
+        chkProporcion.getStyleClass().add("prop-checkbox");
+        chkProporcion.setMaxWidth(MAX_CONTROL_WIDTH);
+        chkProporcion.selectedProperty().addListener((obs, old, newVal) -> {
+            imagen.setMantenerProporcion(newVal);
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblOpacidad, sldOpacidad, chkProporcion);
+    }
+
+    // ===================== SECCIÓN DATOS VARIABLES =====================
+
+    /* Añade al panel de texto la sección para vincular a una columna del Excel. */
+    private void addSeccionDatosVariablesTexto(VBox props, TextoElemento texto) {
+        Label lblSeccion = new Label("Datos Variables");
+        lblSeccion.getStyleClass().add("prop-label");
+
+        Label lblInfo = new Label("Columna del Excel:");
+        lblInfo.getStyleClass().add("prop-label-small");
+
+        ComboBox<String> cmbColumna = new ComboBox<>();
+        cmbColumna.setMaxWidth(MAX_CONTROL_WIDTH);
+
+        List<String> opciones = new ArrayList<>();
+        opciones.add("(sin vincular)");
+        opciones.addAll(fuenteDatos.getColumnas());
+        cmbColumna.setItems(FXCollections.observableArrayList(opciones));
+
+        String actual = texto.getColumnaVinculada();
+        cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
+
+        cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
+            if ("(sin vincular)".equals(newVal)) {
+                texto.setColumnaVinculada(null);
+            } else {
+                texto.setColumnaVinculada(newVal);
+            }
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblSeccion, lblInfo, cmbColumna);
+    }
+
+    /* Añade al panel de imagen la sección para vincular a una columna del Excel. */
+    private void addSeccionDatosVariablesImagen(VBox props, ImagenElemento imagen) {
+        Label lblSeccion = new Label("Datos Variables");
+        lblSeccion.getStyleClass().add("prop-label");
+
+        Label lblInfo = new Label("Columna del Excel (nombre de archivo):");
+        lblInfo.getStyleClass().add("prop-label-small");
+        lblInfo.setMaxWidth(MAX_CONTROL_WIDTH);
+        lblInfo.setWrapText(true);
+
+        ComboBox<String> cmbColumna = new ComboBox<>();
+        cmbColumna.setMaxWidth(MAX_CONTROL_WIDTH);
+
+        List<String> opciones = new ArrayList<>();
+        opciones.add("(sin vincular)");
+        opciones.addAll(fuenteDatos.getColumnas());
+        cmbColumna.setItems(FXCollections.observableArrayList(opciones));
+
+        String actual = imagen.getColumnaVinculada();
+        cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
+
+        cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
+            if ("(sin vincular)".equals(newVal)) {
+                imagen.setColumnaVinculada(null);
+            } else {
+                imagen.setColumnaVinculada(newVal);
+            }
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblSeccion, lblInfo, cmbColumna);
     }
 
     // ===================== NOTIFICACIONES =====================

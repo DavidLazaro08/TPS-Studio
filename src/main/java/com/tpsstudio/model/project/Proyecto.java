@@ -7,7 +7,26 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 /**
- * Modelo simple para representar un proyecto/trabajo de tarjeta CR80
+ * Entidad de dominio central de TPS Studio.
+ *
+ * <p>Representa un trabajo de diseño de tarjeta CR80 (tarjeta de crédito estándar).
+ * Encapsula todos los datos necesarios para diseñar, editar y exportar una tarjeta:
+ * los elementos gráficos de cada cara, los fondos y los metadatos del proyecto.</p>
+ *
+ * <p><b>Modelo de dos caras:</b><br/>
+ * Cada proyecto contiene dos listas independientes de {@link com.tpsstudio.model.elements.Elemento}
+ * (frente y dorso), así como un fondo opcional por cara ({@link com.tpsstudio.model.elements.ImagenFondoElemento}).
+ * El atributo {@code mostrandoFrente} determina qué cara se está editando actualmente
+ * en el canvas, y los métodos {@link #getElementosActuales()} y {@link #getFondoActual()}
+ * abstraen esta dualidad para no duplicar lógica en los controladores.</p>
+ *
+ * <p><b>Persistencia:</b><br/>
+ * Esta clase es serializable mediante Gson a archivos {@code .tps} a través del
+ * {@link com.tpsstudio.dao.ProyectoDAO} y su implementación
+ * {@link com.tpsstudio.service.ProyectoFileManager}.</p>
+ *
+ * @see com.tpsstudio.model.project.ProyectoMetadata
+ * @see com.tpsstudio.dao.ProyectoDAO
  */
 public class Proyecto {
 
