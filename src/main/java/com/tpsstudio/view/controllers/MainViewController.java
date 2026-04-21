@@ -76,6 +76,8 @@ public class MainViewController {
     private ToggleButton toggleDatosVariables;
     @FXML
     private javafx.scene.layout.HBox bloqueContextual;
+    @FXML
+    private Label lblCurrentUser; // Label para mostrar el usuario activo
 
     // =====================================================
     // =====================================================
@@ -103,6 +105,9 @@ public class MainViewController {
 
         projectManager.cargarProyectosRecientes(8);
 
+        // Mostrar el usuario actual en el perfil
+        lblCurrentUser.setText("Sesión: " + com.tpsstudio.service.AuthService.getInstance().getCurrentUser());
+
         // Arrancamos en Producción: sin canvas ni paneles de diseño
         switchMode(AppMode.PRODUCTION);
     }
@@ -117,6 +122,113 @@ public class MainViewController {
         // Panel lateral cerrado al inicio
         rightPanel.setVisible(false);
         rightPanel.setManaged(false);
+    }
+
+    @FXML
+    private void onLogout() {
+        // Confirmar cierre de sesión con diálogo estándar
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Cerrar Sesión");
+        alert.setHeaderText("Vas a salir de la sesión actual.");
+        alert.setContentText("¿Estás seguro de que quieres volver al login?");
+        
+        // Estilo nativo para el diálogo
+
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            try {
+                // 1. Limpiar sesión en el servicio
+                com.tpsstudio.service.AuthService.getInstance().logout();
+
+                // 2. Obtener Stage y Escena actual
+                Stage stage = (Stage) leftPanel.getScene().getWindow();
+                Scene scene = leftPanel.getScene();
+                
+                // Capturar el root actual (Main View) para la animación de salida
+                javafx.scene.Parent mainView = scene.getRoot();
+
+                // 3. Cargar la vista de Login (todavía invisible)
+                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/login_view.fxml"));
+                javafx.scene.Parent loginView = loader.load();
+                loginView.setOpacity(0);
+                loginView.setScaleX(1.05);
+                loginView.setScaleY(1.05);
+
+                // 4. Crear contenedor de transición
+                javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
+                transitionContainer.setStyle("-fx-background-color: #0e1217;"); 
+                
+                // Intercambiamos el root por el contenedor temporal
+                scene.setRoot(transitionContainer);
+                transitionContainer.getChildren().addAll(loginView, mainView);
+
+                // 5. SECUENCIA DE ANIMACIÓN
+                javafx.application.Platform.runLater(() -> {
+                    Duration duration = Duration.millis(300);
+                    
+                    // --- Salida (Main) ---
+                    javafx.animation.FadeTransition fadeMain = new javafx.animation.FadeTransition(duration, mainView);
+                    fadeMain.setFromValue(1.0);
+                    fadeMain.setToValue(0.0);
+                    
+                    fadeMain.setOnFinished(e -> {
+                        // LIMPIEZA CLAVE: Desvinculamos el loginView del contenedor antes de ponerlo como ROOT
+                        transitionContainer.getChildren().clear(); 
+                        
+                        // Reset de ventana: unmaximize y restaurar tamaño de contenido
+                        stage.setMaximized(false);
+                        stage.setMinWidth(0);
+                        stage.setMinHeight(0);
+                        
+                        // Aplicar LoginView como root definitivo
+                        scene.setRoot(loginView);
+                        
+                        // Reaplicar CSS al Login (asegurarnos de que hereda el estilo)
+                        if (!scene.getStylesheets().contains(getClass().getResource("/css/app.css").toExternalForm())) {
+                            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+                        }
+
+                        // Forzar el tamaño exacto del contenido (760x580)
+                        stage.setWidth(776); // Aproximación del marco de Windows (760 + decoraciones)
+                        stage.setHeight(619); // Aproximación del marco de Windows (580 + decoraciones)
+                        
+                        // Ajuste fino: sizeToScene es más preciso si el contenido está listo
+                        javafx.application.Platform.runLater(() -> {
+                            stage.sizeToScene();
+                            stage.centerOnScreen();
+                        });
+
+                        // --- Entrada (Login) ---
+                        javafx.animation.FadeTransition fadeLogin = new javafx.animation.FadeTransition(duration, loginView);
+                        fadeLogin.setFromValue(0.0);
+                        fadeLogin.setToValue(1.0);
+                        
+                        javafx.animation.ScaleTransition scaleLogin = new javafx.animation.ScaleTransition(duration, loginView);
+                        scaleLogin.setFromX(1.05);
+                        scaleLogin.setFromY(1.05);
+                        scaleLogin.setToX(1.0);
+                        scaleLogin.setToY(1.0);
+                        
+                        new javafx.animation.ParallelTransition(fadeLogin, scaleLogin).play();
+                    });
+
+                    fadeMain.play();
+                });
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                // Fallback de emergencia: recarga total
+                try {
+                    Stage stage = (Stage) leftPanel.getScene().getWindow();
+                    javafx.scene.Parent root = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/login_view.fxml")).load();
+                    javafx.scene.Scene newScene = new javafx.scene.Scene(root, 760, 580);
+                    newScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+                    stage.setScene(newScene);
+                    stage.setMaximized(false);
+                    stage.sizeToScene();
+                    stage.centerOnScreen();
+                } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        }
     }
 
     private void setupCanvas() {
@@ -192,7 +304,7 @@ public class MainViewController {
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
         modeManager.setOnAddShape(this::onAñadirForma);
-        
+
         modeManager.setOnValidateDesign(this::onValidarDiseno);
 
         modeManager.setOnNewCR80(this::onNuevoCR80);
@@ -236,7 +348,7 @@ public class MainViewController {
         // -------------------------------------------------
         // Sincronización Canvas ↔ UI (callbacks del canvas)
         // -------------------------------------------------
-        
+
         canvasManager.setOnClientDataRequested(() -> {
             if (viewModel.getProyectoActual() != null) {
                 abrirDialogoEditarProyecto(viewModel.getProyectoActual());
@@ -288,19 +400,21 @@ public class MainViewController {
 
         dibujarCanvas();
     }
-    
+
     private void onValidarDiseno() {
-        if (viewModel.getProyectoActual() == null) return;
-        
+        if (viewModel.getProyectoActual() == null)
+            return;
+
         DesignValidatorService validator = new DesignValidatorService();
         java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
-        
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Validación de Diseño");
         alert.setHeaderText(avisos.isEmpty() ? "¡Diseño correcto!" : "Se han encontrado problemas potenciales:");
-        
+
         if (avisos.isEmpty()) {
-            alert.setContentText("No se han detectado problemas de resolución ni elementos fuera de las zonas seguras.");
+            alert.setContentText(
+                    "No se han detectado problemas de resolución ni elementos fuera de las zonas seguras.");
         } else {
             StringBuilder sb = new StringBuilder();
             for (String aviso : avisos) {
@@ -312,41 +426,45 @@ public class MainViewController {
             textArea.setMaxWidth(Double.MAX_VALUE);
             textArea.setMaxHeight(Double.MAX_VALUE);
             textArea.setPrefHeight(250);
-            
+
             javafx.scene.layout.VBox expContent = new javafx.scene.layout.VBox(textArea);
             expContent.setMaxWidth(Double.MAX_VALUE);
             javafx.scene.layout.VBox.setVgrow(textArea, javafx.scene.layout.Priority.ALWAYS);
             alert.getDialogPane().setContent(expContent);
             alert.getDialogPane().setPrefWidth(500);
         }
-        
+
         alert.showAndWait();
     }
-    
+
     private void onDescargarPlantilla() {
         javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
         fileChooser.setTitle("Descargar Plantilla CR80");
         fileChooser.setInitialFileName("Plantilla_CR80_TPS.pdf");
         fileChooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Documento PDF", "*.pdf"));
-        
+
         File file = fileChooser.showSaveDialog(canvas.getScene().getWindow());
-        if (file == null) return;
-        
+        if (file == null)
+            return;
+
         try {
             java.io.InputStream in = getClass().getResourceAsStream("/pdf/Plantilla_CR80_TPS.pdf");
             if (in != null) {
                 java.nio.file.Files.copy(in, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 in.close();
-                TPSToast.mostrar(canvas.getScene().getWindow(), "Plantilla descargada con éxito", null, TPSToast.Tipo.EXITO);
+                TPSToast.mostrar(canvas.getScene().getWindow(), "Plantilla descargada con éxito", null,
+                        TPSToast.Tipo.EXITO);
             } else {
-                TPSToast.mostrar(canvas.getScene().getWindow(), "No se encontró el recurso interno /pdf/Plantilla_CR80_TPS.pdf", null, TPSToast.Tipo.ERROR);
+                TPSToast.mostrar(canvas.getScene().getWindow(),
+                        "No se encontró el recurso interno /pdf/Plantilla_CR80_TPS.pdf", null, TPSToast.Tipo.ERROR);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            TPSToast.mostrar(canvas.getScene().getWindow(), "Error al guardar la plantilla.", null, TPSToast.Tipo.ERROR);
+            TPSToast.mostrar(canvas.getScene().getWindow(), "Error al guardar la plantilla.", null,
+                    TPSToast.Tipo.ERROR);
         }
     }
-    
+
     // =====================================================
     // Cambio de modo (Design / Production)
     // =====================================================
@@ -376,16 +494,20 @@ public class MainViewController {
             }
             // Si había algún panel abierto, lo cerramos
             cerrarPanelDerecho();
-            
+
             // Iniciar parpadeo (respiración suave) en el botón Diseño invitando a pulsarlo
             if (btnModeEdit != null) {
                 btnModeEdit.setEffect(designColorAdjust);
                 if (designPulse == null) {
                     designPulse = new javafx.animation.Timeline(
-                        new javafx.animation.KeyFrame(Duration.ZERO, new javafx.animation.KeyValue(designColorAdjust.brightnessProperty(), 0.0, Interpolator.EASE_BOTH)),
-                        new javafx.animation.KeyFrame(Duration.millis(1200), new javafx.animation.KeyValue(designColorAdjust.brightnessProperty(), 0.35, Interpolator.EASE_BOTH)),
-                        new javafx.animation.KeyFrame(Duration.millis(2400), new javafx.animation.KeyValue(designColorAdjust.brightnessProperty(), 0.0, Interpolator.EASE_BOTH))
-                    );
+                            new javafx.animation.KeyFrame(Duration.ZERO,
+                                    new javafx.animation.KeyValue(designColorAdjust.brightnessProperty(), 0.0,
+                                            Interpolator.EASE_BOTH)),
+                            new javafx.animation.KeyFrame(Duration.millis(1200),
+                                    new javafx.animation.KeyValue(designColorAdjust.brightnessProperty(), 0.35,
+                                            Interpolator.EASE_BOTH)),
+                            new javafx.animation.KeyFrame(Duration.millis(2400), new javafx.animation.KeyValue(
+                                    designColorAdjust.brightnessProperty(), 0.0, Interpolator.EASE_BOTH)));
                     designPulse.setCycleCount(javafx.animation.Animation.INDEFINITE);
                 }
                 designPulse.play();
@@ -396,7 +518,7 @@ public class MainViewController {
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
             }
-            
+
             // Apagar y frenar la respiración del botón Diseño
             if (designPulse != null) {
                 designPulse.stop();
@@ -626,7 +748,8 @@ public class MainViewController {
 
         // Si la ruta guardada no existe, intentamos localizarla dentro del proyecto
         // (carpeta /Fondos)
-        if (!file.exists() && viewModel.getProyectoActual() != null && viewModel.getProyectoActual().getMetadata() != null) {
+        if (!file.exists() && viewModel.getProyectoActual() != null
+                && viewModel.getProyectoActual().getMetadata() != null) {
 
             String projectDir = viewModel.getProyectoActual().getMetadata().getCarpetaProyecto();
             if (projectDir != null) {
@@ -880,7 +1003,8 @@ public class MainViewController {
             return;
 
         // 4. Generar PDFs en hilo de fondo
-        com.tpsstudio.service.PDFExportService pdfService = new com.tpsstudio.service.PDFExportService(viewModel.getProyectoActual(),
+        com.tpsstudio.service.PDFExportService pdfService = new com.tpsstudio.service.PDFExportService(
+                viewModel.getProyectoActual(),
                 fd);
 
         final java.util.List<Integer> filasFinal = filas;
@@ -986,8 +1110,9 @@ public class MainViewController {
 
                     if (owner != null) {
                         alert.setOnShown(e -> {
-                            javafx.stage.Stage stage = (javafx.stage.Stage) alert.getDialogPane().getScene().getWindow();
-                            stage.setX(owner.getX() + (owner.getWidth()  - stage.getWidth())  / 2.0);
+                            javafx.stage.Stage stage = (javafx.stage.Stage) alert.getDialogPane().getScene()
+                                    .getWindow();
+                            stage.setX(owner.getX() + (owner.getWidth() - stage.getWidth()) / 2.0);
                             stage.setY(owner.getY() + (owner.getHeight() - stage.getHeight()) / 2.0);
                         });
                     }
@@ -1056,7 +1181,8 @@ public class MainViewController {
     }
 
     private void onAñadirFondo() {
-        if (viewModel.getProyectoActual() == null) return;
+        if (viewModel.getProyectoActual() == null)
+            return;
 
         ImagenFondoElemento fondoExistente = viewModel.getProyectoActual().getFondoActual();
         if (fondoExistente != null && !confirmarReemplazoFondo()) {
@@ -1069,14 +1195,17 @@ public class MainViewController {
                 new javafx.stage.FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
 
         File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-        if (file == null) return;
+        if (file == null)
+            return;
 
         FondoFitMode fitMode;
-        if (viewModel.getProyectoActual().isNoVolverAPreguntarFondo() && viewModel.getProyectoActual().getFondoFitModePreferido() != null) {
+        if (viewModel.getProyectoActual().isNoVolverAPreguntarFondo()
+                && viewModel.getProyectoActual().getFondoFitModePreferido() != null) {
             fitMode = viewModel.getProyectoActual().getFondoFitModePreferido();
         } else {
             fitMode = mostrarDialogoFitMode();
-            if (fitMode == null) return;
+            if (fitMode == null)
+                return;
         }
 
         ImagenFondoElemento fondo = projectManager.añadirFondoDesdeArchivo(file, fitMode);

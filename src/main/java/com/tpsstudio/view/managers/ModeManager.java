@@ -384,13 +384,15 @@ public class ModeManager {
     private VBox buildLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         VBox panel = new VBox(8);
         panel.setPadding(new Insets(12));
+        VBox.setVgrow(panel, Priority.ALWAYS); // Hacer que el panel de capas ocupe el resto del VBox
 
         Label lblCapas = new Label("Capas");
         lblCapas.getStyleClass().add("panel-title");
 
         ListView<Elemento> listCapas = new ListView<>();
         listCapas.getStyleClass().add("project-list");
-        listCapas.setPrefHeight(200);
+        listCapas.setPrefHeight(120); // Altura mínima preferida más pequeña
+        VBox.setVgrow(listCapas, Priority.ALWAYS); // Que la lista sea lo que se estire y use scroll
 
         if (proyecto != null) {
             ObservableList<Elemento> allElements = FXCollections.observableArrayList();

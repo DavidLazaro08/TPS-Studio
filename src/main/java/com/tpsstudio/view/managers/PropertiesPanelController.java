@@ -75,7 +75,7 @@ public class PropertiesPanelController {
         this.onDownloadTemplate = callback;
     }
 
-    public void setFuenteDatos(FuenteDatos fuenteDatos) {
+    public void setFuenteDatos(com.tpsstudio.model.project.FuenteDatos fuenteDatos) {
         this.fuenteDatos = fuenteDatos;
     }
 
@@ -181,7 +181,7 @@ public class PropertiesPanelController {
     /**
      * Actualiza los campos de texto con los valores recientes (para arrastrar en tiempo real)
      */
-    public void updatePositionFields(Elemento elemento) {
+    public void updatePositionFields(com.tpsstudio.model.elements.Elemento elemento) {
         if (elemento == null) return;
         if (txtX != null && !txtX.isFocused()) txtX.setText(String.format(java.util.Locale.US, "%.0f", elemento.getX()));
         if (txtY != null && !txtY.isFocused()) txtY.setText(String.format(java.util.Locale.US, "%.0f", elemento.getY()));

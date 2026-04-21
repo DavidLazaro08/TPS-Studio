@@ -31,7 +31,14 @@ public class TPSStudio extends Application {
             scene.getStylesheets().add(TPSStudio.class.getResource(APP_CSS).toExternalForm());
 
             stage.setTitle(APP_TITLE);
-            stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/img/Icono_TPS.png")));
+            
+            // Cargar icono con try-with-resources para asegurar el cierre del stream
+            try (java.io.InputStream is = getClass().getResourceAsStream("/img/Icono_TPS.png")) {
+                if (is != null) {
+                    stage.getIcons().add(new javafx.scene.image.Image(is));
+                }
+            }
+            
             stage.setScene(scene);
             stage.show();
 

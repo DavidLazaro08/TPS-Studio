@@ -68,7 +68,11 @@ public class ProjectManager {
 
     public ProjectManager() {
         this.fileManager = new ProyectoFileManager();
-        this.recentManager = new RecentProjectsManager();
+        
+        // Obtener el usuario actual para aislar los proyectos recientes
+        String currentUser = AuthService.getInstance().getCurrentUser();
+        this.recentManager = new RecentProjectsManager(currentUser);
+        
         this.datosVariablesManager = new DatosVariablesManager();
     }
 

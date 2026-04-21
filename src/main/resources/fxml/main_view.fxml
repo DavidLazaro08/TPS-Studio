@@ -4,6 +4,7 @@
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -81,10 +82,22 @@
             </VBox>
         </top>
 
-        <!-- PANEL IZQUIERDO -->
         <left>
-            <VBox fx:id="leftPanel" styleClass="side-panel"
-                  prefWidth="240" minWidth="200" maxWidth="300" />
+            <VBox styleClass="side-panel" prefWidth="240" minWidth="200" maxWidth="300">
+                <!-- Zona superior: Proyectos / Herramientas (ahora sin scroll global) -->
+                <VBox fx:id="leftPanel" VBox.vgrow="ALWAYS" />
+                
+                <Separator />
+                
+                <!-- Zona inferior: Perfil de Usuario -->
+                <VBox fx:id="userProfileArea" spacing="8" alignment="CENTER_LEFT" styleClass="user-profile-panel">
+                    <padding>
+                        <Insets top="12" bottom="12" left="15" right="15" />
+                    </padding>
+                    <Label fx:id="lblCurrentUser" text="Usuario: Admin" styleClass="user-profile-name" />
+                    <Button fx:id="btnLogout" text="Cerrar Sesión" onAction="#onLogout" styleClass="logout-btn" />
+                </VBox>
+            </VBox>
         </left>
 
         <!-- ÁREA DE TRABAJO (Canvas) -->

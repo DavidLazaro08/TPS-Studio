@@ -1,0 +1,54 @@
+# Informe de Estado del Proyecto: TPS Studio
+
+He realizado una "radiografía" rápida del proyecto tal y como ha quedado tras la refactorización profunda. Aquí tienes la composición de lugar.
+
+## 1. Mapa Estructural (¿Dónde está cada cosa?)
+
+Tu proyecto sigue una arquitectura **MVC (Modelo-Vista-Controlador)** muy limpia, dividida ahora en capas lógicas para que no crezca todo "a lo loco".
+
+*   **`com.tpsstudio`**
+    *   📂 **`app`**: El punto de partida ([TPSStudio.java](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/app/TPSStudio.java)). Aquí arranca todo.
+    *   📂 **`model`** (Los Datos):
+        *   Aquí viven [Proyecto](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/project/Proyecto.java#12-152), [Elemento](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/elements/Elemento.java#6-107), [ClienteInfo](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/project/ClienteInfo.java#8-126). Son las "cajas" donde guardamos la información.
+        *   *Estado*: Nombres en Español ([Proyecto](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/project/Proyecto.java#12-152), [Elemento](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/elements/Elemento.java#6-107)), estructura estándar.
+    *   📂 **`service`** (La Lógica Pura):
+        *   **[ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#33-624)**: El "cerebro" que coordina guardados, cargas y ediciones.
+        *   **[ProyectoFileManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProyectoFileManager.java#26-719)**: El "bibliotecario" que sabe leer/escribir archivos JSON y mover fotos.
+        *   **[SettingsManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/SettingsManager.java#11-76)**: Gestiona las preferencias (configuración).
+    *   📂 **`view`** (Lo que se ve):
+        *   📂 **`controllers`**:
+            *   **[MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/controllers/MainViewController.java#31-709)**: El director de orquesta de la pantalla principal. Antes hacía todo, ahora delega trabajo.
+        *   📂 **`managers`** (Los Ayudantes - **NUEVO**):
+            *   Aquí es donde hemos movido la complejidad para limpiar el controlador.
+            *   **[EditorCanvasManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/managers/EditorCanvasManager.java#21-569)**: Se encarga solo de pintar en el lienzo y detectar clics.
+            *   **[ModeManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/managers/ModeManager.java#24-441)**: Controla qué paneles se muestran (Diseño vs Producción) y la lista de capas.
+            *   **[PropertiesPanelController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/managers/PropertiesPanelController.java#28-571)**: Construye dinámicamente el panel derecho según qué selecciones.
+    *   📂 **`util`**:
+        *   **[ImageUtils](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/util/ImageUtils.java#10-86)**: Nuestra navaja suiza para imágenes (y donde vive el fix del Proxy).
+
+## 2. Análisis de Idioma (Código)
+
+Estamos en una situación de **"Spanglish Técnico"**, que es muy común en desarrollo, pero es bueno que seas consciente:
+*   **Clases (Archivos)**: Mayoría en **Inglés** ([MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/controllers/MainViewController.java#31-709), [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#33-624), [ImageUtils](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/util/ImageUtils.java#10-86)).
+*   **Métodos (Acciones)**: Mayoría en **Español** ([dibujarCanvas](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/controllers/MainViewController.java#290-296), [cargarImagen](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/util/ImageUtils.java#40-85), [añadirFondo](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#436-548)) o híbrido ([getElemento](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/model/project/Proyecto.java#85-88), [setNombre](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProyectoFileManager.java#504-507)).
+*   **Variables**: Mezcla (`leftPanel`, `proyectoActual`, `zoomLevel`).
+
+**Conclusión**: No es crítico cambiarlo, funciona bien así. Lo importante es que la lógica (métodos) está mayormente en español, que es lo que lees el 90% del tiempo.
+
+## 3. Análisis de Comentarios (El 'Toque Humano')
+
+He revisado la "leibilidad" actual de los comentarios:
+
+*   **Estado General**: El 80% de los comentarios ya están en Español.
+*   **Zonas "Robot" (Inglés)**:
+    *   Al refactorizar, moví mucho código y creé clases nuevas ([ModeManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/managers/ModeManager.java#24-441), etc.) dejando algunos comentarios técnicos en inglés (ej: `// Start in PRODUCTION mode`, `// Render handles`).
+*   **Zonas "Humanas"**:
+    *   Las partes más antiguas o que hemos tocado juntos tienen comentarios más explicativos en español.
+
+### Recomendación
+Para que el código se sienta 100% "nuestro" y humano, puedo hacer una **pasada de limpieza** rápida por los archivos clave ([MainViewController](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/controllers/MainViewController.java#31-709), [ProjectManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/service/ProjectManager.java#33-624), [ImageUtils](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/util/ImageUtils.java#10-86), [ModeManager](file:///c:/Users/Usuario/Documents/Grado%20S%20Programaci%C3%B3n%20-%20SEGUNDO/00%20PROYECTO%20FINAL/TPS_STUDIO_APP/TPS_Studio/tps-studio/src/main/java/com/tpsstudio/view/managers/ModeManager.java#24-441)) para:
+1.  Traducir los comentarios técnicos de inglés a español.
+2.  Reescribir los comentarios robóticos ("Inicializar variable") por explicaciones más naturales ("Preparamos esto para...").
+3.  Añadir alguna advertencia clara en las zonas delicadas (como el Proxy de imágenes).
+
+¿Te parece bien que proceda con esa "humanización" de comentarios?
