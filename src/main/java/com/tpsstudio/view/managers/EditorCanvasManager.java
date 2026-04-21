@@ -160,6 +160,10 @@ public class EditorCanvasManager {
         this.zoomLevel = zoom;
     }
 
+    public void setFuenteDatos(com.tpsstudio.model.project.FuenteDatos fuenteDatos) {
+        this.fuenteDatos = fuenteDatos;
+    }
+
     public void setMostrarGuias(boolean mostrar) {
         this.mostrarGuias = mostrar;
     }
@@ -202,10 +206,6 @@ public class EditorCanvasManager {
             });
         }
         return hudOpacityProp;
-    }
-
-    public void setFuenteDatos(FuenteDatos fuenteDatos) {
-        this.fuenteDatos = fuenteDatos;
     }
 
     // ===================== CALLBACKS =====================

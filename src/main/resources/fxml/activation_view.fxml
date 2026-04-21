@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.SVGPath?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml/1" 
+           fx:controller="com.tpsstudio.view.controllers.ActivationViewController"
+           prefWidth="500" prefHeight="650"
+           stylesheets="@../css/app.css,@../css/toast.css">
+
+    <VBox alignment="CENTER" spacing="0" maxWidth="450" styleClass="login-outer">
+        
+        <VBox alignment="CENTER" spacing="20.0" styleClass="login-inner" maxWidth="460.0">
+            
+            <!-- Header -->
+            <VBox alignment="CENTER" spacing="10">
+                <ImageView fx:id="imgLogo" fitHeight="70.0" preserveRatio="true" smooth="true">
+                    <Image url="@../img/Logo_TPS_S.png" smooth="true" requestedHeight="140.0" preserveRatio="true" />
+                </ImageView>
+                <Label text="ACTIVACIÓN TPS-S" styleClass="login-title" wrapText="true" alignment="CENTER" />
+                <Label text="Introduce tus datos y la clave de licencia" styleClass="login-subtitle" />
+            </VBox>
+
+            <!-- Form -->
+            <VBox spacing="15" alignment="CENTER_LEFT">
+                <VBox spacing="5">
+                    <Label text="Nombre de Usuario" styleClass="field-label" />
+                    <TextField fx:id="txtUsername" promptText="Ej: David L." styleClass="form-field" />
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Correo Electrónico" styleClass="field-label" />
+                    <TextField fx:id="txtEmail" promptText="usuario@ejemplo.com" styleClass="form-field" />
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Contraseña de Acceso" styleClass="field-label" />
+                    <PasswordField fx:id="txtPassword" styleClass="form-field" />
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Clave de Licencia" styleClass="field-label" />
+                    <TextField fx:id="txtLicense" promptText="TPS-XXXX-XXXX-XXXX" styleClass="form-field" />
+                </VBox>
+            </VBox>
+
+            <!-- Error area -->
+            <Label fx:id="lblError" styleClass="error-text" visible="false" managed="false" wrapText="true" />
+
+            <!-- Action -->
+            <VBox alignment="CENTER" spacing="15">
+                <Button text="ACTIVAR COPIA" onAction="#handleActivate" styleClass="success-btn" prefWidth="300" />
+                <Hyperlink text="¿Dónde encuentro mi clave?" styleClass="link-text" onAction="#handleHelp" />
+            </VBox>
+
+        </VBox>
+
+    </VBox>
+
+</StackPane>

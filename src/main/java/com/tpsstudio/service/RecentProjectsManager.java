@@ -16,11 +16,32 @@ public class RecentProjectsManager {
 
     private final Preferences prefs;
     private final List<String> recentProjects;
+    private final String prefKey;
 
-    public RecentProjectsManager() {
+    public RecentProjectsManager(String username) {
         this.prefs = Preferences.userNodeForPackage(RecentProjectsManager.class);
         this.recentProjects = new ArrayList<>();
+        
+        // Clave única por usuario para aislar espacios de trabajo
+        this.prefKey = PREFS_KEY + "_" + (username != null ? username : "Guest");
+        
         cargarRecientes();
+
+        // MIGRACIÓN LEGACY: Si el usuario es Admin y su lista está vacía, 
+        // intentamos cargar la lista antigua (sin prefijo) para no perder datos.
+        if (recentProjects.isEmpty() && "Admin".equalsIgnoreCase(username)) {
+            String legacyData = prefs.get(PREFS_KEY, "");
+            if (!legacyData.isEmpty()) {
+                System.out.println("Migrando proyectos recientes antiguos para Admin...");
+                String[] rutas = legacyData.split("\\" + SEPARATOR);
+                for (String ruta : rutas) {
+                    if (!ruta.isEmpty() && new File(ruta).exists()) {
+                        recentProjects.add(ruta);
+                    }
+                }
+                guardarRecientes(); // Consolidar en el nuevo nodo del usuario
+            }
+        }
     }
 
     /**
@@ -88,7 +109,7 @@ public class RecentProjectsManager {
      * Carga los proyectos recientes desde las preferencias
      */
     private void cargarRecientes() {
-        String datos = prefs.get(PREFS_KEY, "");
+        String datos = prefs.get(prefKey, "");
         if (!datos.isEmpty()) {
             String[] rutas = datos.split("\\" + SEPARATOR);
             for (String ruta : rutas) {
@@ -104,6 +125,6 @@ public class RecentProjectsManager {
      */
     private void guardarRecientes() {
         String datos = String.join(SEPARATOR, recentProjects);
-        prefs.put(PREFS_KEY, datos);
+        prefs.put(prefKey, datos);
     }
 }

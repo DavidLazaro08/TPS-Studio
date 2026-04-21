@@ -52,7 +52,7 @@ public class LoginViewModel {
 
     // Método de validación
     public boolean validateLogin() {
-        boolean isValid = "Admin".equals(user.get()) && "Admin".equals(pass.get());
+        boolean isValid = com.tpsstudio.service.AuthService.getInstance().login(user.get(), pass.get());
         loginOk.set(isValid);
         return isValid;
     }

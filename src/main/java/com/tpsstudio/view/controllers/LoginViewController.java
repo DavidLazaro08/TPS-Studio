@@ -70,6 +70,12 @@ public class LoginViewController {
         txtPass.textProperty().bindBidirectional(viewModel.passProperty());
         txtPassVisible.textProperty().bindBidirectional(viewModel.passProperty());
 
+        // Comprobación de activación
+        if (!com.tpsstudio.service.AuthService.getInstance().isActivated()) {
+            lblError.setText("SISTEMA NO ACTIVADO. Por favor, solicita acceso o introduce tu licencia.");
+            lblError.setStyle("-fx-text-fill: #ffa07a; -fx-font-weight: bold;"); // Color naranja suave/alerta
+        }
+
         // Cargar usuario guardado si existe
         loadRememberedUser();
 
@@ -158,18 +164,28 @@ public class LoginViewController {
 
     @FXML
     private void onRequestAccess() {
-        // Mostrar alerta informativa
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Solicitar acceso");
-        alert.setHeaderText("Función en desarrollo");
-        alert.setContentText("Esta funcionalidad estará disponible en próximas versiones.");
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/activation_view.fxml"));
+            javafx.scene.Parent root = loader.load();
+            
+            Stage stage = new Stage();
+            stage.setTitle("Activación de TPS Studio");
+            stage.initOwner(txtUser.getScene().getWindow());
+            stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
+            stage.setScene(new Scene(root));
+            stage.setResizable(false);
+            
+            // Añadir el icono del programa al modal
+            try (java.io.InputStream is = getClass().getResourceAsStream("/img/Icono_TPS.png")) {
+                if (is != null) stage.getIcons().add(new javafx.scene.image.Image(is));
+            } catch (Exception ignored) {}
 
-        // Aplicar tema oscuro al diálogo (opcional, mejora visual)
-        alert.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/app.css").toExternalForm());
-        alert.getDialogPane().getStyleClass().add("alert-dialog");
-
-        alert.showAndWait();
+            stage.showAndWait();
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("No se pudo cargar la pantalla de activación");
+        }
     }
 
     private void showError(String message) {

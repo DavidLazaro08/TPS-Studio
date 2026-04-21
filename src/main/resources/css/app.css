@@ -527,3 +527,48 @@
     -fx-font-size: 13px;
     -fx-border-color: #3d3739;
 }
+
+/* =====================================================
+   PERFIL DE USUARIO (SIDEBAR FOOTER)
+   ===================================================== */
+.user-profile-panel {
+    -fx-background-color: #1a1618;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1 0 0 0;
+}
+
+.user-profile-name {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-transform: uppercase;
+}
+
+.logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #5a8599;
+    -fx-font-size: 12px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-underline: true;
+}
+
+.logout-btn:hover {
+    -fx-text-fill: #d48a8a; /* Cambio a tono rojizo al querer salir */
+}
+
+/* ScrollPane del panel lateral */
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.sidebar-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .corner {
+    -fx-background-color: transparent;
+}
