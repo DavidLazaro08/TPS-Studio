@@ -12,6 +12,7 @@ import com.tpsstudio.view.dialogs.NuevoProyectoDialog;
 import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
+import com.tpsstudio.service.DesignValidatorService;
 import com.tpsstudio.util.TPSToast;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
@@ -180,6 +181,7 @@ public class MainViewController {
 
         propertiesPanelController.setOnEditExternal(this::abrirEditorExterno);
         propertiesPanelController.setOnReload(this::recargarFondo);
+        propertiesPanelController.setOnDownloadTemplate(this::onDescargarPlantilla);
 
         // -------------------------------------------------
         // ModeManager (montaje de paneles + acciones de UI)
@@ -189,6 +191,9 @@ public class MainViewController {
         modeManager.setOnAddText(this::onAñadirTexto);
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
+        modeManager.setOnAddShape(this::onAñadirForma);
+        
+        modeManager.setOnValidateDesign(this::onValidarDiseno);
 
         modeManager.setOnNewCR80(this::onNuevoCR80);
         modeManager.setOnExport(this::onExportarProyecto);
@@ -283,6 +288,65 @@ public class MainViewController {
 
         dibujarCanvas();
     }
+    
+    private void onValidarDiseno() {
+        if (viewModel.getProyectoActual() == null) return;
+        
+        DesignValidatorService validator = new DesignValidatorService();
+        java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Validación de Diseño");
+        alert.setHeaderText(avisos.isEmpty() ? "¡Diseño correcto!" : "Se han encontrado problemas potenciales:");
+        
+        if (avisos.isEmpty()) {
+            alert.setContentText("No se han detectado problemas de resolución ni elementos fuera de las zonas seguras.");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String aviso : avisos) {
+                sb.append("• ").append(aviso).append("\n\n");
+            }
+            javafx.scene.control.TextArea textArea = new javafx.scene.control.TextArea(sb.toString().trim());
+            textArea.setEditable(false);
+            textArea.setWrapText(true);
+            textArea.setMaxWidth(Double.MAX_VALUE);
+            textArea.setMaxHeight(Double.MAX_VALUE);
+            textArea.setPrefHeight(250);
+            
+            javafx.scene.layout.VBox expContent = new javafx.scene.layout.VBox(textArea);
+            expContent.setMaxWidth(Double.MAX_VALUE);
+            javafx.scene.layout.VBox.setVgrow(textArea, javafx.scene.layout.Priority.ALWAYS);
+            alert.getDialogPane().setContent(expContent);
+            alert.getDialogPane().setPrefWidth(500);
+        }
+        
+        alert.showAndWait();
+    }
+    
+    private void onDescargarPlantilla() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Descargar Plantilla CR80");
+        fileChooser.setInitialFileName("Plantilla_CR80_TPS.pdf");
+        fileChooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Documento PDF", "*.pdf"));
+        
+        File file = fileChooser.showSaveDialog(canvas.getScene().getWindow());
+        if (file == null) return;
+        
+        try {
+            java.io.InputStream in = getClass().getResourceAsStream("/pdf/Plantilla_CR80_TPS.pdf");
+            if (in != null) {
+                java.nio.file.Files.copy(in, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                in.close();
+                TPSToast.mostrar(canvas.getScene().getWindow(), "Plantilla descargada con éxito", null, TPSToast.Tipo.EXITO);
+            } else {
+                TPSToast.mostrar(canvas.getScene().getWindow(), "No se encontró el recurso interno /pdf/Plantilla_CR80_TPS.pdf", null, TPSToast.Tipo.ERROR);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            TPSToast.mostrar(canvas.getScene().getWindow(), "Error al guardar la plantilla.", null, TPSToast.Tipo.ERROR);
+        }
+    }
+    
     // =====================================================
     // Cambio de modo (Design / Production)
     // =====================================================
@@ -957,6 +1021,15 @@ public class MainViewController {
             if (imagen.getColumnaVinculada() != null) {
                 notificarColumnaAutoVinculada(imagen.getColumnaVinculada());
             }
+        }
+    }
+
+    private void onAñadirForma(FormaElemento.TipoForma tipo) {
+        FormaElemento forma = projectManager.añadirForma(tipo);
+        if (forma != null) {
+            viewModel.setElementoSeleccionado(forma);
+            canvasManager.setElementoSeleccionado(forma);
+            ensurePropertiesPanelVisible();
         }
     }
 

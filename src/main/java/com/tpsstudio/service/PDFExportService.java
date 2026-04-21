@@ -366,6 +366,33 @@ public class PDFExportService {
                 gc.setFill(Color.web("#cccccc"));
                 gc.fillRect(ex, ey, ew, eh);
             }
+        } else if (elem instanceof FormaElemento forma) {
+            double grosor = Math.max(1.0, forma.getGrosorBorde() * scale);
+            gc.setLineWidth(grosor);
+
+            switch (forma.getTipoForma()) {
+                case RECTANGULO -> {
+                    if (forma.isConRelleno()) {
+                        gc.setFill(Color.web(forma.getColorRelleno()));
+                        gc.fillRect(ex, ey, ew, eh);
+                    }
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeRect(ex, ey, ew, eh);
+                }
+                case ELIPSE -> {
+                    if (forma.isConRelleno()) {
+                        gc.setFill(Color.web(forma.getColorRelleno()));
+                        gc.fillOval(ex, ey, ew, eh);
+                    }
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeOval(ex, ey, ew, eh);
+                }
+                case LINEA -> {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    // Centrada verticalmente en el área ocupada por el elemento
+                    gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+                }
+            }
         }
     }
 

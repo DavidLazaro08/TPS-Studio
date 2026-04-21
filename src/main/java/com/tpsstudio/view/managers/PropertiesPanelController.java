@@ -1,6 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
@@ -42,6 +43,7 @@ public class PropertiesPanelController {
     private Runnable onCanvasRedrawNeeded;
     private Consumer<ImagenFondoElemento> onEditExternal;
     private Consumer<ImagenFondoElemento> onReload;
+    private Runnable onDownloadTemplate;
 
     // Referencias a campos de posición para actualizaciones en tiempo real
     private TextField txtX, txtY, txtW, txtH;
@@ -67,6 +69,10 @@ public class PropertiesPanelController {
 
     public void setOnReload(Consumer<ImagenFondoElemento> callback) {
         this.onReload = callback;
+    }
+
+    public void setOnDownloadTemplate(Runnable callback) {
+        this.onDownloadTemplate = callback;
     }
 
     public void setFuenteDatos(FuenteDatos fuenteDatos) {
@@ -99,6 +105,8 @@ public class PropertiesPanelController {
             buildTextPanel(props, lblProps, texto);
         } else if (elemento instanceof ImagenElemento imagen) {
             buildImagePanel(props, lblProps, imagen);
+        } else if (elemento instanceof FormaElemento forma) {
+            buildFormaPanel(props, lblProps, forma);
         }
 
         return props;
@@ -344,12 +352,23 @@ public class PropertiesPanelController {
             }
         });
 
+        Button btnDescargarPlantilla = new Button("Descargar Plantilla CR80");
+        btnDescargarPlantilla.setMaxWidth(MAX_CONTROL_WIDTH);
+        btnDescargarPlantilla.getStyleClass().add("primary-btn");
+        btnDescargarPlantilla.setOnAction(e -> {
+            if (onDownloadTemplate != null) {
+                onDownloadTemplate.run();
+            }
+        });
+
         props.getChildren().addAll(
                 lblProps, lblInfo, lblDim,
                 new Separator(),
                 lblModo, rbBleed, rbFinal,
                 new Separator(),
-                btnReemplazar, cajaEdicion, btnRecargar
+                btnReemplazar, cajaEdicion, btnRecargar,
+                new Separator(),
+                btnDescargarPlantilla
         );
     }
 
@@ -562,6 +581,84 @@ public class PropertiesPanelController {
         });
 
         props.getChildren().addAll(lblOpacidad, sldOpacidad, chkProporcion);
+    }
+
+    // ===================== PANEL FORMA =====================
+
+    private void buildFormaPanel(VBox props, Label lblProps, FormaElemento forma) {
+        props.getChildren().add(lblProps);
+
+        // Etiqueta
+        addEtiquetaControl(props, forma.getEtiqueta(), forma::setEtiqueta, "Ej: RECUADRO, MARCO...");
+
+        // Posición y Tamaño
+        addPositionSizeControls(props, forma);
+
+        props.getChildren().add(new Separator());
+
+        Label lblEstilo = new Label("Estilo de Forma");
+        lblEstilo.getStyleClass().add("prop-label");
+
+        // Color de Borde
+        Label lblBorde = new Label("Color del Borde:");
+        lblBorde.getStyleClass().add("prop-label-small");
+        ColorPicker cpBorde = new ColorPicker(Color.web(forma.getColorBorde()));
+        cpBorde.setMaxWidth(MAX_CONTROL_WIDTH);
+        cpBorde.valueProperty().addListener((obs, old, newVal) -> {
+            forma.setColorBorde(String.format("#%02X%02X%02X",
+                    (int) (newVal.getRed() * 255),
+                    (int) (newVal.getGreen() * 255),
+                    (int) (newVal.getBlue() * 255)
+            ));
+            notifyCanvasRedraw();
+        });
+
+        // Grosor de Borde
+        Label lblGrosor = new Label("Grosor del Borde:");
+        lblGrosor.getStyleClass().add("prop-label-small");
+        Spinner<Double> spnGrosor = new Spinner<>(0.5, 20.0, forma.getGrosorBorde(), 0.5);
+        spnGrosor.setEditable(true);
+        spnGrosor.setMaxWidth(MAX_CONTROL_WIDTH);
+        spnGrosor.valueProperty().addListener((obs, old, newVal) -> {
+            if (newVal != null) {
+                forma.setGrosorBorde(newVal);
+                notifyCanvasRedraw();
+            }
+        });
+
+        props.getChildren().addAll(lblEstilo, lblBorde, cpBorde, lblGrosor, spnGrosor);
+
+        // Relleno (solo para Rectángulo y Elipse)
+        if (forma.getTipoForma() != FormaElemento.TipoForma.LINEA) {
+            props.getChildren().add(new Separator());
+
+            CheckBox chkRelleno = new CheckBox("Relleno activo");
+            chkRelleno.setSelected(forma.isConRelleno());
+            chkRelleno.getStyleClass().add("prop-checkbox");
+
+            Label lblRelleno = new Label("Color de Relleno:");
+            lblRelleno.getStyleClass().add("prop-label-small");
+            ColorPicker cpRelleno = new ColorPicker(Color.web(forma.getColorRelleno()));
+            cpRelleno.setMaxWidth(MAX_CONTROL_WIDTH);
+            cpRelleno.setDisable(!forma.isConRelleno());
+
+            chkRelleno.selectedProperty().addListener((obs, old, newVal) -> {
+                forma.setConRelleno(newVal);
+                cpRelleno.setDisable(!newVal);
+                notifyCanvasRedraw();
+            });
+
+            cpRelleno.valueProperty().addListener((obs, old, newVal) -> {
+                forma.setColorRelleno(String.format("#%02X%02X%02X",
+                        (int) (newVal.getRed() * 255),
+                        (int) (newVal.getGreen() * 255),
+                        (int) (newVal.getBlue() * 255)
+                ));
+                notifyCanvasRedraw();
+            });
+
+            props.getChildren().addAll(chkRelleno, lblRelleno, cpRelleno);
+        }
     }
 
     // ===================== SECCIÓN DATOS VARIABLES =====================

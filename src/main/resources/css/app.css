@@ -481,3 +481,49 @@
 .panel-dark-bg {
     -fx-background-color: #1e1b1c;
 }
+
+/* =====================================================
+   ALERT DIALOGOS (Modo Oscuro Completo)
+   ===================================================== */
+.alert-dialog {
+    -fx-background-color: #1e1a1c;
+    -fx-base: #1e1a1c;
+}
+
+.alert-dialog .header-panel {
+    -fx-background-color: #141012;
+}
+
+.alert-dialog .header-panel .label {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.alert-dialog > *.label.content {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.alert-dialog .button-bar {
+    -fx-background-color: #1e1a1c;
+}
+
+.alert-dialog .button {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+}
+
+.alert-dialog .button:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.alert-dialog .text-area {
+    -fx-control-inner-background: #0a0809;
+    -fx-background-color: transparent, #0a0809, transparent, #0a0809;
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 13px;
+    -fx-border-color: #3d3739;
+}

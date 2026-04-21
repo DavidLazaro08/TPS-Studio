@@ -20,6 +20,7 @@ import javafx.scene.layout.VBox;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import com.tpsstudio.util.AnimationHelper;
 
 /**
  * Gestor del modo de la interfaz de usuario (Diseño / Producción).
@@ -77,7 +78,11 @@ public class ModeManager {
     private Consumer<ImagenFondoElemento> onReload;
     private Consumer<Elemento> onToggleLock;
 
+    private Runnable onValidateDesign;
     private Runnable onCanvasRedraw;
+
+    // Nuevo callback para añadir formas
+    private java.util.function.Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> onAddShape;
 
     // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el
     // panel izquierdo
@@ -90,6 +95,9 @@ public class ModeManager {
     private boolean isPropertiesActive = true;
     private javafx.scene.Node propertiesNode;
     private javafx.scene.Node datosNode;
+
+    // Estado de expansión del submenú de formas
+    private boolean shapesExpanded = false;
 
     public ModeManager(VBox leftPanel, VBox rightPanel, PropertiesPanelController propertiesPanelController) {
         this.leftPanel = leftPanel;
@@ -142,6 +150,14 @@ public class ModeManager {
 
     public void setOnToggleLock(Consumer<Elemento> callback) {
         this.onToggleLock = callback;
+    }
+
+    public void setOnValidateDesign(Runnable callback) {
+        this.onValidateDesign = callback;
+    }
+
+    public void setOnAddShape(java.util.function.Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> callback) {
+        this.onAddShape = callback;
     }
 
     public void setOnCanvasRedraw(Runnable callback) {
@@ -298,18 +314,66 @@ public class ModeManager {
                 onAddBackground.run();
         });
 
-        // Reservado para futuro (formas)
+        // Contenedor para el submenú de formas (tipo acordeón)
+        VBox shapesSubMenu = new VBox(4);
+        shapesSubMenu.setPadding(new Insets(0, 0, 0, 15)); // Sangría para parecer submenú
+        shapesSubMenu.setVisible(shapesExpanded);
+        shapesSubMenu.setManaged(shapesExpanded);
+
         Button btnRectangulo = new Button("▭ Rectángulo");
         btnRectangulo.setMaxWidth(Double.MAX_VALUE);
         btnRectangulo.getStyleClass().add("toolbox-btn");
-        btnRectangulo.setDisable(true);
+        btnRectangulo.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.RECTANGULO);
+        });
 
         Button btnElipse = new Button("○ Elipse");
         btnElipse.setMaxWidth(Double.MAX_VALUE);
         btnElipse.getStyleClass().add("toolbox-btn");
-        btnElipse.setDisable(true);
+        btnElipse.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.ELIPSE);
+        });
 
-        toolbox.getChildren().addAll(lblToolbox, btnTexto, btnImagen, btnFondo, btnRectangulo, btnElipse);
+        Button btnLinea = new Button("― Línea");
+        btnLinea.setMaxWidth(Double.MAX_VALUE);
+        btnLinea.getStyleClass().add("toolbox-btn");
+        btnLinea.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.LINEA);
+        });
+
+        shapesSubMenu.getChildren().addAll(btnRectangulo, btnElipse, btnLinea);
+
+        // Botón principal que despliega el submenú
+        Button btnToggleFormas = new Button(shapesExpanded ? "▼ Dibujar Forma" : "▶ Dibujar Forma");
+        btnToggleFormas.setMaxWidth(Double.MAX_VALUE);
+        btnToggleFormas.getStyleClass().add("toolbox-btn");
+        btnToggleFormas.setOnAction(e -> {
+            shapesExpanded = !shapesExpanded;
+            btnToggleFormas.setText(shapesExpanded ? "▼ Dibujar Forma" : "▶ Dibujar Forma");
+            
+            // Usar el helper de animación para una transición suave
+            AnimationHelper.animateAccordion(shapesSubMenu, shapesExpanded);
+        });
+
+        Button btnValidar = new Button("✓ Validar Diseño");
+        btnValidar.setMaxWidth(Double.MAX_VALUE);
+        btnValidar.getStyleClass().add("primary-btn");
+        btnValidar.setOnAction(e -> {
+            if (onValidateDesign != null)
+                onValidateDesign.run();
+        });
+
+        // Organizar: El submenú aparece justo debajo de su botón
+        toolbox.getChildren().addAll(
+                lblToolbox,
+                btnTexto,
+                btnImagen,
+                btnFondo,
+                btnToggleFormas,
+                shapesSubMenu,
+                new Separator(),
+                btnValidar
+        );
         return toolbox;
     }
 
