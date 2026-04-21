@@ -31,6 +31,7 @@ public class TPSStudio extends Application {
             scene.getStylesheets().add(TPSStudio.class.getResource(APP_CSS).toExternalForm());
 
             stage.setTitle(APP_TITLE);
+            stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/img/Icono_TPS.png")));
             stage.setScene(scene);
             stage.show();
 

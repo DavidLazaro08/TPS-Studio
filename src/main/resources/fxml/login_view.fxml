@@ -10,6 +10,8 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.shape.SVGPath?>
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
@@ -24,8 +26,15 @@
         <VBox fx:id="loginCard" alignment="CENTER" spacing="15.0" styleClass="login-inner"
               maxWidth="424.0">
 
-            <!-- Título -->
-            <Label text="TPS Studio" styleClass="login-title" />
+            <!-- Logotipo -->
+            <ImageView fitHeight="70.0" pickOnBounds="true" preserveRatio="true" smooth="true">
+                <image>
+                    <Image url="@../img/Logo_TPS_S.png" smooth="true" requestedHeight="140.0" preserveRatio="true" />
+                </image>
+                <VBox.margin>
+                    <Insets bottom="5.0" />
+                </VBox.margin>
+            </ImageView>
             <Label text="Acceso al sistema" styleClass="login-subtitle">
                 <VBox.margin>
                     <Insets bottom="8.0" />

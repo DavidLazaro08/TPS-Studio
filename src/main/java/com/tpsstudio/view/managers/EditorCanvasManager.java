@@ -1,6 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
@@ -20,6 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import javafx.scene.control.Tooltip;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 
 /**
  * Gestor del canvas de edición de tarjetas CR80.
@@ -113,6 +117,12 @@ public class EditorCanvasManager {
 
     // Campos figurados
     private javafx.geometry.BoundingBox btnClienteHitbox;
+    
+    // Tooltip UX
+    private Tooltip guideTooltip;
+    private PauseTransition tooltipDelay;
+    private String currentTooltipTarget = null;
+    private double lastScreenX, lastScreenY;
 
     public void setOnClientDataRequested(Runnable callback) {
         this.onClientDataRequested = callback;
@@ -123,6 +133,15 @@ public class EditorCanvasManager {
         this.zoomLevel = 1.3;
         this.mostrarGuias = false;
         this.currentMode = AppMode.PRODUCTION;
+
+        guideTooltip = new Tooltip();
+        guideTooltip.setStyle("-fx-font-size: 11px; -fx-background-color: #333; -fx-text-fill: white;");
+        tooltipDelay = new PauseTransition(Duration.millis(400));
+        tooltipDelay.setOnFinished(ev -> {
+            if (currentTooltipTarget != null) {
+                guideTooltip.show(canvas, lastScreenX + 15, lastScreenY + 15);
+            }
+        });
 
         setupMouseHandlers();
     }
@@ -210,6 +229,10 @@ public class EditorCanvasManager {
         canvas.setOnMouseDragged(this::onCanvasMouseDragged);
         canvas.setOnMouseMoved(this::onCanvasMouseMoved);
         canvas.setOnMouseReleased(this::onCanvasMouseReleased);
+        canvas.setOnMouseExited(e -> {
+            tooltipDelay.stop();
+            guideTooltip.hide();
+        });
     }
 
     // ===================== DIBUJO =====================
@@ -450,6 +473,8 @@ public class EditorCanvasManager {
                         gc.fillText("🖼 Imagen", ex + 6, ey + ew / 2);
                     }
                 }
+            } else if (elem instanceof FormaElemento forma) {
+                dibujarForma(gc, forma, ex, ey, ew, eh);
             }
 
             // Selección + handles
@@ -464,30 +489,25 @@ public class EditorCanvasManager {
                 double dim = HANDLE_SIZE;
 
                 if (elem instanceof TextoElemento) {
-                    // Texto: handle en el lateral derecho
+                    // Texto: handle solo en el lateral derecho (ancho)
                     gc.setGlobalAlpha(0.8);
                     gc.setFill(Color.WHITE);
                     gc.fillRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
                     gc.setGlobalAlpha(1.0);
-
                     gc.setStroke(Color.web("#4a9b7c"));
                     gc.setLineWidth(2);
                     gc.strokeRect(ex + ew - (dim / 2), ey + (eh / 2) - (dim / 2), dim, dim);
                 } else {
-                    // Imagen: handles en las 4 esquinas
+                    // Imagen y Formas: handles en las 4 esquinas
                     gc.setGlobalAlpha(0.8);
                     gc.setFill(Color.WHITE);
-
                     gc.fillRect(ex - (dim / 2), ey - (dim / 2), dim, dim);               // NW
                     gc.fillRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);          // NE
                     gc.fillRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);          // SW
                     gc.fillRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);     // SE
-
                     gc.setGlobalAlpha(1.0);
-
                     gc.setStroke(Color.web("#4a9b7c"));
                     gc.setLineWidth(2);
-
                     gc.strokeRect(ex - (dim / 2), ey - (dim / 2), dim, dim);
                     gc.strokeRect(ex + ew - (dim / 2), ey - (dim / 2), dim, dim);
                     gc.strokeRect(ex - (dim / 2), ey + eh - (dim / 2), dim, dim);
@@ -773,6 +793,10 @@ public class EditorCanvasManager {
     }
 
     private void onCanvasMouseMoved(MouseEvent e) {
+        lastScreenX = e.getScreenX();
+        lastScreenY = e.getScreenY();
+        gestionarHoverGuias(e);
+
         if (proyectoActual == null) {
             canvas.setCursor(Cursor.DEFAULT);
             return;
@@ -856,6 +880,60 @@ public class EditorCanvasManager {
         return DragMode.NONE;
     }
 
+    private void gestionarHoverGuias(MouseEvent e) {
+        if (!mostrarGuias || currentMode != AppMode.DESIGN || currentDragMode != DragMode.NONE) {
+            currentTooltipTarget = null;
+            tooltipDelay.stop();
+            guideTooltip.hide();
+            return;
+        }
+
+        double scaledWidth = CARD_WIDTH * zoomLevel;
+        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
+        double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
+        double mx = e.getX();
+        double my = e.getY();
+        double hit = 4.0; // Tolerancia en pixels
+        String hoverDeteccion = null;
+
+        double bleedScaled = BLEED_MARGIN * zoomLevel;
+        double safetyScaled = SAFETY_MARGIN * zoomLevel;
+
+        // 1. Rectángulo de Sangrado
+        if (esBorde(mx, my, cardX - bleedScaled, cardY - bleedScaled, scaledWidth + bleedScaled * 2, scaledHeight + bleedScaled * 2, hit)) {
+            hoverDeteccion = "Zona de sangrado (área que será recortada en impresión)";
+        } 
+        // 2. Rectángulo de Corte Final
+        else if (esBorde(mx, my, cardX, cardY, scaledWidth, scaledHeight, hit)) {
+            hoverDeteccion = "Corte final";
+        }
+        // 3. Rectángulo de Seguridad
+        else if (esBorde(mx, my, cardX + safetyScaled, cardY + safetyScaled, scaledWidth - safetyScaled * 2, scaledHeight - safetyScaled * 2, hit)) {
+            hoverDeteccion = "Margen de seguridad (zona donde no deben colocarse textos importantes)";
+        }
+
+        if (hoverDeteccion != null) {
+            if (!hoverDeteccion.equals(currentTooltipTarget)) {
+                currentTooltipTarget = hoverDeteccion;
+                guideTooltip.setText(hoverDeteccion);
+                tooltipDelay.playFromStart();
+            }
+        } else {
+            currentTooltipTarget = null;
+            tooltipDelay.stop();
+            guideTooltip.hide();
+        }
+    }
+
+    private boolean esBorde(double mx, double my, double rx, double ry, double rw, double rh, double error) {
+        boolean onLeft = Math.abs(mx - rx) <= error && my >= ry - error && my <= ry + rh + error;
+        boolean onRight = Math.abs(mx - (rx + rw)) <= error && my >= ry - error && my <= ry + rh + error;
+        boolean onTop = Math.abs(my - ry) <= error && mx >= rx - error && mx <= rx + rw + error;
+        boolean onBottom = Math.abs(my - (ry + rh)) <= error && mx >= rx - error && mx <= rx + rw + error;
+        return onLeft || onRight || onTop || onBottom;
+    }
+
     // ===================== GETTERS =====================
 
     public Elemento getElementoSeleccionado() {
@@ -879,6 +957,42 @@ public class EditorCanvasManager {
             return ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * Dibuja un FormaElemento (rectángulo, elipse o línea) en el GraphicsContext dado.
+     * Las coordenadas ex/ey/ew/eh ya están escaladas con el zoomLevel del llamante.
+     */
+    private void dibujarForma(javafx.scene.canvas.GraphicsContext gc,
+                              FormaElemento forma,
+                              double ex, double ey, double ew, double eh) {
+        double grosor = Math.max(1.0, forma.getGrosorBorde());
+        gc.setLineWidth(grosor);
+        gc.setLineDashes();
+
+        switch (forma.getTipoForma()) {
+            case RECTANGULO -> {
+                if (forma.isConRelleno()) {
+                    gc.setFill(Color.web(forma.getColorRelleno()));
+                    gc.fillRect(ex, ey, ew, eh);
+                }
+                gc.setStroke(Color.web(forma.getColorBorde()));
+                gc.strokeRect(ex, ey, ew, eh);
+            }
+            case ELIPSE -> {
+                if (forma.isConRelleno()) {
+                    gc.setFill(Color.web(forma.getColorRelleno()));
+                    gc.fillOval(ex, ey, ew, eh);
+                }
+                gc.setStroke(Color.web(forma.getColorBorde()));
+                gc.strokeOval(ex, ey, ew, eh);
+            }
+            case LINEA -> {
+                gc.setStroke(Color.web(forma.getColorBorde()));
+                // La línea va de la esquina superior-izquierda a la inferior-derecha
+                gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+            }
         }
     }
 }

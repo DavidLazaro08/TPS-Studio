@@ -372,6 +372,31 @@ public class ProjectManager {
         return texto;
     }
 
+    /**
+     * Añade una forma geométrica (Rectángulo, Elipse o Línea) al proyecto actual.
+     */
+    public FormaElemento añadirForma(FormaElemento.TipoForma tipo) {
+        if (proyectoActual == null) return null;
+
+        String nombreBase = switch (tipo) {
+            case RECTANGULO -> "Rectángulo ";
+            case ELIPSE -> "Elipse ";
+            case LINEA -> "Línea ";
+        };
+
+        FormaElemento forma = new FormaElemento(
+                nombreBase + (proyectoActual.getElementosActuales().size() + 1),
+                50, 50, 100, 60, tipo);
+
+        if (tipo == FormaElemento.TipoForma.LINEA) {
+            forma.setHeight(4); // Pequeño alto inicial para facilitar selección
+        }
+
+        proyectoActual.getElementosActuales().add(forma);
+        avisarElementoAñadido();
+        return forma;
+    }
+
     public ImagenElemento añadirImagenDesdeArchivo(File file) {
 
         if (proyectoActual == null || file == null)

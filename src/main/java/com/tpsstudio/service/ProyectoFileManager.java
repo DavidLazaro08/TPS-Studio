@@ -330,6 +330,15 @@ public class ProyectoFileManager implements ProyectoDAO {
                 dto.setHeight(imagen.getHeight());
                 dto.setMantenerProporcion(imagen.isMantenerProporcion());
                 dto.setColumnaVinculada(imagen.getColumnaVinculada());
+            } else if (elem instanceof FormaElemento forma) {
+                dto.setTipo("forma");
+                dto.setWidth(forma.getWidth());
+                dto.setHeight(forma.getHeight());
+                dto.setTipoForma(forma.getTipoForma().name());
+                dto.setColorRelleno(forma.getColorRelleno());
+                dto.setColorBorde(forma.getColorBorde());
+                dto.setGrosorBorde(forma.getGrosorBorde());
+                dto.setConRelleno(forma.isConRelleno());
             }
 
             dtos.add(dto);
@@ -383,6 +392,17 @@ public class ProyectoFileManager implements ProyectoDAO {
                 imagen.setMantenerProporcion(dto.isMantenerProporcion());
                 imagen.setColumnaVinculada(dto.getColumnaVinculada());
                 elem = imagen;
+
+            } else if ("forma".equals(dto.getTipo())) {
+                FormaElemento.TipoForma tipo = FormaElemento.TipoForma.valueOf(
+                        dto.getTipoForma() != null ? dto.getTipoForma() : "RECTANGULO");
+                FormaElemento forma = new FormaElemento(
+                        dto.getNombre(), dto.getX(), dto.getY(), dto.getWidth(), dto.getHeight(), tipo);
+                if (dto.getColorRelleno() != null) forma.setColorRelleno(dto.getColorRelleno());
+                if (dto.getColorBorde()   != null) forma.setColorBorde(dto.getColorBorde());
+                forma.setGrosorBorde(dto.getGrosorBorde());
+                forma.setConRelleno(dto.isConRelleno());
+                elem = forma;
             }
 
             if (elem != null) {
@@ -655,6 +675,24 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public String getColumnaVinculada() { return columnaVinculada; }
         public void setColumnaVinculada(String columnaVinculada) { this.columnaVinculada = columnaVinculada; }
+
+        // Campos de FormaElemento
+        private String tipoForma;
+        private String colorRelleno;
+        private String colorBorde;
+        private double grosorBorde;
+        private boolean conRelleno;
+
+        public String getTipoForma() { return tipoForma; }
+        public void setTipoForma(String tipoForma) { this.tipoForma = tipoForma; }
+        public String getColorRelleno() { return colorRelleno; }
+        public void setColorRelleno(String colorRelleno) { this.colorRelleno = colorRelleno; }
+        public String getColorBorde() { return colorBorde; }
+        public void setColorBorde(String colorBorde) { this.colorBorde = colorBorde; }
+        public double getGrosorBorde() { return grosorBorde; }
+        public void setGrosorBorde(double grosorBorde) { this.grosorBorde = grosorBorde; }
+        public boolean isConRelleno() { return conRelleno; }
+        public void setConRelleno(boolean conRelleno) { this.conRelleno = conRelleno; }
     }
 
     public static class FondoDTO {
