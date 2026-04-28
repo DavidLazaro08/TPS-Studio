@@ -62,3 +62,10 @@ build/
 ##################################
 .DS_Store
 Thumbs.db
+
+# Empaquetado / ejecutables generados
+dist/
+target/
+*.exe
+*.msi
+*.zip
