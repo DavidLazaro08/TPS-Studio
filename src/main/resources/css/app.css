@@ -241,84 +241,90 @@
 }
 
 /* =====================================================
-   WORKSPACE — Professional Toolbar
+   WORKSPACE — Professional Toolbar (Final Premium Polish)
    ===================================================== */
 
 .main-toolbar {
     -fx-background-color: #1a1618;
     -fx-border-color: #2a2628;
     -fx-border-width: 0 0 1 0;
+    -fx-pref-height: 40;
 }
 
-.toolbar-group {
-    -fx-padding: 0 4;
-}
-
-.toolbar-separator {
+.subtle-separator {
     -fx-background-color: transparent;
     -fx-padding: 0 4;
+    -fx-max-height: 18;
 }
 
-.toolbar-separator .line {
-    -fx-border-color: #2a2628;
+.subtle-separator .line {
+    -fx-border-color: #322e30;
     -fx-border-width: 0 1 0 0;
 }
 
-/* 1. Modo Selector (Segmented) */
+.micro-separator {
+    -fx-opacity: 0.15;
+    -fx-padding: 0 6;
+    -fx-max-height: 14;
+}
+
+/* 1. Modo Selector */
 .mode-toggle-left, .mode-toggle-right {
     -fx-background-color: transparent;
-    -fx-text-fill: #c4c0c2;
-    -fx-font-size: 12px;
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-padding: 6 16;
+    -fx-padding: 0 16;
     -fx-cursor: hand;
-    -fx-border-color: #4a6b7c;
-    -fx-border-width: 1.5;
+    -fx-border-color: #3d3739;
+    -fx-border-width: 1;
 }
 
 .mode-toggle-left {
-    -fx-background-radius: 6 0 0 6;
-    -fx-border-radius: 6 0 0 6;
+    -fx-background-radius: 4 0 0 4;
+    -fx-border-radius: 4 0 0 4;
 }
 
 .mode-toggle-right {
-    -fx-background-radius: 0 6 6 0;
-    -fx-border-radius: 0 6 6 0;
-    -fx-border-width: 1.5 1.5 1.5 0;
+    -fx-background-radius: 0 4 4 0;
+    -fx-border-radius: 0 4 4 0;
+    -fx-border-width: 1 1 1 0;
 }
 
 .mode-toggle-left:selected, .mode-toggle-right:selected {
     -fx-background-color: #4a6b7c;
     -fx-text-fill: #e8e6e7;
+    -fx-border-color: #5a7b8c;
 }
 
 .mode-toggle-left:hover:not(:selected), .mode-toggle-right:hover:not(:selected) {
     -fx-background-color: #2a2628;
 }
 
-/* 2. Acciones de Archivo (Icons) */
+/* 2. Iconos de Archivo */
 .icon-btn {
     -fx-background-color: transparent;
     -fx-text-fill: #c4c0c2;
-    -fx-font-size: 15px;
-    -fx-padding: 4 8;
+    -fx-font-size: 14px;
+    -fx-padding: 0 10;
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
 
 .icon-btn:hover {
     -fx-background-color: #2a2628;
-    -fx-text-fill: #e8e6e7;
+    -fx-text-fill: white;
 }
 
 /* 3. Salida / Producción */
 .action-btn, .action-btn-primary {
     -fx-text-fill: #e8e6e7;
-    -fx-font-size: 12px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-padding: 6 12;
+    -fx-padding: 0 12;
     -fx-background-radius: 4;
     -fx-cursor: hand;
+    -fx-border-width: 1;
 }
 
 .action-btn {
@@ -332,50 +338,48 @@
 }
 
 .action-btn-primary {
-    -fx-background-color: #3d1f28; 
-    -fx-border-color: #4d2a34;
+    -fx-background-color: #314450; 
+    -fx-border-color: #4a6b7c;
 }
 
 .action-btn-primary:hover {
-    -fx-background-color: #4d2a34;
+    -fx-background-color: #4a6b7c;
 }
 
-/* 4. Lienzo / Vista */
-.zoom-container {
-    -fx-background-color: #0a0809;
+/* 4. Zoom Integrado */
+.integrated-zoom {
+    -fx-background-color: #0d0a0c;
     -fx-background-radius: 4;
-    -fx-padding: 2;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1;
 }
 
-.zoom-btn {
+.zoom-btn-minimal {
     -fx-background-color: transparent;
-    -fx-text-fill: #c4c0c2;
+    -fx-text-fill: #847e82;
     -fx-font-weight: bold;
-    -fx-padding: 2 8;
+    -fx-padding: 0 12;
     -fx-cursor: hand;
 }
 
-.zoom-btn:hover {
+.zoom-btn-minimal:hover {
     -fx-text-fill: white;
+    -fx-background-color: #231f21;
 }
 
-.zoom-label {
-    -fx-text-fill: #c4c0c2;
+.zoom-label-fixed {
+    -fx-text-fill: #e8e6e7;
     -fx-font-size: 11px;
-    -fx-min-width: 45;
+    -fx-font-weight: bold;
+    -fx-min-width: 50;
     -fx-alignment: center;
-}
-
-.inner-separator {
-    -fx-opacity: 0.3;
-    -fx-padding: 0 4;
 }
 
 .view-toggle {
     -fx-background-color: transparent;
-    -fx-text-fill: #c4c0c2;
-    -fx-font-size: 12px;
-    -fx-padding: 5 10;
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+    -fx-padding: 0 10;
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
@@ -385,17 +389,17 @@
     -fx-text-fill: #e8e6e7;
 }
 
-.view-toggle:hover {
+.view-toggle:hover:not(:selected) {
     -fx-background-color: #2a2628;
 }
 
-.toolbar-hint {
-    -fx-text-fill: #6a6568;
+.control-label {
+    -fx-text-fill: #b4b0b2;
     -fx-font-size: 11px;
-    -fx-font-style: italic;
+    -fx-font-weight: bold;
 }
 
-.troquel-container {
+.troquel-group {
     -fx-padding: 0 4;
 }
 
@@ -405,10 +409,6 @@
     -fx-border-color: #3d3739;
     -fx-border-width: 1;
     -fx-border-radius: 4;
-}
-
-.toolbar-combo:hover {
-    -fx-border-color: #4a6b7c;
 }
 
 .toolbar-combo .label {
@@ -448,10 +448,10 @@
 
 /* 5. Paneles */
 .panel-toggle {
-    -fx-background-color: #141012;
+    -fx-background-color: transparent;
     -fx-text-fill: #9a9598;
-    -fx-font-size: 12px;
-    -fx-padding: 6 12;
+    -fx-font-size: 11px;
+    -fx-padding: 0 12;
     -fx-background-radius: 4;
     -fx-border-color: #2a2628;
     -fx-border-width: 1;
