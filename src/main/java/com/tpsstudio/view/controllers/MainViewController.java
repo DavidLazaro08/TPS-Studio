@@ -15,6 +15,7 @@ import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.service.DesignValidatorService;
 import com.tpsstudio.service.ImpresionService;
 import com.tpsstudio.service.SalidaImpresion;
+import com.tpsstudio.service.SalidaImpresoraDirecta;
 import com.tpsstudio.service.SalidaPDFSistema;
 import com.tpsstudio.service.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
@@ -1100,7 +1101,12 @@ public class MainViewController {
 
         new Thread(() -> {
             try {
-                SalidaImpresion salida = new SalidaPDFSistema();
+                SalidaImpresion salida;
+                if (trabajo.nombreImpresora() != null) {
+                    salida = new SalidaImpresoraDirecta(trabajo.nombreImpresora());
+                } else {
+                    salida = new SalidaPDFSistema();
+                }
                 new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
 
                 Platform.runLater(() -> TPSToast.mostrar(

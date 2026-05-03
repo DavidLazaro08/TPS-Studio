@@ -9,6 +9,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
+import javax.print.PrintService;
+import java.awt.print.PrinterJob;
 
 /**
  * Diálogo de configuración de impresión — Fase 1.
@@ -40,6 +42,22 @@ public class ImpresionDialog extends Dialog<TrabajoImpresion> {
 
         int registroActual = (fuenteDatos != null) ? fuenteDatos.getIndiceActual() : 0;
         int totalRegistros  = (fuenteDatos != null) ? fuenteDatos.getTotalRegistros() : 1;
+
+        // ── DESTINO DE IMPRESIÓN ──────────────────────────────────────────────
+        Label lblDestino = new Label("Destino de impresión");
+        lblDestino.getStyleClass().add("lbl-section");
+
+        ComboBox<String> cmbImpresoras = new ComboBox<>();
+        cmbImpresoras.setPrefWidth(350);
+        cmbImpresoras.getItems().add("[ Visor del sistema (PDF) ]");
+        
+        PrintService[] printServices = PrinterJob.lookupPrintServices();
+        for (PrintService ps : printServices) {
+            cmbImpresoras.getItems().add(ps.getName());
+        }
+
+        VBox boxDestino = new VBox(6, cmbImpresoras);
+        boxDestino.setPadding(new Insets(0, 0, 0, 12));
 
         // ── CARA ───────────────────────────────────────────────────────────────
         Label lblCara = new Label("Cara a imprimir");
@@ -113,13 +131,26 @@ public class ImpresionDialog extends Dialog<TrabajoImpresion> {
         boxSangre.setPadding(new Insets(0, 0, 0, 12));
 
         // ── MODO DE SALIDA (informativo) ───────────────────────────────────────
-        Label lblModo = new Label(
-                "Modo: Vista previa PDF + Imprimir  —  el visor del sistema mostrará el diálogo de impresión.");
+        Label lblModo = new Label();
         lblModo.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
         lblModo.setWrapText(true);
 
+        // Actualizar el texto descriptivo dinámicamente según el destino elegido
+        cmbImpresoras.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null || newVal.equals("[ Visor del sistema (PDF) ]")) {
+                lblModo.setText("Modo: Vista previa PDF — se generará un PDF temporal para revisar antes de imprimir.");
+            } else {
+                lblModo.setText("Modo: Impresión directa — el trabajo se enviará a la cola de la impresora seleccionada.");
+            }
+        });
+        
+        // Forzar inicialización del texto para el valor por defecto
+        cmbImpresoras.getSelectionModel().selectFirst();
+
         // ── ENSAMBLADO ─────────────────────────────────────────────────────────
         VBox root = new VBox(14,
+                lblDestino, boxDestino,
+                new Separator(),
                 lblCara, hbCara,
                 new Separator(),
                 lblRegistros, boxRegistros,
@@ -142,7 +173,10 @@ public class ImpresionDialog extends Dialog<TrabajoImpresion> {
             String rango = txtRango.getText().trim().isEmpty() ? "TODOS" : txtRango.getText().trim();
             boolean sinSangre = rbSinSangre.isSelected();
 
-            return new TrabajoImpresion(frente, dorso, soloActual, rango, sinSangre, registroActual);
+            String seleccion = cmbImpresoras.getSelectionModel().getSelectedItem();
+            String nombreImpresora = (seleccion == null || seleccion.equals("[ Visor del sistema (PDF) ]")) ? null : seleccion;
+
+            return new TrabajoImpresion(frente, dorso, soloActual, rango, sinSangre, registroActual, nombreImpresora);
         });
     }
 }

@@ -21,6 +21,7 @@ package com.tpsstudio.service;
  * @param recortarSangre      true para generar el PDF sin área de sangrado (tamaño CR80 final).
  * @param registroActualIdx   índice 0-based del registro activo; usado cuando
  *                            {@code soloRegistroActual} es true.
+ * @param nombreImpresora     nombre de la impresora elegida, o nulo si se usa el visor de PDF por defecto.
  */
 public record TrabajoImpresion(
         boolean imprimirFrente,
@@ -28,5 +29,6 @@ public record TrabajoImpresion(
         boolean soloRegistroActual,
         String  rangoFilas,
         boolean recortarSangre,
-        int     registroActualIdx
+        int     registroActualIdx,
+        String  nombreImpresora
 ) {}
