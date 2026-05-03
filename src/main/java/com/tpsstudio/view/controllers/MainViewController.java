@@ -13,7 +13,13 @@ import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.service.DesignValidatorService;
+import com.tpsstudio.service.ImpresionService;
+import com.tpsstudio.service.SalidaImpresion;
+import com.tpsstudio.service.SalidaImpresoraDirecta;
+import com.tpsstudio.service.SalidaPDFSistema;
+import com.tpsstudio.service.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
+import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -331,6 +337,7 @@ public class MainViewController {
                 }
             });
         }
+        modeManager.setOnPrint(this::onImprimirProyecto);
 
         modeManager.setOnElementSelected(elemento -> {
             viewModel.setElementoSeleccionado(elemento);
@@ -1078,6 +1085,68 @@ public class MainViewController {
                 });
             }
         }, "pdf-export-thread").start();
+    }
+
+    /**
+     * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF temporal
+     * con el mismo motor que la exportación y lo envía al sistema operativo.
+     *
+     * El hilo de fondo sigue el mismo patrón que onExportarProyecto().
+     */
+    @FXML
+    private void onImprimirProyecto() {
+        if (viewModel.getProyectoActual() == null) {
+            new Alert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
+            return;
+        }
+
+        if (!SalidaPDFSistema.isSupported()) {
+            TPSToast.mostrar(canvas.getScene().getWindow(),
+                    "La impresión mediante el sistema no está disponible en este equipo.",
+                    null, TPSToast.Tipo.ERROR);
+            return;
+        }
+
+        com.tpsstudio.model.project.FuenteDatos fd = projectManager.getFuenteDatos();
+
+        ImpresionDialog dialog = new ImpresionDialog(
+                canvas.getScene().getWindow(),
+                viewModel.getProyectoActual(),
+                fd);
+
+        java.util.Optional<TrabajoImpresion> resultado = dialog.showAndWait();
+        if (resultado.isEmpty() || resultado.get() == null) return;
+
+        TrabajoImpresion trabajo = resultado.get();
+        com.tpsstudio.model.project.Proyecto proyecto = viewModel.getProyectoActual();
+        javafx.stage.Window owner = canvas.getScene().getWindow();
+
+        new Thread(() -> {
+            try {
+                SalidaImpresion salida;
+                if (trabajo.nombreImpresora() != null) {
+                    salida = new SalidaImpresoraDirecta(trabajo.nombreImpresora());
+                } else {
+                    salida = new SalidaPDFSistema();
+                }
+                new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
+
+                Platform.runLater(() -> TPSToast.mostrar(
+                        owner,
+                        "Trabajo enviado a la cola de impresión",
+                        null, TPSToast.Tipo.EXITO));
+
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    err.setTitle("Error al imprimir");
+                    err.setHeaderText("No se pudo completar la impresión");
+                    err.setContentText(ex.getMessage());
+                    err.showAndWait();
+                });
+            }
+        }, "imprimir-thread").start();
     }
 
     @FXML
