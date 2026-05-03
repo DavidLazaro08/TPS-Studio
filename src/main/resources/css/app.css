@@ -308,6 +308,54 @@
     -fx-background-color: #2a2628;
 }
 
+/* ComboBox de toolbar personalizado */
+.toolbar-combo {
+    -fx-background-color: #2a2628;
+    -fx-background-radius: 4;
+    -fx-border-color: #3d3739;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+.toolbar-combo:hover {
+    -fx-border-color: #4a6b7c;
+}
+
+.toolbar-combo .label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
+}
+
+.toolbar-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.toolbar-combo .arrow {
+    -fx-background-color: #847e82;
+}
+
+.toolbar-combo .list-view {
+    -fx-background-color: #1a1618;
+    -fx-border-color: #4a6b7c;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+.toolbar-combo .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+}
+
+.toolbar-combo .list-cell:hover {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+}
+
+.toolbar-combo .list-cell:selected {
+    -fx-background-color: #4a6b7c;
+    -fx-text-fill: #e8e6e7;
+}
+
 /* Paneles laterales */
 .side-panel {
     -fx-background-color: #141012;

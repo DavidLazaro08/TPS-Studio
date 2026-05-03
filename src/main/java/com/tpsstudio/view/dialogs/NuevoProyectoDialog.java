@@ -2,6 +2,7 @@ package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.ClienteInfo;
 import com.tpsstudio.model.project.ProyectoMetadata;
+import com.tpsstudio.model.enums.TipoTroquel;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -29,8 +30,9 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
 
     private ClienteInfo clienteInfo;
 
-    // Para poder actualizar el label "Se creará la carpeta..."
     private Label lblUbicacionInfo;
+
+    private ComboBox<TipoTroquel> cmbTroquel;
 
     // Ventana propietaria (para centrado y file choosers)
     private final Window ownerWindow;
@@ -94,6 +96,14 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         lblClienteInfo.getStyleClass().add("lbl-hint-empty");
         hboxCliente.getChildren().addAll(btnDatosCliente, lblClienteInfo);
 
+        // ===== TROQUELADO =====
+        Label lblTroquel = new Label("Troquelado (Agujero Lanyard):");
+        lblTroquel.getStyleClass().add("lbl-section");
+        cmbTroquel = new ComboBox<>();
+        cmbTroquel.getItems().addAll(TipoTroquel.values());
+        cmbTroquel.getSelectionModel().selectFirst();
+        cmbTroquel.setPrefWidth(300);
+
         // ===== VINCULAR BASE DE DATOS =====
         chkVincularBD = new CheckBox("Vincular base de datos (opcional)");
         chkVincularBD.getStyleClass().add("lbl-section");
@@ -147,6 +157,14 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         grid.add(lblCliente, 0, row, 2, 1);
         row++;
         grid.add(hboxCliente, 0, row, 2, 1);
+
+        row++;
+        grid.add(new Separator(), 0, row, 2, 1);
+
+        row++;
+        grid.add(lblTroquel, 0, row, 2, 1);
+        row++;
+        grid.add(cmbTroquel, 0, row, 2, 1);
 
         row++;
         grid.add(new Separator(), 0, row, 2, 1);
@@ -392,5 +410,9 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         }
 
         return metadata;
+    }
+
+    public TipoTroquel getTipoTroquelSeleccionado() {
+        return cmbTroquel.getValue() != null ? cmbTroquel.getValue() : TipoTroquel.NINGUNO;
     }
 }

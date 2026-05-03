@@ -4,6 +4,7 @@ import com.tpsstudio.model.elements.Elemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
+import com.tpsstudio.model.enums.TipoTroquel;
 import com.tpsstudio.model.project.Proyecto;
 
 import java.util.ArrayList;
@@ -39,18 +40,18 @@ public class DesignValidatorService {
         }
 
         // Revisamos el frente
-        validarCara(proyecto.getElementosFrente(), proyecto.getFondoFrente(), true, avisos);
+        validarCara(proyecto.getElementosFrente(), proyecto.getFondoFrente(), true, proyecto.getTipoTroquel(), avisos);
 
         // Revisamos el dorso (solo si hay elementos o fondo)
         boolean hasDorso = proyecto.getFondoDorso() != null || !proyecto.getElementosDorso().isEmpty();
         if (hasDorso) {
-            validarCara(proyecto.getElementosDorso(), proyecto.getFondoDorso(), false, avisos);
+            validarCara(proyecto.getElementosDorso(), proyecto.getFondoDorso(), false, proyecto.getTipoTroquel(), avisos);
         }
 
         return avisos;
     }
 
-    private void validarCara(List<Elemento> elementos, ImagenFondoElemento fondo, boolean esFrente, List<String> avisos) {
+    private void validarCara(List<Elemento> elementos, ImagenFondoElemento fondo, boolean esFrente, TipoTroquel tipoTroquel, List<String> avisos) {
         String capa = esFrente ? "FRENTE" : "DORSO";
 
         // 1. VALIDACIÓN DEL FONDO (RESOLUCIÓN Y PROPORCIÓN)
@@ -81,7 +82,22 @@ public class DesignValidatorService {
             }
         }
 
-        // 2. VALIDACIÓN DE ELEMENTOS
+        // 2. CÁLCULO DEL ÁREA DEL TROQUEL (Si existe)
+        double tx = -1, ty = -1, tw = 0, th = 0;
+        boolean hayTroquel = (tipoTroquel != null && tipoTroquel != TipoTroquel.NINGUNO);
+        if (hayTroquel) {
+            double cx = CARD_WIDTH / 2.0;
+            double cy = 18.0; // 18px ~ 4.5mm desde arriba
+            if (tipoTroquel == TipoTroquel.CIRCULAR) {
+                tw = 20.0; th = 20.0;
+                tx = cx - 10.0; ty = cy - 10.0;
+            } else if (tipoTroquel == TipoTroquel.ALARGADO) {
+                tw = 56.0; th = 12.0;
+                tx = cx - 28.0; ty = cy - 6.0;
+            }
+        }
+
+        // 3. VALIDACIÓN DE ELEMENTOS
         for (Elemento elem : elementos) {
             if (!elem.isVisible()) continue;
 
@@ -115,6 +131,17 @@ public class DesignValidatorService {
             } else if (elem instanceof ImagenElemento) {
                 if (saleIzquierda || saleArriba || saleDerecha || saleAbajo) {
                     avisos.add("[" + capa + "] La imagen '" + name + "' o su caja de selección se sale excesivamente fuera de los límites.");
+                }
+            }
+
+            // B) Colisión con el Troquel
+            if (hayTroquel) {
+                // Intersección básica de rectángulos (Bounding Box)
+                boolean intersecaX = ex < tx + tw && ex + ew > tx;
+                boolean intersecaY = ey < ty + th && ey + eh > ty;
+                
+                if (intersecaX && intersecaY) {
+                    avisos.add("[" + capa + "] CRÍTICO: El elemento '" + name + "' está debajo del área de troquelado (" + tipoTroquel.getDescripcion() + ") y será perforado físicamente.");
                 }
             }
         }

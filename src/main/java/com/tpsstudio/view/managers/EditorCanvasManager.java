@@ -6,6 +6,7 @@ import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.enums.AppMode;
+import com.tpsstudio.model.enums.TipoTroquel;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.util.ImageUtils;
@@ -514,6 +515,41 @@ public class EditorCanvasManager {
                     gc.strokeRect(ex + ew - (dim / 2), ey + eh - (dim / 2), dim, dim);
                 }
             }
+        }
+
+        // 5.5) Visualización del troquel (Hole Punch)
+        if (mostrarGuias && proyectoActual.getTipoTroquel() != null && proyectoActual.getTipoTroquel() != TipoTroquel.NINGUNO) {
+            gc.setGlobalAlpha(0.6);
+            gc.setFill(Color.web("#e74c3c")); // Rojo semitransparente para indicar "agujero"
+            gc.setStroke(Color.web("#c0392b"));
+            gc.setLineWidth(1.5);
+
+            double cx = cardX + (scaledWidth / 2); // Centro X
+            double cy = cardY + (18 * zoomLevel);  // Centro Y (18px = ~4.5mm desde arriba)
+
+            if (proyectoActual.getTipoTroquel() == TipoTroquel.CIRCULAR) {
+                // Circular: 20x20px (~5mm)
+                double radius = 10 * zoomLevel;
+                gc.fillOval(cx - radius, cy - radius, radius * 2, radius * 2);
+                gc.strokeOval(cx - radius, cy - radius, radius * 2, radius * 2);
+                
+                // Cruzeta central
+                gc.setLineWidth(0.5);
+                gc.strokeLine(cx, cy - radius - 5, cx, cy + radius + 5);
+                gc.strokeLine(cx - radius - 5, cy, cx + radius + 5, cy);
+            } else if (proyectoActual.getTipoTroquel() == TipoTroquel.ALARGADO) {
+                // Alargado: 56x12px (~14x3mm)
+                double w = 56 * zoomLevel;
+                double h = 12 * zoomLevel;
+                gc.fillRoundRect(cx - (w / 2), cy - (h / 2), w, h, 10 * zoomLevel, 10 * zoomLevel);
+                gc.strokeRoundRect(cx - (w / 2), cy - (h / 2), w, h, 10 * zoomLevel, 10 * zoomLevel);
+                
+                // Cruzeta central
+                gc.setLineWidth(0.5);
+                gc.strokeLine(cx, cy - (h/2) - 5, cx, cy + (h/2) + 5);
+                gc.strokeLine(cx - (w/2) - 5, cy, cx + (w/2) + 5, cy);
+            }
+            gc.setGlobalAlpha(1.0);
         }
 
         // 6) Texto informativo de la UI
