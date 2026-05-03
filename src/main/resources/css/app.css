@@ -252,7 +252,7 @@
     -fx-background-color: transparent;
     -fx-text-fill: #c4c0c2;
     -fx-font-size: 13px;
-    -fx-padding: 6 12;
+    -fx-padding: 4 10;
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
@@ -294,7 +294,7 @@
     -fx-background-color: transparent;
     -fx-text-fill: #c4c0c2;
     -fx-font-size: 13px;
-    -fx-padding: 6 12;
+    -fx-padding: 4 10;
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
@@ -419,9 +419,9 @@
 .mode-toggle {
     -fx-background-color: transparent;
     -fx-text-fill: #c4c0c2;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-padding: 8 16;
+    -fx-padding: 6 14;
     -fx-background-radius: 6;
     -fx-cursor: hand;
     -fx-border-color: #4a6b7c;

@@ -9,7 +9,9 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -42,45 +44,65 @@
                         <ToggleGroup fx:id="modeToggleGroup" />
                     </fx:define>
 
-                    <ToggleButton fx:id="btnModeExport" text="📦 Producción" toggleGroup="$modeToggleGroup"
-                                  onAction="#onModeExport" styleClass="mode-toggle" selected="true" />
-                    <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup"
-                                  onAction="#onModeEdit" styleClass="mode-toggle" />
+                    <HBox spacing="4" alignment="CENTER_LEFT">
+                        <ToggleButton fx:id="btnModeExport" text="📦 Producción" toggleGroup="$modeToggleGroup"
+                                      onAction="#onModeExport" styleClass="mode-toggle" selected="true" />
+                        <ToggleButton fx:id="btnModeEdit" text="🎨 Diseño" toggleGroup="$modeToggleGroup"
+                                      onAction="#onModeEdit" styleClass="mode-toggle" />
+                    </HBox>
 
                     <Separator orientation="VERTICAL" />
 
-                    <!-- BLOQUE 2: Archivo / Proyecto -->
-                    <Button fx:id="btnNuevo" text="Nuevo" onAction="#onNuevoProyecto" styleClass="toolbar-btn" />
-                    <Button fx:id="btnAbrir" text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
-                    <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
-                    <Button fx:id="btnExportar" text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
-                    <Button fx:id="btnImprimir" text="🖨 Imprimir" onAction="#onImprimirProyecto" styleClass="toolbar-btn" />
+                    <!-- BLOQUE 2: Archivo / Proyecto (Iconos para ahorrar espacio) -->
+                    <HBox spacing="2" alignment="CENTER_LEFT">
+                        <Button fx:id="btnNuevo" text="📄" onAction="#onNuevoProyecto" styleClass="toolbar-btn">
+                            <tooltip><Tooltip text="Nuevo Proyecto" /></tooltip>
+                        </Button>
+                        <Button fx:id="btnAbrir" text="📂" onAction="#onAbrirProyecto" styleClass="toolbar-btn">
+                            <tooltip><Tooltip text="Abrir Proyecto" /></tooltip>
+                        </Button>
+                        <Button fx:id="btnGuardar" text="💾" onAction="#onGuardarProyecto" styleClass="toolbar-btn">
+                            <tooltip><Tooltip text="Guardar Cambios" /></tooltip>
+                        </Button>
+                        <Button fx:id="btnExportar" text="📤" onAction="#onExportarProyecto" styleClass="toolbar-btn">
+                            <tooltip><Tooltip text="Exportar a PDF" /></tooltip>
+                        </Button>
+                        <Button fx:id="btnImprimir" text="🖨" onAction="#onImprimirProyecto" styleClass="toolbar-btn">
+                            <tooltip><Tooltip text="Imprimir Tarjeta" /></tooltip>
+                        </Button>
+                    </HBox>
 
                     <Separator orientation="VERTICAL" />
 
                     <!-- BLOQUE 3: Vista / Documento -->
-                    <Button text="-" onAction="#onZoomOut" styleClass="toolbar-btn-small" />
-                    <Label fx:id="lblZoom" text="100%" styleClass="toolbar-label" />
-                    <Button text="+" onAction="#onZoomIn" styleClass="toolbar-btn-small" />
+                    <HBox spacing="4" alignment="CENTER_LEFT">
+                        <Button text="-" onAction="#onZoomOut" styleClass="toolbar-btn-small" />
+                        <Label fx:id="lblZoom" text="100%" styleClass="toolbar-label" />
+                        <Button text="+" onAction="#onZoomIn" styleClass="toolbar-btn-small" />
+                    </HBox>
 
                     <Separator orientation="VERTICAL" />
 
-                    <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso"
-                                  styleClass="toolbar-toggle" selected="true" />
+                    <!-- BLOQUE 4: Controles de visualización -->
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso"
+                                      styleClass="toolbar-toggle" selected="true" />
+                        <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias"
+                                      styleClass="toolbar-toggle" selected="true" />
+                        <ComboBox fx:id="cmbTroquelToolbar" promptText="Sin Troquel" prefWidth="120"
+                                  styleClass="toolbar-combo" />
+                    </HBox>
 
-                    <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias"
-                                  styleClass="toolbar-toggle" selected="true" />
-
-                    <ComboBox fx:id="cmbTroquelToolbar" promptText="Sin Troquel" prefWidth="130"
-                              styleClass="toolbar-combo" />
+                    <!-- Espaciador para empujar lo siguiente a la derecha -->
+                    <Region HBox.hgrow="ALWAYS" />
 
                     <Separator orientation="VERTICAL" />
 
-                    <!-- BLOQUE 4: Paneles contextuales (solo visibles en modo Diseño) -->
+                    <!-- BLOQUE 5: Paneles contextuales -->
                     <HBox fx:id="bloqueContextual" spacing="6" alignment="CENTER_LEFT" visible="false" managed="false">
                         <ToggleButton fx:id="togglePropiedades" text="⚙ Propiedades" onAction="#onTogglePropiedades"
                                       styleClass="toolbar-toggle" />
-                        <ToggleButton fx:id="toggleDatosVariables" text="📊 Datos Variables" onAction="#onToggleDatosVariables"
+                        <ToggleButton fx:id="toggleDatosVariables" text="📊 Datos" onAction="#onToggleDatosVariables"
                                       styleClass="toolbar-toggle" />
                     </HBox>
                 </HBox>
