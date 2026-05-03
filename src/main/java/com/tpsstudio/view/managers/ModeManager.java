@@ -69,6 +69,7 @@ public class ModeManager {
     private Runnable onAddBackground;
     private Runnable onNewCR80;
     private Runnable onExport;
+    private Runnable onPrint;
 
     private Consumer<Elemento> onElementSelected;
     private Consumer<Proyecto> onProjectSelected;
@@ -126,6 +127,10 @@ public class ModeManager {
 
     public void setOnExport(Runnable callback) {
         this.onExport = callback;
+    }
+
+    public void setOnPrint(Runnable callback) {
+        this.onPrint = callback;
     }
 
     public void setOnElementSelected(Consumer<Elemento> callback) {
@@ -762,6 +767,14 @@ public class ModeManager {
                 onExport.run();
         });
 
+        Button btnImprimir = new Button("\uD83D\uDDA8 Imprimir\u2026");
+        btnImprimir.getStyleClass().add("toolbox-btn");
+        btnImprimir.setMaxWidth(200.0);
+        btnImprimir.setOnAction(e -> {
+            if (onPrint != null)
+                onPrint.run();
+        });
+
         exportPanel.getChildren().addAll(
                 lblExport,
                 lblInfoExp,
@@ -769,7 +782,8 @@ public class ModeManager {
                 lblGuias,
                 lblSide,
                 new Separator(),
-                btnDoExport);
+                btnDoExport,
+                btnImprimir);
 
         return exportPanel;
     }

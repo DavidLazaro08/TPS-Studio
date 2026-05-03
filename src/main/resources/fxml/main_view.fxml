@@ -53,6 +53,7 @@
                     <Button fx:id="btnAbrir" text="Abrir" onAction="#onAbrirProyecto" styleClass="toolbar-btn" />
                     <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardarProyecto" styleClass="toolbar-btn" />
                     <Button fx:id="btnExportar" text="Exportar" onAction="#onExportarProyecto" styleClass="toolbar-btn" />
+                    <Button fx:id="btnImprimir" text="🖨 Imprimir" onAction="#onImprimirProyecto" styleClass="toolbar-btn" />
 
                     <Separator orientation="VERTICAL" />
 
