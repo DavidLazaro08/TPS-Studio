@@ -3,6 +3,7 @@ package com.tpsstudio.view.dialogs;
 import com.tpsstudio.model.project.ClienteInfo;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
+import com.tpsstudio.model.enums.TipoTroquel;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -29,6 +30,8 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
     private String rutaAlmacenadaBD = null; // Guardar la ruta real independientemente de lo que se muestre
     private Label lblAvisoBD;
     private Button btnExaminarBD;
+
+    private ComboBox<TipoTroquel> cmbTroquel;
 
     private boolean eliminarProyecto = false;
 
@@ -88,6 +91,14 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
         clienteBox.getChildren().addAll(lblClienteInfo, btnEditarCliente);
 
+        // Troquelado
+        Label lblTroquel = new Label("Troquelado (Hole Punch):");
+        lblTroquel.getStyleClass().add("lbl-section");
+        cmbTroquel = new ComboBox<>();
+        cmbTroquel.getItems().addAll(TipoTroquel.values());
+        cmbTroquel.setValue(proyecto.getTipoTroquel());
+        cmbTroquel.setPrefWidth(300);
+
         // Base de datos
         Label lblBD = new Label("Base de datos:");
         lblBD.getStyleClass().add("lbl-section");
@@ -144,6 +155,8 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
                 new Separator(),
                 lblCliente, clienteBox,
                 new Separator(),
+                lblTroquel, cmbTroquel,
+                new Separator(),
                 lblBD, chkVincularBD, bdBox, lblAvisoBD,
                 new Separator(),
                 lblInfo);
@@ -183,6 +196,8 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
         setResultConverter(dialogButton -> {
             if (dialogButton == btnGuardar) {
+                proyecto.setTipoTroquel(cmbTroquel.getValue());
+                
                 metadata.setNombre(txtNombre.getText().trim());
                 metadata.setClienteInfo(clienteInfoActual != null ? clienteInfoActual : new ClienteInfo());
 

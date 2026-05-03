@@ -3,6 +3,7 @@ package com.tpsstudio.model.project;
 import com.tpsstudio.model.elements.Elemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.enums.TipoTroquel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -47,6 +48,9 @@ public class Proyecto {
     private FondoFitMode fondoFitModePreferido;
     private boolean noVolverAPreguntarFondo;
 
+    // Tipo de troquel físico
+    private TipoTroquel tipoTroquel;
+
     // Metadatos del proyecto (ubicación, cliente, etc.)
     private ProyectoMetadata metadata;
 
@@ -63,6 +67,7 @@ public class Proyecto {
         this.fondoDorso = null;
         this.fondoFitModePreferido = null;
         this.noVolverAPreguntarFondo = false;
+        this.tipoTroquel = TipoTroquel.NINGUNO;
     }
 
     // Getters y setters
@@ -161,6 +166,15 @@ public class Proyecto {
 
     public void setMetadata(ProyectoMetadata metadata) {
         this.metadata = metadata;
+    }
+
+    public TipoTroquel getTipoTroquel() {
+        // Por retrocompatibilidad con proyectos guardados antes del Enum
+        return tipoTroquel != null ? tipoTroquel : TipoTroquel.NINGUNO;
+    }
+
+    public void setTipoTroquel(TipoTroquel tipoTroquel) {
+        this.tipoTroquel = tipoTroquel;
     }
 
     @Override

@@ -73,6 +73,8 @@ public class MainViewController {
     @FXML
     private ToggleButton toggleGuias;
     @FXML
+    private ComboBox<TipoTroquel> cmbTroquelToolbar;
+    @FXML
     private ToggleButton btnModeEdit;
     @FXML
     private ToggleButton btnModeExport;
@@ -315,6 +317,26 @@ public class MainViewController {
 
         modeManager.setOnNewCR80(this::onNuevoCR80);
         modeManager.setOnExport(this::onExportarProyecto);
+        
+        // Inicializar ComboBox de Troquel en la barra superior
+        if (cmbTroquelToolbar != null) {
+            cmbTroquelToolbar.getItems().addAll(TipoTroquel.values());
+            cmbTroquelToolbar.getSelectionModel().select(TipoTroquel.NINGUNO);
+            cmbTroquelToolbar.setOnAction(e -> {
+                if (viewModel.getProyectoActual() != null) {
+                    TipoTroquel sel = cmbTroquelToolbar.getValue();
+                    viewModel.getProyectoActual().setTipoTroquel(sel);
+                    
+                    // Asegurar que las guías están visibles si se selecciona un troquel
+                    if (sel != TipoTroquel.NINGUNO && !toggleGuias.isSelected()) {
+                        toggleGuias.setSelected(true);
+                        canvasManager.setMostrarGuias(true);
+                    }
+                    
+                    dibujarCanvas();
+                }
+            });
+        }
         modeManager.setOnPrint(this::onImprimirProyecto);
 
         modeManager.setOnElementSelected(elemento -> {
@@ -1160,6 +1182,9 @@ public class MainViewController {
             Proyecto nuevo = projectManager.crearProyectoDesdeMetadata(metadata);
 
             if (nuevo != null) {
+                // Configurar propiedades físicas adicionales no incluidas en metadata
+                nuevo.setTipoTroquel(dialog.getTipoTroquelSeleccionado());
+
                 // Mostrar alerta de éxito visual en el Controller
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.INFORMATION);
