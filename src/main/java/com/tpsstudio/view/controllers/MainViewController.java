@@ -521,7 +521,6 @@ public class MainViewController {
                 bloqueContextual.setVisible(false);
                 bloqueContextual.setManaged(false);
             }
-            // Si había algún panel abierto, lo cerramos
             cerrarPanelDerecho();
 
             // Iniciar parpadeo (respiración suave) en el botón Diseño invitando a pulsarlo
@@ -539,7 +538,7 @@ public class MainViewController {
                                     designColorAdjust.brightnessProperty(), 0.0, Interpolator.EASE_BOTH)));
                     designPulse.setCycleCount(javafx.animation.Animation.INDEFINITE);
                 }
-                designPulse.play();
+                designPulse.playFromStart(); // Sincronizado
             }
 
         } else {
@@ -552,7 +551,6 @@ public class MainViewController {
             if (designPulse != null) {
                 designPulse.stop();
             }
-            designColorAdjust.setBrightness(0.0);
             if (btnModeEdit != null) {
                 btnModeEdit.setEffect(null);
             }

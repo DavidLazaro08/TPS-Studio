@@ -664,18 +664,166 @@ public class ModeManager {
     }
 
     private VBox buildProjectListPanel(ObservableList<Proyecto> projects, Proyecto currentProject) {
-        VBox projectPanel = new VBox(8);
-        projectPanel.setPadding(new Insets(12));
+        VBox projectPanel = new VBox(12);
+        projectPanel.setPadding(new Insets(14, 12, 14, 12));
+        VBox.setVgrow(projectPanel, Priority.ALWAYS);
 
-        Label lblTrabajos = new Label("Trabajos");
+        // Cabecera Equilibrada
+        VBox header = new VBox(2);
+        Label lblTrabajos = new Label("Gestión de Trabajos");
         lblTrabajos.getStyleClass().add("panel-title");
+        Label lblSubtitulo = new Label("Seleccione un proyecto para editar");
+        lblSubtitulo.setStyle("-fx-text-fill: #6a6568; -fx-font-size: 10px;");
+        header.getChildren().addAll(lblTrabajos, lblSubtitulo);
 
         ListView<Proyecto> listProyectos = new ListView<>();
         listProyectos.setItems(projects);
         listProyectos.getStyleClass().add("project-list");
-        listProyectos.setPrefHeight(400);
+        VBox.setVgrow(listProyectos, Priority.ALWAYS);
 
-        // Si hay proyecto actual, lo seleccionamos al abrir el modo producción
+        // --- FACTORÍA DE CELDAS COMPACTA CON EFECTO DE PULSO ---
+        listProyectos.setCellFactory(lv -> new ListCell<Proyecto>() {
+            private javafx.animation.Timeline pulse;
+
+            @Override
+            protected void updateItem(Proyecto item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    setPadding(Insets.EMPTY);
+                    if (pulse != null) { pulse.stop(); pulse = null; }
+                } else {
+                    // ── Barra de luz IZQUIERDA ─────────────────────────────────────
+                    javafx.scene.layout.Region activeBar = new javafx.scene.layout.Region();
+                    activeBar.setPrefWidth(4);
+                    activeBar.setMinWidth(4);
+                    activeBar.setMaxWidth(4);
+                    activeBar.setMaxHeight(Double.MAX_VALUE);
+                    activeBar.getStyleClass().add("project-active-bar");
+                    activeBar.setOpacity(0.0);
+                    activeBar.setVisible(false);
+
+                    // ── Texto ──────────────────────────────────────────────────────
+                    VBox textContainer = new VBox(2);
+                    textContainer.setAlignment(Pos.CENTER_LEFT);
+                    Label lblName = new Label(item.getNombre());
+                    lblName.getStyleClass().add("project-cell-name");
+                    Label lblEmpresa = new Label("");
+                    lblEmpresa.getStyleClass().add("project-cell-type");
+                    if (item.getMetadata() != null && item.getMetadata().getClienteInfo() != null) {
+                        String empresa = item.getMetadata().getClienteInfo().getNombreEmpresa();
+                        if (empresa != null && !empresa.trim().isEmpty()) {
+                            lblEmpresa.setText("Cliente: " + empresa);
+                        }
+                    }
+                    textContainer.getChildren().addAll(lblName, lblEmpresa);
+
+                    javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+                    HBox.setHgrow(spacer, Priority.ALWAYS);
+                    Label lblBadge = new Label(item.getTipo());
+                    lblBadge.getStyleClass().add("project-badge");
+
+                    // HBox de contenido (barra + texto + badge)
+                    HBox contentRow = new HBox(0);
+                    contentRow.setAlignment(Pos.CENTER_LEFT);
+                    contentRow.setMaxWidth(Double.MAX_VALUE);
+                    contentRow.setMaxHeight(Double.MAX_VALUE);
+                    HBox textAndBadge = new HBox(10);
+                    textAndBadge.setAlignment(Pos.CENTER_LEFT);
+                    textAndBadge.setPadding(new Insets(0, 12, 0, 12));
+                    HBox.setHgrow(textAndBadge, Priority.ALWAYS);
+                    textAndBadge.getChildren().addAll(textContainer, spacer, lblBadge);
+                    contentRow.getChildren().addAll(activeBar, textAndBadge);
+
+                    // ── Hover overlay (muy sutil) ──────────────────────────────────
+                    javafx.scene.layout.Region hoverOverlay = new javafx.scene.layout.Region();
+                    hoverOverlay.getStyleClass().add("project-hover-overlay");
+                    hoverOverlay.setOpacity(0.0);
+                    hoverOverlay.setMouseTransparent(true);
+                    hoverOverlay.setMaxWidth(Double.MAX_VALUE);
+                    hoverOverlay.setMaxHeight(Double.MAX_VALUE);
+
+                    // ── Selected overlay (para transición al seleccionar) ──────────
+                    javafx.scene.layout.Region selectedOverlay = new javafx.scene.layout.Region();
+                    selectedOverlay.getStyleClass().add("project-selected-overlay");
+                    selectedOverlay.setOpacity(0.0);
+                    selectedOverlay.setMouseTransparent(true);
+                    selectedOverlay.setMaxWidth(Double.MAX_VALUE);
+                    selectedOverlay.setMaxHeight(Double.MAX_VALUE);
+
+                    // ── StackPane: overlays debajo → contentRow encima ────────────
+                    javafx.scene.layout.StackPane card = new javafx.scene.layout.StackPane();
+                    card.getStyleClass().add("project-card");
+                    card.setPrefHeight(62);
+                    card.setMinHeight(62);
+                    card.getChildren().addAll(hoverOverlay, selectedOverlay, contentRow);
+
+                    // Clip con esquinas redondeadas
+                    javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+                    clip.setArcWidth(16);
+                    clip.setArcHeight(16);
+                    card.layoutBoundsProperty().addListener((obs, old, b) -> {
+                        clip.setWidth(b.getWidth());
+                        clip.setHeight(b.getHeight());
+                    });
+                    card.setClip(clip);
+
+                    // ── Separador sutil (fuera de la tarjeta) ─────────────────────
+                    javafx.scene.layout.Region separator = new javafx.scene.layout.Region();
+                    separator.getStyleClass().add("project-separator");
+                    separator.setPrefHeight(1);
+                    separator.setMaxWidth(Double.MAX_VALUE);
+                    VBox.setMargin(separator, new Insets(0, 8, 0, 8));
+
+                    // ── Layout de celda ───────────────────────────────────────────
+                    VBox cellLayout = new VBox(0);
+                    cellLayout.getChildren().addAll(card, separator);
+                    setGraphic(cellLayout);
+                    setText(null);
+                    setPadding(new Insets(6, 8, 0, 8));
+
+                    // ── Animaciones ───────────────────────────────────────────────
+                    // Hover: muy sutil (opacidad 0 → 0.6 del overlay)
+                    javafx.animation.FadeTransition hoverIn  = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                    hoverIn.setToValue(0.6);
+                    javafx.animation.FadeTransition hoverOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                    hoverOut.setToValue(0.0);
+
+                    // ── Estado seleccionado ───────────────────────────────────────
+                    if (isSelected()) {
+                        // Ya seleccionado: aparecer con fade-in suave del selectedOverlay
+                        javafx.animation.FadeTransition selectIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(550), selectedOverlay);
+                        selectIn.setFromValue(0.0);
+                        selectIn.setToValue(1.0);
+                        selectIn.play();
+
+                        activeBar.setVisible(true);
+                        if (pulse == null) {
+                            pulse = new javafx.animation.Timeline(
+                                new javafx.animation.KeyFrame(javafx.util.Duration.ZERO,
+                                    new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH)),
+                                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2),
+                                    new javafx.animation.KeyValue(activeBar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
+                                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4),
+                                    new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH))
+                            );
+                            pulse.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+                            pulse.play();
+                        }
+
+                    } else {
+                        activeBar.setVisible(false);
+                        if (pulse != null) { pulse.stop(); pulse = null; }
+                    }
+
+                    card.setOnMouseEntered(e -> { if (!isSelected()) hoverIn.playFromStart(); });
+                    card.setOnMouseExited(e  -> { if (!isSelected()) hoverOut.playFromStart(); });
+                }
+            }
+
+        });
+
         if (currentProject != null) {
             listProyectos.getSelectionModel().select(currentProject);
         }
@@ -685,32 +833,25 @@ public class ModeManager {
                 onProjectSelected.accept(newVal);
         });
 
-        // Doble click para editar
         listProyectos.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 Proyecto seleccionado = listProyectos.getSelectionModel().getSelectedItem();
-                if (seleccionado != null && seleccionado.getMetadata() != null) {
-                    if (onEditProject != null) {
-                        // Lo normal: que el MainViewController gestione el flujo
-                        onEditProject.accept(seleccionado);
-                    } else {
-                        // Alternativa: si no hay callback, tiramos del helper interno (si hay
-                        // projectManager)
-                        abrirDialogoEditarProyecto(seleccionado);
-                    }
+                if (seleccionado != null) {
+                    if (onEditProject != null) onEditProject.accept(seleccionado);
+                    else abrirDialogoEditarProyecto(seleccionado);
                 }
             }
         });
 
-        Button btnNuevoCR80 = new Button("+ Nuevo CR80");
-        btnNuevoCR80.getStyleClass().add("primary-btn");
+        Button btnNuevoCR80 = new Button("+ Nuevo Proyecto CR80");
+        btnNuevoCR80.getStyleClass().add("action-btn-primary");
         btnNuevoCR80.setMaxWidth(Double.MAX_VALUE);
+        btnNuevoCR80.setPrefHeight(32); // Altura corregida
         btnNuevoCR80.setOnAction(e -> {
-            if (onNewCR80 != null)
-                onNewCR80.run();
+            if (onNewCR80 != null) onNewCR80.run();
         });
 
-        projectPanel.getChildren().addAll(lblTrabajos, listProyectos, btnNuevoCR80);
+        projectPanel.getChildren().addAll(header, listProyectos, btnNuevoCR80);
         return projectPanel;
     }
 

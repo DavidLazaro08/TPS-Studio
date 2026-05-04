@@ -36,7 +36,7 @@
             <VBox>
                 <HBox alignment="CENTER_LEFT" styleClass="main-toolbar" spacing="12">
                     <padding>
-                        <Insets top="4" bottom="4" left="15" right="15" />
+                        <Insets top="10" bottom="10" left="15" right="15" />
                     </padding>
 
                     <!-- GRUPO 1: Selector de Modo -->
@@ -50,7 +50,7 @@
                                       onAction="#onModeEdit" styleClass="mode-toggle-right" prefHeight="30" />
                     </HBox>
 
-                    <Separator orientation="VERTICAL" styleClass="subtle-separator" />
+                    <Region styleClass="subtle-separator" />
 
                     <!-- GRUPO 2: Acciones de Archivo -->
                     <HBox spacing="2" alignment="CENTER_LEFT" styleClass="toolbar-group">
@@ -65,7 +65,7 @@
                         </Button>
                     </HBox>
 
-                    <Separator orientation="VERTICAL" styleClass="subtle-separator" />
+                    <Region styleClass="subtle-separator" />
 
                     <!-- GRUPO 3: Salida -->
                     <HBox spacing="6" alignment="CENTER_LEFT" styleClass="toolbar-group">
@@ -77,7 +77,7 @@
                         </Button>
                     </HBox>
 
-                    <Separator orientation="VERTICAL" styleClass="subtle-separator" />
+                    <Region styleClass="subtle-separator" />
 
                     <!-- GRUPO 4: Herramientas -->
                     <HBox spacing="10" alignment="CENTER_LEFT" styleClass="toolbar-group">
@@ -87,12 +87,12 @@
                             <Button text="+" onAction="#onZoomIn" styleClass="zoom-btn-minimal" prefHeight="30" />
                         </HBox>
                         
-                        <Separator orientation="VERTICAL" styleClass="micro-separator" />
+                        <Region styleClass="micro-separator" />
                         
                         <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso"
-                                      styleClass="view-toggle" selected="true" prefHeight="30" />
+                                      styleClass="view-toggle" selected="true" prefHeight="30" minWidth="60" />
                         <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias"
-                                      styleClass="view-toggle" selected="true" prefHeight="30" />
+                                      styleClass="view-toggle" selected="true" prefHeight="30" minWidth="55" />
                         
                         <HBox alignment="CENTER_LEFT" spacing="6" styleClass="troquel-group">
                             <Label text="Troquel" styleClass="control-label" />
@@ -105,7 +105,7 @@
 
                     <!-- GRUPO 5: Paneles -->
                     <HBox fx:id="bloqueContextual" spacing="6" alignment="CENTER_LEFT" visible="false" managed="false">
-                        <Separator orientation="VERTICAL" styleClass="subtle-separator" />
+                        <Region styleClass="subtle-separator" />
                         <ToggleButton fx:id="togglePropiedades" text="⚙ Propiedades" onAction="#onTogglePropiedades"
                                       styleClass="panel-toggle" prefHeight="30" />
                         <ToggleButton fx:id="toggleDatosVariables" text="📊 Datos" onAction="#onToggleDatosVariables"
@@ -120,15 +120,20 @@
                 <!-- Zona superior: Proyectos / Herramientas (ahora sin scroll global) -->
                 <VBox fx:id="leftPanel" VBox.vgrow="ALWAYS" />
                 
-                <Separator />
+                <VBox spacing="0" alignment="BOTTOM_CENTER" VBox.vgrow="NEVER">
+                    <Region style="-fx-background-color: #2a2628; -fx-min-height: 1; -fx-max-height: 1;" />
+                </VBox>
                 
                 <!-- Zona inferior: Perfil de Usuario -->
-                <VBox fx:id="userProfileArea" spacing="8" alignment="CENTER_LEFT" styleClass="user-profile-panel">
+                <VBox fx:id="userProfileArea" spacing="4" alignment="CENTER_LEFT" styleClass="user-profile-panel">
                     <padding>
                         <Insets top="12" bottom="12" left="15" right="15" />
                     </padding>
-                    <Label fx:id="lblCurrentUser" text="Usuario: Admin" styleClass="user-profile-name" />
-                    <Button fx:id="btnLogout" text="Cerrar Sesión" onAction="#onLogout" styleClass="logout-btn" />
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="👤" style="-fx-opacity: 0.5;" />
+                        <Label fx:id="lblCurrentUser" text="Admin" styleClass="user-profile-name" />
+                    </HBox>
+                    <Button fx:id="btnLogout" text="Cerrar sesión" onAction="#onLogout" styleClass="logout-btn" />
                 </VBox>
             </VBox>
         </left>
