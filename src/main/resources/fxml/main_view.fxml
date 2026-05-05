@@ -125,13 +125,10 @@
                 </VBox>
                 
                 <!-- Zona inferior: Perfil de Usuario -->
-                <VBox fx:id="userProfileArea" spacing="4" alignment="CENTER_LEFT" styleClass="user-profile-panel">
-                    <padding>
-                        <Insets top="12" bottom="12" left="15" right="15" />
-                    </padding>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="👤" style="-fx-opacity: 0.5;" />
-                        <Label fx:id="lblCurrentUser" text="Admin" styleClass="user-profile-name" />
+                <VBox fx:id="userProfileArea" spacing="6" alignment="CENTER_LEFT" styleClass="user-profile-panel">
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <Label text="●" style="-fx-text-fill: #3a6a5a; -fx-font-size: 8px;" />
+                        <Label fx:id="lblCurrentUser" text="Sesión: Admin" styleClass="user-profile-name" />
                     </HBox>
                     <Button fx:id="btnLogout" text="Cerrar sesión" onAction="#onLogout" styleClass="logout-btn" />
                 </VBox>

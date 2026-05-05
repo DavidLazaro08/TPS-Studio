@@ -673,7 +673,7 @@ public class ModeManager {
         Label lblTrabajos = new Label("Gestión de Trabajos");
         lblTrabajos.getStyleClass().add("panel-title");
         Label lblSubtitulo = new Label("Seleccione un proyecto para editar");
-        lblSubtitulo.setStyle("-fx-text-fill: #6a6568; -fx-font-size: 10px;");
+        lblSubtitulo.getStyleClass().add("panel-placeholder");
         header.getChildren().addAll(lblTrabajos, lblSubtitulo);
 
         ListView<Proyecto> listProyectos = new ListView<>();
@@ -709,6 +709,9 @@ public class ModeManager {
                     textContainer.setAlignment(Pos.CENTER_LEFT);
                     Label lblName = new Label(item.getNombre());
                     lblName.getStyleClass().add("project-cell-name");
+                    lblName.setMaxWidth(Double.MAX_VALUE);
+                    lblName.setEllipsisString("…");
+                    HBox.setHgrow(lblName, Priority.SOMETIMES);
                     Label lblEmpresa = new Label("");
                     lblEmpresa.getStyleClass().add("project-cell-type");
                     if (item.getMetadata() != null && item.getMetadata().getClienteInfo() != null) {
@@ -844,9 +847,8 @@ public class ModeManager {
         });
 
         Button btnNuevoCR80 = new Button("+ Nuevo Proyecto CR80");
-        btnNuevoCR80.getStyleClass().add("action-btn-primary");
+        btnNuevoCR80.getStyleClass().add("new-project-btn");
         btnNuevoCR80.setMaxWidth(Double.MAX_VALUE);
-        btnNuevoCR80.setPrefHeight(32); // Altura corregida
         btnNuevoCR80.setOnAction(e -> {
             if (onNewCR80 != null) onNewCR80.run();
         });

@@ -248,15 +248,13 @@
     -fx-background-color: #1a1618;
     -fx-border-color: #2a2628;
     -fx-border-width: 0 0 1 0;
-    -fx-pref-height: 40;
 }
 
 .subtle-separator {
-    -fx-background-color: #3d3739;
+    -fx-background-color: #2e2b2d;
     -fx-min-width: 1;
     -fx-max-width: 1;
-    -fx-max-height: 20;
-    -fx-translate-y: 0;
+    -fx-max-height: 18;
     -fx-border-color: transparent;
 }
 
@@ -310,47 +308,63 @@
 /* 2. Iconos de Archivo */
 .icon-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #c4c0c2;
-    -fx-font-size: 14px;
-    -fx-padding: 0 8; /* Un poco más de aire */
-    -fx-background-radius: 4;
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 15px;  /* Icono emoji más visible */
+    -fx-padding: 2 10;
+    -fx-background-radius: 5;
     -fx-cursor: hand;
-    -fx-min-width: 32;
+    -fx-min-width: 34;
+    -fx-alignment: center;
 }
 
 .icon-btn:hover {
-    -fx-background-color: #2a2628;
-    -fx-text-fill: white;
+    -fx-background-color: #252123;
+    -fx-text-fill: #e8e6e7;
+}
+
+.icon-btn:pressed {
+    -fx-background-color: #1e1a1c;
 }
 
 /* 3. Salida / Producción */
 .action-btn, .action-btn-primary {
     -fx-text-fill: #e8e6e7;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 0 12; /* Recuperamos el padding profesional */
-    -fx-background-radius: 4;
+    -fx-padding: 4 14;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
     -fx-cursor: hand;
     -fx-border-width: 1;
+    -fx-alignment: center;
 }
 
 .action-btn {
-    -fx-background-color: #2a2628;
-    -fx-border-color: #3d3739;
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
 }
 
 .action-btn:hover {
-    -fx-background-color: #322e30;
+    -fx-background-color: #2e2a2c;
     -fx-border-color: #4a6b7c;
 }
 
+.action-btn:pressed {
+    -fx-background-color: #1e1a1c;
+}
+
 .action-btn-primary {
-    -fx-background-color: #314450; 
+    -fx-background-color: #284050;
     -fx-border-color: #4a6b7c;
 }
 
 .action-btn-primary:hover {
-    -fx-background-color: #4a6b7c;
+    -fx-background-color: #3a5a6c;
+    -fx-border-color: #5a8599;
+}
+
+.action-btn-primary:pressed {
+    -fx-background-color: #1e303c;
 }
 
 /* 4. Zoom Integrado */
@@ -505,11 +519,48 @@
     -fx-border-color: transparent;
 }
 
+/* Ocultar scroll horizontal */
 .project-list .scroll-bar:horizontal {
     -fx-opacity: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
     -fx-padding: -10;
+}
+
+/* Scrollbar vertical personalizado — integrado con la estética oscura */
+.project-list .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6;
+    -fx-padding: 2 1;
+}
+
+.project-list .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.project-list .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3638;
+    -fx-background-radius: 4;
+}
+
+.project-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.project-list .scroll-bar:vertical .increment-button,
+.project-list .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.project-list .scroll-bar:vertical .increment-arrow,
+.project-list .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
 }
 
 /* Celda base: sin fondo, sin padding (lo gestiona Java) */
@@ -599,30 +650,7 @@
     -fx-border-color: #4a6b7c;
 }
 
-.user-profile-panel {
-    -fx-background-color: #0d0a0c;
-    -fx-border-color: transparent;
-    -fx-padding: 18 20; /* Más aire en el pie */
-}
-
-.user-profile-name {
-    -fx-text-fill: #e8e6e7;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-}
-
-.logout-btn {
-    -fx-background-color: transparent;
-    -fx-text-fill: #847e82;
-    -fx-font-size: 11px;
-    -fx-padding: 4 0;
-    -fx-cursor: hand;
-}
-
-.logout-btn:hover {
-    -fx-text-fill: #c4c0c2;
-    -fx-underline: true;
-}
+/* (bloque legacy eliminado — estilos reales en la sección PERFIL DE USUARIO al final) */
 
 /* Separadores */
 .separator {
@@ -783,29 +811,32 @@
    PERFIL DE USUARIO (SIDEBAR FOOTER)
    ===================================================== */
 .user-profile-panel {
-    -fx-background-color: #1a1618;
+    -fx-background-color: #141012;
     -fx-border-color: #2a2628;
     -fx-border-width: 1 0 0 0;
+    -fx-padding: 14 16;
 }
 
+/* Línea "Sesión: Admin" */
 .user-profile-name {
-    -fx-text-fill: #9a9598;
-    -fx-font-size: 11px;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-text-transform: uppercase;
 }
 
+/* Botón «Cerrar sesión» — discreto pero legible */
 .logout-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #5a8599;
+    -fx-text-fill: #4d7a8a;
     -fx-font-size: 12px;
-    -fx-padding: 0;
+    -fx-padding: 2 0 0 0;
     -fx-cursor: hand;
-    -fx-underline: true;
+    -fx-underline: false;
 }
 
 .logout-btn:hover {
-    -fx-text-fill: #d48a8a; /* Cambio a tono rojizo al querer salir */
+    -fx-text-fill: #c97070;  /* tono coral discreto para acción destructiva */
+    -fx-underline: true;
 }
 
 /* ScrollPane del panel lateral */
@@ -822,4 +853,44 @@
 
 .sidebar-scroll .corner {
     -fx-background-color: transparent;
+}
+
+/* =====================================================
+   PANEL TÍTULO / SUBTÍTULO (Modo Producción)
+   ===================================================== */
+.panel-title {
+    -fx-text-fill: #dedad8;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.panel-placeholder {
+    -fx-text-fill: #6a6568;
+    -fx-font-size: 11px;
+}
+
+/* Botón nuevo proyecto */
+.new-project-btn {
+    -fx-background-color: #1e2e38;
+    -fx-text-fill: #88c9ff;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #2e4858;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center;
+}
+
+.new-project-btn:hover {
+    -fx-background-color: #253a48;
+    -fx-border-color: #4a6b7c;
+    -fx-text-fill: #a8d8ff;
+}
+
+.new-project-btn:pressed {
+    -fx-background-color: #162430;
 }
