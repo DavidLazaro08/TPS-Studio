@@ -12,6 +12,38 @@
         radial-gradient(center 30% 25%, radius 70%, rgba(40, 30, 35, 0.08), transparent),
         linear-gradient(to bottom right, #0a0809, #120e10);
     -fx-font-family: "Segoe UI", "Arial", sans-serif;
+
+    /* ================================================================
+       PALETA DE COLORES — TPS Studio Looked-up Colors
+       Hue unificado: 205° (azul/teal frío sobre fondo cálido — contraste de temperatura)
+       Saturación constante ~35% en toda la familia. Solo varía lightness.
+       ================================================================ */
+
+    /* Familia de acento — teal 205° */
+    tps-accent-deep:    #192c38;   /* L 16% — Nuevo Proyecto, contenedor más profundo */
+    tps-accent-dark:    #243f50;   /* L 23% — Selección: tarjetas, Producción, Frente, Guías */
+    tps-accent:         #3d6478;   /* L 35% — Bordes activos, selección visible */
+    tps-accent-hover:   #4d7a8e;   /* L 43% — Hover sobre elementos de acento */
+    tps-accent-subtle:  #1e3445;   /* L 19% — Hover discreto en lista de proyectos */
+    tps-accent-border:  #2d5060;   /* L 28% — Borde sobre fondos de acento */
+    tps-accent-light:   #88c9ff;   /* L 77% — Barra de luz activa, texto destacado */
+
+    /* Superficies — tonos cálidos propios de la app */
+    tps-bg-0:     #0d0a0c;
+    tps-bg-1:     #141012;
+    tps-bg-2:     #1a1618;
+    tps-bg-3:     #252123;
+    tps-bg-4:     #2a2628;
+
+    /* Bordes neutrales */
+    tps-border:       #3a3638;
+    tps-border-dark:  #2a2628;
+
+    /* Textos */
+    tps-text-1:   #e8e6e7;
+    tps-text-2:   #c4c0c2;
+    tps-text-3:   #9a9598;
+    tps-text-4:   #6a6568;
 }
 
 
@@ -270,17 +302,17 @@
     -fx-max-height: 12;
 }
 
-/* 1. Modo Selector */
+/* 1. Modo Selector — Producción / Diseño */
 .mode-toggle-left, .mode-toggle-right {
     -fx-background-color: transparent;
-    -fx-text-fill: #847e82;
+    -fx-text-fill: tps-text-3;
     -fx-font-weight: bold;
     -fx-padding: 0;
-    -fx-min-width: 112; 
+    -fx-min-width: 112;
     -fx-cursor: hand;
-    -fx-border-color: #2a2628;
+    -fx-border-color: tps-bg-4;
     -fx-border-width: 1;
-    -fx-opacity: 1.0; /* Base para el pulso */
+    -fx-opacity: 1.0;
 }
 
 .mode-toggle-left {
@@ -295,14 +327,14 @@
 }
 
 .mode-toggle-left:selected, .mode-toggle-right:selected {
-    -fx-background-color: #314450;
-    -fx-text-fill: #e8e6e7;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
 }
 
 .mode-toggle-left:hover:not(:selected), .mode-toggle-right:hover:not(:selected) {
-    -fx-background-color: #2a2628;
-    -fx-text-fill: #c4c0c2;
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
 }
 
 /* 2. Iconos de Archivo */
@@ -326,9 +358,9 @@
     -fx-background-color: #1e1a1c;
 }
 
-/* 3. Salida / Producción */
+/* 3. Salida / Producción — PDF e Imprimir */
 .action-btn, .action-btn-primary {
-    -fx-text-fill: #e8e6e7;
+    -fx-text-fill: tps-text-1;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-padding: 4 14;
@@ -339,32 +371,35 @@
     -fx-alignment: center;
 }
 
+/* PDF: neutro oscuro */
 .action-btn {
-    -fx-background-color: #252123;
-    -fx-border-color: #3a3638;
+    -fx-background-color: tps-bg-3;
+    -fx-border-color: tps-border;
 }
 
 .action-btn:hover {
-    -fx-background-color: #2e2a2c;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-bg-4;
+    -fx-border-color: tps-accent;
 }
 
 .action-btn:pressed {
-    -fx-background-color: #1e1a1c;
+    -fx-background-color: tps-bg-1;
 }
 
+/* Imprimir: acento principal */
 .action-btn-primary {
-    -fx-background-color: #284050;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
 }
 
 .action-btn-primary:hover {
-    -fx-background-color: #3a5a6c;
-    -fx-border-color: #5a8599;
+    -fx-background-color: tps-accent;
+    -fx-border-color: tps-accent-hover;
+    -fx-text-fill: tps-text-1;
 }
 
 .action-btn-primary:pressed {
-    -fx-background-color: #1e303c;
+    -fx-background-color: tps-accent-deep;
 }
 
 /* 4. Zoom Integrado */
@@ -396,22 +431,32 @@
     -fx-alignment: center;
 }
 
+/* Frente / Guías / Dorso — Vista toggles
+   IMPORTANTE: el borde base siempre visible garantiza que
+   "Dorso" (estado deseleccionado) tenga apariencia de control,
+   no de texto suelto. */
 .view-toggle {
     -fx-background-color: transparent;
-    -fx-text-fill: #9a9598;
+    -fx-text-fill: tps-text-3;
     -fx-font-size: 11px;
     -fx-padding: 0 10;
     -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-color: tps-border;    /* siempre visible — indica que es un control */
+    -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .view-toggle:selected {
-    -fx-background-color: #4a6b7c;
-    -fx-text-fill: #e8e6e7;
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
 }
 
 .view-toggle:hover:not(:selected) {
-    -fx-background-color: #2a2628;
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent-border;
 }
 
 .control-label {
@@ -468,28 +513,29 @@
     -fx-text-fill: #e8e6e7;
 }
 
-/* 5. Paneles */
+/* 5. Paneles — Propiedades / Datos */
 .panel-toggle {
     -fx-background-color: transparent;
-    -fx-text-fill: #847e82;
+    -fx-text-fill: tps-text-3;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 0 12;
     -fx-background-radius: 4;
-    -fx-border-color: #2a2628;
+    -fx-border-color: tps-bg-4;
     -fx-border-width: 1;
     -fx-cursor: hand;
     -fx-min-width: 90;
 }
 
 .panel-toggle:selected {
-    -fx-background-color: #4a6b7c;
-    -fx-text-fill: #e8e6e7;
-    -fx-border-color: #5a7b8c;
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
 }
 
 .panel-toggle:hover {
-    -fx-background-color: #2a2628;
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
 }
 
 /* Paneles laterales */
@@ -582,72 +628,73 @@
     -fx-background-radius: 8;
 }
 
-/* Tarjeta seleccionada */
+/* Tarjeta seleccionada — usa el mismo tps-accent-dark que el modo activo */
 .project-card-selected {
-    -fx-background-color: #314450;
+    -fx-background-color: tps-accent-dark;
     -fx-background-radius: 8;
 }
 
-/* Overlay de hover: muy sutil, casi imperceptible */
+/* Overlay de hover: tint muy sutil */
 .project-hover-overlay {
-    -fx-background-color: rgba(255,255,255,0.035);
+    -fx-background-color: rgba(255,255,255,0.03);
     -fx-background-radius: 8;
 }
 
-/* Overlay de selección: se usa para la transición al seleccionar */
+/* Overlay de selección: mismo fondo que project-card-selected */
 .project-selected-overlay {
-    -fx-background-color: #314450;
+    -fx-background-color: tps-accent-dark;
     -fx-background-radius: 8;
 }
 
 /* Barra de luz izquierda */
 .project-active-bar {
-    -fx-background-color: #88c9ff;
+    -fx-background-color: tps-accent-light;
 }
 
 /* Separador entre tarjetas */
 .project-separator {
-    -fx-background-color: rgba(255,255,255,0.06);
+    -fx-background-color: rgba(255,255,255,0.05);
 }
 
-/* Forzar color blanco en selección */
-.project-list .list-cell:selected .project-cell-name {
-    -fx-text-fill: white;
-}
-
+/* Nombre del proyecto */
 .project-cell-name {
-    -fx-text-fill: #e8e6e7;
+    -fx-text-fill: tps-text-1;
     -fx-font-weight: bold;
     -fx-font-size: 12px;
 }
 
-/* Subtítulo de celda (Cliente) */
+/* Línea de cliente */
 .project-cell-type {
-    -fx-text-fill: #6a6568;
+    -fx-text-fill: tps-text-4;
     -fx-font-size: 10px;
 }
 
-.project-list .list-cell:selected .project-cell-type {
-    -fx-text-fill: #a4a0a2;
+.project-list .list-cell:selected .project-cell-name {
+    -fx-text-fill: tps-text-1;
 }
 
-/* Badge de formato */
+.project-list .list-cell:selected .project-cell-type {
+    -fx-text-fill: tps-text-3;
+}
+
+/* Badge CR80 — estado normal */
 .project-badge {
-    -fx-background-color: #1a1618;
-    -fx-text-fill: #847e82;
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-text-3;
     -fx-font-size: 9px;
     -fx-font-weight: bold;
     -fx-padding: 2 6;
     -fx-background-radius: 3;
-    -fx-border-color: #2a2628;
+    -fx-border-color: tps-bg-4;
     -fx-border-width: 1;
     -fx-border-radius: 3;
 }
 
+/* Badge CR80 — tarjeta seleccionada */
 .project-list .list-cell:selected .project-badge {
-    -fx-background-color: #0d0a0c;
-    -fx-text-fill: #c4c0c2;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-bg-0;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent;
 }
 
 /* (bloque legacy eliminado — estilos reales en la sección PERFIL DE USUARIO al final) */
@@ -796,7 +843,7 @@
 }
 
 .alert-dialog .button:hover {
-    -fx-background-color: #4a6b7c;
+    -fx-background-color: tps-accent;
 }
 
 .alert-dialog .text-area {
@@ -811,31 +858,37 @@
    PERFIL DE USUARIO (SIDEBAR FOOTER)
    ===================================================== */
 .user-profile-panel {
-    -fx-background-color: #141012;
-    -fx-border-color: #2a2628;
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-bg-4;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 14 16;
+    -fx-padding: 13 16;
 }
 
-/* Línea "Sesión: Admin" */
+/* Indicador de sesión activa (punto verde discreto) */
+.session-dot {
+    -fx-text-fill: tps-accent;   /* Usa el acento principal */
+    -fx-font-size: 7px;
+}
+
+/* Línea „Sesión: Admin“ */
 .user-profile-name {
-    -fx-text-fill: #c4c0c2;
+    -fx-text-fill: tps-text-2;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
-/* Botón «Cerrar sesión» — discreto pero legible */
+/* Botón «Cerrar sesión» — secundario, alineado a la derecha */
 .logout-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #4d7a8a;
-    -fx-font-size: 12px;
-    -fx-padding: 2 0 0 0;
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 11px;
+    -fx-padding: 1 0 0 0;
     -fx-cursor: hand;
     -fx-underline: false;
 }
 
 .logout-btn:hover {
-    -fx-text-fill: #c97070;  /* tono coral discreto para acción destructiva */
+    -fx-text-fill: #c97070;   /* coral discreto: acción destructiva */
     -fx-underline: true;
 }
 
@@ -859,26 +912,26 @@
    PANEL TÍTULO / SUBTÍTULO (Modo Producción)
    ===================================================== */
 .panel-title {
-    -fx-text-fill: #dedad8;
+    -fx-text-fill: tps-text-1;
     -fx-font-size: 15px;
     -fx-font-weight: bold;
 }
 
 .panel-placeholder {
-    -fx-text-fill: #6a6568;
+    -fx-text-fill: tps-text-4;
     -fx-font-size: 11px;
 }
 
-/* Botón nuevo proyecto */
+/* Botón nuevo proyecto — tono de acento profundo + texto claro */
 .new-project-btn {
-    -fx-background-color: #1e2e38;
-    -fx-text-fill: #88c9ff;
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-padding: 10 16;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
-    -fx-border-color: #2e4858;
+    -fx-border-color: tps-accent-border;
     -fx-border-width: 1;
     -fx-cursor: hand;
     -fx-max-width: Infinity;
@@ -886,11 +939,12 @@
 }
 
 .new-project-btn:hover {
-    -fx-background-color: #253a48;
-    -fx-border-color: #4a6b7c;
-    -fx-text-fill: #a8d8ff;
+    -fx-background-color: tps-accent-subtle;
+    -fx-border-color: tps-accent;
+    -fx-text-fill: tps-accent-light;
 }
 
 .new-project-btn:pressed {
-    -fx-background-color: #162430;
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
 }
