@@ -556,10 +556,7 @@ public class EditorCanvasManager {
         gc.setLineDashes();
         
         // --- 6.1: FRENTE / DORSO a la izquierda ---
-        gc.setFill(Color.web("#e8e6e7"));
-        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 16));
-        String lado = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
-        gc.fillText(lado, cardX, cardY - 30);
+        // (Renderizado de texto eliminado: ahora se usa el selector interactivo HBox sobre el lienzo)
 
         // --- 6.2: PROYECTO y CLIENTE CENTRADOS DE FORMA ESTÁTICA ARRIBA ---
         // (Se animan suavemente por código leyendo hudOpacity, entre modo diseño y producción)

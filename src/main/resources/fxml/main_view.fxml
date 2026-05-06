@@ -15,6 +15,8 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.control.MenuButton?>
 
 <!--
     Layout raíz: StackPane con dos capas.
@@ -79,7 +81,7 @@
 
                     <Region styleClass="subtle-separator" />
 
-                    <!-- GRUPO 4: Herramientas -->
+                    <!-- GRUPO 4: Herramientas del Lienzo -->
                     <HBox spacing="10" alignment="CENTER_LEFT" styleClass="toolbar-group">
                         <HBox alignment="CENTER" spacing="0" styleClass="integrated-zoom" prefHeight="30">
                             <Button text="-" onAction="#onZoomOut" styleClass="zoom-btn-minimal" prefHeight="30" />
@@ -89,11 +91,11 @@
                         
                         <Region styleClass="micro-separator" />
                         
-                        <ToggleButton fx:id="toggleFrenteDorso" text="Frente" onAction="#onToggleFrenteDorso"
-                                      styleClass="view-toggle" selected="true" prefHeight="30" minWidth="60" />
                         <ToggleButton fx:id="toggleGuias" text="Guías" onAction="#onToggleGuias"
                                       styleClass="view-toggle" selected="true" prefHeight="30" minWidth="55" />
                         
+                        <Region styleClass="micro-separator" />
+
                         <HBox alignment="CENTER_LEFT" spacing="6" styleClass="troquel-group">
                             <Label text="Troquel" styleClass="control-label" />
                             <ComboBox fx:id="cmbTroquelToolbar" promptText="Sin troquel" prefWidth="130" prefHeight="30"
@@ -141,6 +143,19 @@
         <center>
             <StackPane fx:id="canvasContainer" styleClass="canvas-area">
                 <Canvas fx:id="canvas" width="750" height="600" />
+                
+                <!-- Overlay para controles posicionados sobre el lienzo -->
+                <Pane fx:id="canvasOverlay" pickOnBounds="false" StackPane.alignment="TOP_LEFT">
+                    <HBox fx:id="selectorCaraBox" spacing="0" styleClass="integrated-view-selector" pickOnBounds="false" managed="false">
+                        <fx:define>
+                            <ToggleGroup fx:id="caraToggleGroup" />
+                        </fx:define>
+                        <ToggleButton fx:id="btnCaraFrente" text="Frente" toggleGroup="$caraToggleGroup"
+                                      onAction="#onShowFrente" styleClass="view-selector-btn-left" selected="true" prefHeight="20" minWidth="80" />
+                        <ToggleButton fx:id="btnCaraDorso" text="Dorso" toggleGroup="$caraToggleGroup"
+                                      onAction="#onShowDorso" styleClass="view-selector-btn-right" prefHeight="20" minWidth="80" />
+                    </HBox>
+                </Pane>
             </StackPane>
         </center>
 

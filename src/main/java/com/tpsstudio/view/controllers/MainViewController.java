@@ -31,6 +31,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 
 import java.io.File;
@@ -69,9 +71,15 @@ public class MainViewController {
     @FXML
     private Label lblZoom;
     @FXML
-    private ToggleButton toggleFrenteDorso;
-    @FXML
     private ToggleButton toggleGuias;
+    @FXML
+    private HBox selectorCaraBox;
+    @FXML
+    private ToggleButton btnCaraFrente;
+    @FXML
+    private ToggleButton btnCaraDorso;
+    @FXML
+    private Pane canvasOverlay;
     @FXML
     private ComboBox<TipoTroquel> cmbTroquelToolbar;
     @FXML
@@ -427,7 +435,41 @@ public class MainViewController {
         clipRect.heightProperty().bind(canvasContainer.heightProperty());
         canvasContainer.setClip(clipRect);
 
+        canvasContainer.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        canvasContainer.heightProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        if (canvasOverlay != null) {
+            canvasOverlay.prefWidthProperty().bind(canvasContainer.widthProperty());
+            canvasOverlay.prefHeightProperty().bind(canvasContainer.heightProperty());
+        }
+        if (selectorCaraBox != null) selectorCaraBox.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        
         dibujarCanvas();
+    }
+
+    private void posicionarSelectorCara() {
+        if (selectorCaraBox != null && canvasContainer != null) {
+            double zoom = viewModel.getZoomLevel();
+            double cardScaledWidth = EditorCanvasManager.CARD_WIDTH * zoom;
+            double cardScaledHeight = EditorCanvasManager.CARD_HEIGHT * zoom;
+            double bleedScaled = EditorCanvasManager.BLEED_MARGIN * zoom;
+            
+            double cw = canvasContainer.getWidth();
+            double ch = canvasContainer.getHeight();
+            
+            // Posición de la tarjeta absoluta dentro del contenedor (asumiendo centrado)
+            double cardX = (cw / 2) - (cardScaledWidth / 2);
+            double cardY = (ch / 2) - (cardScaledHeight / 2);
+            
+            // Borde superior de la tarjeta con sangre
+            double topEdge = cardY - bleedScaled;
+            
+            // Margen vertical equilibrado (altura botón 20px + margen 30px)
+            double offset = 50; 
+            
+            // Alineación al borde izquierdo del área con sangre (ajuste final de -20px)
+            selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
+            selectorCaraBox.setLayoutY(topEdge - offset);
+        }
     }
 
     private void onValidarDiseno() {
@@ -517,9 +559,14 @@ public class MainViewController {
 
         // En Producción, los paneles de diseño no aplican: los ocultamos
         if (newMode == AppMode.PRODUCTION) {
-            if (bloqueContextual != null) {
-                bloqueContextual.setVisible(false);
-                bloqueContextual.setManaged(false);
+            if (bloqueContextual != null && bloqueContextual.isVisible()) {
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), bloqueContextual);
+                ft.setToValue(0.0);
+                ft.setOnFinished(e -> {
+                    bloqueContextual.setVisible(false);
+                    bloqueContextual.setManaged(false);
+                });
+                ft.play();
             }
             cerrarPanelDerecho();
 
@@ -542,9 +589,13 @@ public class MainViewController {
             }
 
         } else {
-            if (bloqueContextual != null) {
+            if (bloqueContextual != null && !bloqueContextual.isVisible()) {
+                bloqueContextual.setOpacity(0.0);
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), bloqueContextual);
+                ft.setToValue(1.0);
+                ft.play();
             }
 
             // Apagar y frenar la respiración del botón Diseño
@@ -583,6 +634,7 @@ public class MainViewController {
     private void actualizarZoom() {
         lblZoom.setText(String.format("%.0f%%", viewModel.getZoomLevel() * 100));
         canvasManager.setZoomLevel(viewModel.getZoomLevel());
+        posicionarSelectorCara();
         dibujarCanvas();
     }
 
@@ -614,6 +666,32 @@ public class MainViewController {
      * Dibuja el canvas delegando en EditorCanvasManager.
      */
     private void dibujarCanvas() {
+        posicionarSelectorCara();
+        if (selectorCaraBox != null) {
+            boolean hasProject = viewModel.getProyectoActual() != null;
+            boolean shouldShow = hasProject && viewModel.getCurrentMode() == AppMode.DESIGN;
+            
+            if (shouldShow && !selectorCaraBox.isVisible()) {
+                selectorCaraBox.setOpacity(0.0);
+                selectorCaraBox.setVisible(true);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), selectorCaraBox);
+                ft.setToValue(1.0);
+                ft.play();
+            } else if (!shouldShow && selectorCaraBox.isVisible() && selectorCaraBox.getOpacity() > 0) {
+                selectorCaraBox.setOpacity(0.0); // Prevenimos multiples animaciones superpuestas
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), selectorCaraBox);
+                ft.setFromValue(1.0);
+                ft.setToValue(0.0);
+                ft.setOnFinished(e -> selectorCaraBox.setVisible(false));
+                ft.play();
+            }
+            
+            if (hasProject) {
+                boolean isFrente = viewModel.getProyectoActual().isMostrandoFrente();
+                btnCaraFrente.setSelected(isFrente);
+                btnCaraDorso.setSelected(!isFrente);
+            }
+        }
         canvasManager.dibujarCanvas();
     }
 
@@ -1148,20 +1226,20 @@ public class MainViewController {
     }
 
     @FXML
-    private void onToggleFrenteDorso() {
-        if (viewModel.getProyectoActual() == null)
-            return;
-
-        viewModel.getProyectoActual().setMostrandoFrente(toggleFrenteDorso.isSelected());
-        toggleFrenteDorso.setText(toggleFrenteDorso.isSelected() ? "Frente" : "Dorso");
-
-        // Cambiar de cara invalida la selección actual
+    private void onShowFrente() {
+        if (viewModel.getProyectoActual() == null) return;
+        viewModel.getProyectoActual().setMostrandoFrente(true);
         viewModel.setElementoSeleccionado(null);
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) buildEditPanels();
+        dibujarCanvas();
+    }
 
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            buildEditPanels();
-        }
-
+    @FXML
+    private void onShowDorso() {
+        if (viewModel.getProyectoActual() == null) return;
+        viewModel.getProyectoActual().setMostrandoFrente(false);
+        viewModel.setElementoSeleccionado(null);
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) buildEditPanels();
         dibujarCanvas();
     }
 
@@ -1378,6 +1456,9 @@ public class MainViewController {
 
         double targetX = panelVisible ? -(rightPanel.getPrefWidth() / 2.0) : 0;
         AnimationHelper.shiftCanvas(canvas, targetX);
+        if (canvasOverlay != null) {
+            AnimationHelper.shiftCanvas(canvasOverlay, targetX);
+        }
     }
 
     /* Abre el diálogo para editar o eliminar un proyecto existente. */
