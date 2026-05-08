@@ -164,6 +164,7 @@
     <!-- CAPA 2: Panel derecho como overlay — empieza bajo la toolbar (margen 46px) -->
     <VBox fx:id="rightPanel" styleClass="side-panel"
           prefWidth="290" minWidth="290" maxWidth="290"
+          maxHeight="Infinity"
           visible="false" managed="false">
         <StackPane.alignment>TOP_RIGHT</StackPane.alignment>
         <StackPane.margin>

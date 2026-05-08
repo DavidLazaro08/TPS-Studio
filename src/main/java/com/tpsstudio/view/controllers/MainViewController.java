@@ -355,8 +355,13 @@ public class MainViewController {
                 ensurePropertiesPanelVisible();
             }
 
-            modeManager.switchMode(viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                    viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                
+                if (togglePropiedades.isSelected()) {
+                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
+                }
+            }
             dibujarCanvas();
         });
 
@@ -364,6 +369,13 @@ public class MainViewController {
             viewModel.setProyectoActual(proyecto);
             projectManager.setProyectoActual(proyecto);
             canvasManager.setProyectoActual(proyecto);
+            
+            // Animación de entrada para la tarjeta
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
+            ft.setFromValue(0.4);
+            ft.setToValue(1.0);
+            ft.play();
+            
             dibujarCanvas();
         });
 
@@ -372,8 +384,9 @@ public class MainViewController {
 
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
-            modeManager.switchMode(viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                    viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+            }
             dibujarCanvas();
         });
 

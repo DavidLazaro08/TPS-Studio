@@ -244,8 +244,15 @@ public class EditorCanvasManager {
 
         if (proyectoActual == null) {
             gc.setFill(Color.web("#9a9598"));
-            gc.fillText("Seleccione un proyecto o cree uno nuevo",
-                    canvas.getWidth() / 2 - 120, canvas.getHeight() / 2);
+            gc.setFont(Font.font("System", 16)); // Texto más grande y legible
+            String msg = "Seleccione un proyecto o cree uno nuevo";
+            
+            // Centrado preciso
+            javafx.scene.text.Text t = new javafx.scene.text.Text(msg);
+            t.setFont(gc.getFont());
+            double tw = t.getLayoutBounds().getWidth();
+            
+            gc.fillText(msg, (canvas.getWidth() - tw) / 2, canvas.getHeight() / 2);
             return;
         }
 

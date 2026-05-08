@@ -15,7 +15,12 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.input.*;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import java.util.Collections;
 
 import java.util.Map;
 import java.util.Optional;
@@ -230,13 +235,33 @@ public class ModeManager {
                 fade.setFromValue(0.4);
                 fade.setToValue(1.0);
                 
+                VBox.setVgrow(targetNode, Priority.ALWAYS); 
                 rightPanel.getChildren().setAll(targetNode);
                 fade.play();
             }
         }
     }
 
+    /**
+     * Refresca solo el panel de propiedades.
+     */
+    public void refreshPropertiesPanel(Elemento selectedElement, Proyecto proyecto) {
+        VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
+        ScrollPane scrollProps = new ScrollPane(properties);
+        scrollProps.setFitToWidth(true);
+        scrollProps.getStyleClass().add("panel-scroll-view");
+        VBox.setVgrow(scrollProps, Priority.ALWAYS);
+        this.propertiesNode = scrollProps;
+
+        if (isPropertiesActive && currentMode == AppMode.DESIGN) {
+            rightPanel.getChildren().setAll(propertiesNode);
+        }
+    }
+
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
+        leftPanel.getChildren().clear();
+        rightPanel.getChildren().clear();
+
         // Panel izquierdo: herramientas + capas
         VBox toolbox = buildToolboxPanel();
         layersPanel = buildLayersPanel(proyecto, selectedElement);
@@ -245,11 +270,7 @@ public class ModeManager {
         // Panel derecho: Nodos para "Propiedades" y "Datos Variables"
 
         // 1. Nodo de Propiedades
-        VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
-        ScrollPane scrollProps = new ScrollPane(properties);
-        scrollProps.setFitToWidth(true);
-        scrollProps.getStyleClass().add("panel-scroll-view");
-        this.propertiesNode = scrollProps;
+        refreshPropertiesPanel(selectedElement, proyecto);
 
         // 2. Nodo de Datos Variables
         if (projectManager != null && projectManager.getFuenteDatos() != null) {
@@ -289,100 +310,90 @@ public class ModeManager {
     }
 
     private VBox buildToolboxPanel() {
-        VBox toolbox = new VBox(8);
-        toolbox.setPadding(new Insets(12));
+        VBox toolbox = new VBox(4);
+        toolbox.setPadding(new Insets(14, 12, 14, 12)); // Mismo padding que buildProjectListPanel
+        toolbox.getStyleClass().add("tools-panel");
 
+        // Cabecera Equilibrada (como Gestión de Trabajos)
+        VBox header = new VBox(2);
+        header.setPadding(new Insets(0, 0, 8, 0)); // Margen bajo la cabecera
         Label lblToolbox = new Label("Herramientas");
         lblToolbox.getStyleClass().add("panel-title");
+        Label lblSubtitulo = new Label("Seleccione un elemento para añadir al lienzo");
+        lblSubtitulo.getStyleClass().add("panel-placeholder");
+        header.getChildren().addAll(lblToolbox, lblSubtitulo);
 
-        Button btnTexto = new Button("Texto");
-        Label iconTexto = new Label("T");
-        iconTexto.getStyleClass().add("toolbox-icon");
-        btnTexto.setGraphic(iconTexto);
-        btnTexto.setMaxWidth(Double.MAX_VALUE);
-        btnTexto.getStyleClass().add("toolbox-btn");
-        btnTexto.setOnAction(e -> {
-            if (onAddText != null)
-                onAddText.run();
-        });
+        // Helper para crear el gráfico HBox [icono 32px | texto]
+        // Este patrón garantiza que todos los iconos caen en la misma columna
+        // y todos los textos empiezan en la misma X
 
-        Button btnImagen = new Button("Imagen");
-        Label iconImagen = new Label("🖼");
-        iconImagen.getStyleClass().add("toolbox-icon");
-        btnImagen.setGraphic(iconImagen);
-        btnImagen.setMaxWidth(Double.MAX_VALUE);
-        btnImagen.getStyleClass().add("toolbox-btn");
-        btnImagen.setOnAction(e -> {
-            if (onAddImage != null)
-                onAddImage.run();
-        });
+        // ---- Texto ----
+        Button btnTexto = makeToolButton("T", "tool-icon", "Texto", "tool-label", "tool-button");
+        btnTexto.setOnAction(e -> { if (onAddText != null) onAddText.run(); });
 
-        Button btnFondo = new Button("Fondo");
-        Label iconFondo = new Label("🎨");
-        iconFondo.getStyleClass().add("toolbox-icon");
-        btnFondo.setGraphic(iconFondo);
-        btnFondo.setMaxWidth(Double.MAX_VALUE);
-        btnFondo.getStyleClass().add("toolbox-btn");
-        btnFondo.setOnAction(e -> {
-            if (onAddBackground != null)
-                onAddBackground.run();
-        });
+        // ---- Imagen ----
+        Button btnImagen = makeToolButton("▣", "tool-icon", "Imagen", "tool-label", "tool-button");
+        btnImagen.setOnAction(e -> { if (onAddImage != null) onAddImage.run(); });
 
-        // Contenedor para el submenú de formas (tipo acordeón)
-        VBox shapesSubMenu = new VBox(3);
-        shapesSubMenu.setPadding(new Insets(2, 0, 2, 12));
+        // ---- Fondo ----
+        Button btnFondo = makeToolButton("⬚", "tool-icon", "Fondo", "tool-label", "tool-button");
+        btnFondo.setOnAction(e -> { if (onAddBackground != null) onAddBackground.run(); });
+
+        // ---- Subherramientas de forma ----
+        VBox shapesSubMenu = new VBox(1);
+        shapesSubMenu.getStyleClass().add("tool-subtools");
         shapesSubMenu.setVisible(shapesExpanded);
         shapesSubMenu.setManaged(shapesExpanded);
 
-        Button btnRectangulo = new Button("▭  Rectángulo");
-        btnRectangulo.setMaxWidth(Double.MAX_VALUE);
-        btnRectangulo.getStyleClass().add("toolbox-submenu-btn");
-        btnRectangulo.setOnAction(e -> {
-            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.RECTANGULO);
-        });
+        Button btnRectangulo = makeSubToolButton("▭", "Rectángulo");
+        btnRectangulo.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.RECTANGULO); });
 
-        Button btnElipse = new Button("○  Elipse");
-        btnElipse.setMaxWidth(Double.MAX_VALUE);
-        btnElipse.getStyleClass().add("toolbox-submenu-btn");
-        btnElipse.setOnAction(e -> {
-            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.ELIPSE);
-        });
+        Button btnElipse = makeSubToolButton("◯", "Elipse");
+        btnElipse.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.ELIPSE); });
 
-        Button btnLinea = new Button("―  Línea");
-        btnLinea.setMaxWidth(Double.MAX_VALUE);
-        btnLinea.getStyleClass().add("toolbox-submenu-btn");
-        btnLinea.setOnAction(e -> {
-            if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.LINEA);
-        });
+        Button btnLinea = makeSubToolButton("―", "Línea");
+        btnLinea.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.LINEA); });
 
         shapesSubMenu.getChildren().addAll(btnRectangulo, btnElipse, btnLinea);
 
-        // Botón principal que despliega el submenú
-        Button btnToggleFormas = new Button("Dibujar Forma");
-        Label iconFormas = new Label(shapesExpanded ? "▼" : "▶");
-        iconFormas.getStyleClass().add("toolbox-icon");
-        btnToggleFormas.setGraphic(iconFormas);
+        // ---- Dibujar Forma (acordeón) ----
+        Label iconExpander = new Label(shapesExpanded ? "▾" : "▸");
+        iconExpander.getStyleClass().add("tool-icon");
+        iconExpander.setMinWidth(16);
+        iconExpander.setPrefWidth(16);
+        iconExpander.setMaxWidth(16);
+
+        Label iconFormas = new Label("⬒");
+        iconFormas.getStyleClass().add("tool-icon");
+
+        Label textFormas = new Label("Dibujar Forma");
+        textFormas.getStyleClass().add("tool-label");
+        HBox.setHgrow(textFormas, Priority.ALWAYS);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox formasGraphic = new HBox(iconFormas, textFormas, spacer, iconExpander);
+        formasGraphic.setAlignment(Pos.CENTER_LEFT);
+        formasGraphic.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnToggleFormas = new Button();
+        btnToggleFormas.setGraphic(formasGraphic);
+        btnToggleFormas.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         btnToggleFormas.setMaxWidth(Double.MAX_VALUE);
-        btnToggleFormas.getStyleClass().add("toolbox-btn");
+        btnToggleFormas.getStyleClass().add("tool-button");
         btnToggleFormas.setOnAction(e -> {
             shapesExpanded = !shapesExpanded;
-            iconFormas.setText(shapesExpanded ? "▼" : "▶");
-            
-            // Usar el helper de animación para una transición suave
+            iconExpander.setText(shapesExpanded ? "\u25BE" : "\u25B8");
             AnimationHelper.animateAccordion(shapesSubMenu, shapesExpanded);
         });
 
-        Button btnValidar = new Button("✓ Validar Diseño");
-        btnValidar.setMaxWidth(Double.MAX_VALUE);
-        btnValidar.getStyleClass().add("primary-btn");
-        btnValidar.setOnAction(e -> {
-            if (onValidateDesign != null)
-                onValidateDesign.run();
-        });
+        // ---- Validar Diseño ----
+        Button btnValidar = makeToolButton("✓", "tool-icon", "Validar Diseño", "tool-label", "validate-button");
+        btnValidar.setOnAction(e -> { if (onValidateDesign != null) onValidateDesign.run(); });
 
-        // Organizar: El submenú aparece justo debajo de su botón
         toolbox.getChildren().addAll(
-                lblToolbox,
+                header,
                 btnTexto,
                 btnImagen,
                 btnFondo,
@@ -395,20 +406,70 @@ public class ModeManager {
     }
 
     /**
+     * Crea un botón de herramienta principal con retícula fija:
+     * [ icono 32px | texto ]
+     * El icono y el texto se inyectan como un HBox gráfico GRAPHIC_ONLY,
+     * garantizando que todos los textos comiencen en la misma X.
+     */
+    private Button makeToolButton(String iconText, String iconStyle,
+                                   String labelText, String labelStyle,
+                                   String buttonStyle) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add(iconStyle);
+
+        Label label = new Label(labelText);
+        label.getStyleClass().add(labelStyle);
+
+        HBox graphic = new HBox(icon, label);
+        graphic.setAlignment(Pos.CENTER_LEFT);
+        graphic.setMaxWidth(Double.MAX_VALUE);
+
+        Button btn = new Button();
+        btn.setGraphic(graphic);
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.getStyleClass().add(buttonStyle);
+        return btn;
+    }
+
+    /**
+     * Crea un sub-botón (Rectángulo / Elipse / Línea) con retícula indentada:
+     * [ icono 28px | texto ]
+     */
+    private Button makeSubToolButton(String iconText, String labelText) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add("tool-icon");
+
+        Label label = new Label(labelText);
+        label.getStyleClass().add("tool-label");
+
+        HBox graphic = new HBox(icon, label);
+        graphic.setAlignment(Pos.CENTER_LEFT);
+        graphic.setMaxWidth(Double.MAX_VALUE);
+
+        Button btn = new Button();
+        btn.setGraphic(graphic);
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.getStyleClass().add("tool-subbutton");
+        return btn;
+    }
+
+
+    /**
      * Construye la lista de capas (fondo + elementos). El fondo se muestra arriba
      * si existe.
      */
     private VBox buildLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         VBox panel = new VBox(8);
-        panel.setPadding(new Insets(12));
-        VBox.setVgrow(panel, Priority.ALWAYS); // Hacer que el panel de capas ocupe el resto del VBox
+        panel.setPadding(new Insets(12)); // Restaurado el padding de 12px
+        VBox.setVgrow(panel, Priority.ALWAYS);
 
         Label lblCapas = new Label("Capas");
         lblCapas.getStyleClass().add("panel-title");
 
         ListView<Elemento> listCapas = new ListView<>();
         listCapas.getStyleClass().add("layers-list");
-        listCapas.setPrefHeight(120);
         VBox.setVgrow(listCapas, Priority.ALWAYS);
 
         if (proyecto != null) {
@@ -416,112 +477,269 @@ public class ModeManager {
 
             // Fondo (si hay) + elementos del lado actual
             ImagenFondoElemento fondo = proyecto.getFondoActual();
-            if (fondo != null)
-                allElements.add(fondo);
+            if (fondo != null) allElements.add(fondo);
             allElements.addAll(proyecto.getElementosActuales());
 
             listCapas.setItems(allElements);
 
-            // Si nos pasan el elemento seleccionado, intentamos reflejarlo en la lista
             if (selectedElement != null) {
                 listCapas.getSelectionModel().select(selectedElement);
             }
 
+            // --- FACTORÍA DE CELDAS AVANZADA (ANIMACIONES + D&D) ---
             listCapas.setCellFactory(lv -> new ListCell<Elemento>() {
+                private javafx.animation.Timeline pulse;
+
                 @Override
                 protected void updateItem(Elemento item, boolean empty) {
                     super.updateItem(item, empty);
-
                     if (empty || item == null) {
-                        setText(null);
                         setGraphic(null);
-                        setContextMenu(null);
+                        setText(null);
                         setPadding(Insets.EMPTY);
-                        return;
-                    }
-
-                    // Icono según tipo de elemento
-                    String icon;
-                    if (item instanceof com.tpsstudio.model.elements.ImagenFondoElemento) icon = "🎨";
-                    else if (item instanceof com.tpsstudio.model.elements.TextoElemento)  icon = "T";
-                    else if (item instanceof com.tpsstudio.model.elements.ImagenElemento) icon = "🖼";
-                    else if (item instanceof com.tpsstudio.model.elements.FormaElemento)  icon = "▭";
-                    else icon = "·";
-
-                    String lockIcon = item.isLocked() ? " 🔒" : "";
-                    String nombre   = item.toString() + lockIcon;
-
-                    // Fila compacta con icono + texto
-                    javafx.scene.control.Label lblIcon = new javafx.scene.control.Label(icon);
-                    lblIcon.getStyleClass().add("layer-item-icon");
-                    lblIcon.setMinWidth(18);
-
-                    javafx.scene.control.Label lblNombre = new javafx.scene.control.Label(nombre);
-                    lblNombre.getStyleClass().add("layer-item-text");
-
-                    HBox row = new HBox(8, lblIcon, lblNombre);
-                    row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    row.setMaxWidth(Double.MAX_VALUE);
-
-                    // Estilo del contenedor según selección
-                    boolean selected = getListView().getSelectionModel().getSelectedItem() == item;
-                    row.getStyleClass().add(selected ? "layer-item-selected" : "layer-item");
-
-                    setGraphic(row);
-                    setText(null);
-                    setPadding(new Insets(2, 4, 2, 4));
-
-                    // Menú contextual según tipo
-                    ContextMenu contextMenu = new ContextMenu();
-
-                    if (item instanceof ImagenFondoElemento) {
-                        MenuItem menuEditar = new MenuItem("Editar imagen externa...");
-                        menuEditar.setOnAction(e -> {
-                            if (onEditExternal != null)
-                                onEditExternal.accept((ImagenFondoElemento) item);
-                        });
-
-                        MenuItem menuRecargar = new MenuItem("Recargar desde disco");
-                        menuRecargar.setOnAction(e -> {
-                            if (onReload != null)
-                                onReload.accept((ImagenFondoElemento) item);
-                        });
-
-                        MenuItem menuLock = new MenuItem(item.isLocked() ? "Desbloquear" : "Bloquear");
-                        menuLock.setOnAction(e -> {
-                            if (onToggleLock != null)
-                                onToggleLock.accept(item);
-                            // Esto ayuda a que el icono 🔒 se vea actualizado sin tener que reconstruir
-                            // paneles
-                            listCapas.refresh();
-                        });
-
-                        contextMenu.getItems().addAll(menuEditar, menuRecargar, new SeparatorMenuItem(), menuLock);
-
+                        if (pulse != null) { pulse.stop(); pulse = null; }
                     } else {
-                        MenuItem menuEliminar = new MenuItem("Eliminar");
-                        menuEliminar.setOnAction(e -> {
-                            proyecto.getElementosActuales().remove(item);
+                        // 1. Barra de luz lateral
+                        Region activeBar = new Region();
+                        activeBar.setPrefWidth(3);
+                        activeBar.setMinWidth(3);
+                        activeBar.setMaxWidth(3);
+                        activeBar.setMaxHeight(Double.MAX_VALUE);
+                        activeBar.getStyleClass().add("layer-active-bar");
+                        activeBar.setOpacity(0.0);
+                        activeBar.setVisible(false);
 
-                            // Si borramos lo seleccionado, limpiamos selección en UI
-                            if (onElementSelected != null)
-                                onElementSelected.accept(null);
+                        // 2. Contenido (Icono + Texto)
+                        String iconStr;
+                        if (item instanceof com.tpsstudio.model.elements.ImagenFondoElemento) iconStr = "⬚";
+                        else if (item instanceof com.tpsstudio.model.elements.TextoElemento)  iconStr = "T";
+                        else if (item instanceof com.tpsstudio.model.elements.ImagenElemento) iconStr = "▣";
+                        else if (item instanceof com.tpsstudio.model.elements.FormaElemento)  iconStr = "⬒";
+                        else iconStr = "·";
 
-                            // Refrescamos la lista (y normalmente el canvas se repinta vía controller)
-                            listCapas.refresh();
+                        String lockIcon = item.isLocked() ? " 🔒" : "";
+                        String nombre = item.toString() + lockIcon;
+
+                        Label lblIcon = new Label(iconStr);
+                        lblIcon.getStyleClass().add("layer-item-icon");
+                        lblIcon.setMinWidth(24);
+                        lblIcon.setAlignment(Pos.CENTER);
+
+                        Label lblNombre = new Label(nombre);
+                        lblNombre.getStyleClass().add("layer-item-text");
+                        lblNombre.setMinWidth(0);
+                        lblNombre.setPrefWidth(1); // Forzar a que solo tome el espacio disponible
+                        lblNombre.setMaxWidth(Double.MAX_VALUE);
+                        lblNombre.setEllipsisString("…");
+                        HBox.setHgrow(lblNombre, Priority.ALWAYS);
+                        
+                        if (isSelected()) {
+                            getStyleClass().add("layer-item-selected");
+                        } else {
+                            getStyleClass().remove("layer-item-selected");
+                        }
+
+                        HBox actions = new HBox(4);
+                        actions.setAlignment(Pos.CENTER_RIGHT);
+                        actions.setMinWidth(Region.USE_PREF_SIZE); // No permitir que se encojan los botones
+                        actions.setOpacity(0.0);
+                        actions.setVisible(false);
+                        actions.managedProperty().bind(actions.visibleProperty());
+
+                        if (!(item instanceof ImagenFondoElemento)) {
+                            Button btnUp = new Button("▲");
+                            btnUp.getStyleClass().add("layer-action-btn");
+                            btnUp.setOnAction(e -> {
+                                int idx = proyecto.getElementosActuales().indexOf(item);
+                                if (idx > 0) {
+                                    Collections.swap(proyecto.getElementosActuales(), idx, idx - 1);
+                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                    buildDesignModePanels(proyecto, item);
+                                }
+                            });
+
+                            Button btnDown = new Button("▼");
+                            btnDown.getStyleClass().add("layer-action-btn");
+                            btnDown.setOnAction(e -> {
+                                int idx = proyecto.getElementosActuales().indexOf(item);
+                                if (idx < proyecto.getElementosActuales().size() - 1) {
+                                    Collections.swap(proyecto.getElementosActuales(), idx, idx + 1);
+                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                    buildDesignModePanels(proyecto, item);
+                                }
+                            });
+
+                            Button btnDel = new Button("✕");
+                            btnDel.getStyleClass().add("layer-action-btn-del");
+                            btnDel.setOnAction(e -> {
+                                proyecto.getElementosActuales().remove(item);
+                                if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                buildDesignModePanels(proyecto, null);
+                            });
+
+                            actions.getChildren().addAll(btnUp, btnDown, btnDel);
+                        }
+
+                        HBox content = new HBox(8, lblIcon, lblNombre, actions);
+                        content.setAlignment(Pos.CENTER_LEFT);
+                        content.setPadding(new Insets(0, 10, 0, 10));
+                        HBox.setHgrow(content, Priority.ALWAYS);
+
+                        HBox row = new HBox(activeBar, content);
+                        row.setAlignment(Pos.CENTER_LEFT);
+
+                        // 3. Overlays de estado
+                        Region hoverOverlay = new Region();
+                        hoverOverlay.getStyleClass().add("layer-hover-overlay");
+                        hoverOverlay.setOpacity(0.0);
+                        hoverOverlay.setMouseTransparent(true);
+
+                        Region selectedOverlay = new Region();
+                        selectedOverlay.getStyleClass().add("layer-selected-overlay");
+                        selectedOverlay.setOpacity(0.0);
+                        selectedOverlay.setMouseTransparent(true);
+
+                        StackPane card = new StackPane(hoverOverlay, selectedOverlay, row);
+                        card.getStyleClass().add("layer-card");
+                        card.setPrefHeight(40);
+                        card.setMinHeight(40);
+
+                        // Separador
+                        Region sep = new Region();
+                        sep.getStyleClass().add("layer-separator");
+                        sep.setPrefHeight(1);
+
+
+                        VBox cellLayout = new VBox(card, sep);
+                        setGraphic(cellLayout);
+                        setText(null);
+                        setPadding(Insets.EMPTY);
+
+                        // 4. Animaciones
+                        javafx.animation.FadeTransition hIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                        hIn.setToValue(0.6);
+                        javafx.animation.FadeTransition hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                        hOut.setToValue(0.0);
+
+                        if (isSelected()) {
+                            javafx.animation.FadeTransition sIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(700), selectedOverlay);
+                            sIn.setToValue(1.0);
+                            sIn.play();
+                            
+                            actions.setVisible(true);
+                            actions.setOpacity(1.0);
+
+                            activeBar.setVisible(true);
+                            if (pulse == null) {
+                                pulse = new javafx.animation.Timeline(
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH)),
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2), new javafx.animation.KeyValue(activeBar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4), new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH))
+                                );
+                                pulse.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+                                pulse.play();
+                            }
+                        } else {
+                            activeBar.setVisible(false);
+                            if (pulse != null) { pulse.stop(); pulse = null; }
+                        }
+
+                        card.setOnMouseEntered(e -> { 
+                            if (!isSelected()) {
+                                hIn.playFromStart();
+                                actions.setVisible(true);
+                                actions.setOpacity(0.7);
+                            }
+                        });
+                        card.setOnMouseExited(e -> { 
+                            if (!isSelected()) {
+                                hOut.playFromStart();
+                                actions.setVisible(false);
+                                actions.setOpacity(0.0);
+                            }
                         });
 
-                        contextMenu.getItems().add(menuEliminar);
-                    }
+                        // 5. Drag & Drop (Reordenar)
+                        card.setOnDragDetected(event -> {
+                            if (item instanceof ImagenFondoElemento) return; // Fondo no se mueve
+                            Dragboard db = card.startDragAndDrop(TransferMode.MOVE);
+                            ClipboardContent cc = new ClipboardContent();
+                            cc.putString(String.valueOf(allElements.indexOf(item)));
+                            db.setContent(cc);
+                            event.consume();
+                        });
 
-                    setContextMenu(contextMenu);
+                        card.setOnDragOver(event -> {
+                            if (event.getGestureSource() != card && event.getDragboard().hasString()) {
+                                event.acceptTransferModes(TransferMode.MOVE);
+                            }
+                            event.consume();
+                        });
+
+                        card.setOnDragDropped(event -> {
+                            Dragboard db = event.getDragboard();
+                            if (db.hasString()) {
+                                int sourceIdx = Integer.parseInt(db.getString());
+                                int targetIdx = allElements.indexOf(item);
+
+                                // No permitir mover nada debajo del fondo (que está en 0 si existe)
+                                ImagenFondoElemento f = proyecto.getFondoActual();
+                                int minIdx = (f != null) ? 1 : 0;
+
+                                if (sourceIdx >= minIdx && targetIdx >= minIdx && sourceIdx != targetIdx) {
+                                    Elemento sourceItem = allElements.get(sourceIdx);
+                                    
+                                    // Sincronizar con la lista real del proyecto
+                                    ObservableList<Elemento> listaReal = proyecto.getElementosActuales();
+                                    int realSourceIdx = sourceIdx - minIdx;
+                                    int realTargetIdx = targetIdx - minIdx;
+                                    
+                                    if (realSourceIdx >= 0 && realTargetIdx >= 0) {
+                                        Collections.swap(listaReal, realSourceIdx, realTargetIdx);
+                                        if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                        // Refrescar panel para ver cambios
+                                        buildDesignModePanels(proyecto, sourceItem);
+                                    }
+                                }
+                                event.setDropCompleted(true);
+                            }
+                            event.consume();
+                        });
+
+                        // Menú contextual
+                        ContextMenu cm = new ContextMenu();
+                        if (item instanceof ImagenFondoElemento) {
+                            MenuItem mEdit = new MenuItem("Editar fondo...");
+                            mEdit.setOnAction(e -> { if (onEditExternal != null) onEditExternal.accept((ImagenFondoElemento)item); });
+                            cm.getItems().add(mEdit);
+                        } else {
+                            MenuItem mDel = new MenuItem("Eliminar");
+                            mDel.setOnAction(e -> {
+                                proyecto.getElementosActuales().remove(item);
+                                if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                buildDesignModePanels(proyecto, null);
+                            });
+                            cm.getItems().add(mDel);
+                        }
+                        setContextMenu(cm);
+                    }
                 }
             });
 
-            // Selección de capas -> se lo comunicamos al controlador
+            // Borrado rápido con teclado
+            listCapas.setOnKeyPressed(event -> {
+                if (event.getCode() == KeyCode.DELETE || event.getCode() == KeyCode.BACK_SPACE) {
+                    Elemento sel = listCapas.getSelectionModel().getSelectedItem();
+                    if (sel != null && !(sel instanceof ImagenFondoElemento)) {
+                        proyecto.getElementosActuales().remove(sel);
+                        if (onCanvasRedraw != null) onCanvasRedraw.run();
+                        buildDesignModePanels(proyecto, null);
+                    }
+                }
+            });
+
             listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-                if (onElementSelected != null)
-                    onElementSelected.accept(newVal);
+                if (onElementSelected != null) onElementSelected.accept(newVal);
             });
         }
 
@@ -714,7 +932,7 @@ public class ModeManager {
         VBox header = new VBox(2);
         Label lblTrabajos = new Label("Gestión de Trabajos");
         lblTrabajos.getStyleClass().add("panel-title");
-        Label lblSubtitulo = new Label("Seleccione un proyecto para editar");
+        Label lblSubtitulo = new Label("Administración y exportación");
         lblSubtitulo.getStyleClass().add("panel-placeholder");
         header.getChildren().addAll(lblTrabajos, lblSubtitulo);
 
@@ -888,8 +1106,9 @@ public class ModeManager {
             }
         });
 
-        Button btnNuevoCR80 = new Button("+ Nuevo Proyecto CR80");
+        Button btnNuevoCR80 = new Button("+ NUEVO PROYECTO CR80");
         btnNuevoCR80.getStyleClass().add("new-project-btn");
+        btnNuevoCR80.setStyle("-fx-font-size: 11.5px;");
         btnNuevoCR80.setMaxWidth(Double.MAX_VALUE);
         btnNuevoCR80.setOnAction(e -> {
             if (onNewCR80 != null) onNewCR80.run();
