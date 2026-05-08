@@ -1230,7 +1230,10 @@ public class MainViewController {
         if (viewModel.getProyectoActual() == null) return;
         viewModel.getProyectoActual().setMostrandoFrente(true);
         viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) buildEditPanels();
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
+            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+        }
         dibujarCanvas();
     }
 
@@ -1239,7 +1242,10 @@ public class MainViewController {
         if (viewModel.getProyectoActual() == null) return;
         viewModel.getProyectoActual().setMostrandoFrente(false);
         viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) buildEditPanels();
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
+            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+        }
         dibujarCanvas();
     }
 
