@@ -295,7 +295,10 @@ public class ModeManager {
         Label lblToolbox = new Label("Herramientas");
         lblToolbox.getStyleClass().add("panel-title");
 
-        Button btnTexto = new Button("T Texto");
+        Button btnTexto = new Button("Texto");
+        Label iconTexto = new Label("T");
+        iconTexto.getStyleClass().add("toolbox-icon");
+        btnTexto.setGraphic(iconTexto);
         btnTexto.setMaxWidth(Double.MAX_VALUE);
         btnTexto.getStyleClass().add("toolbox-btn");
         btnTexto.setOnAction(e -> {
@@ -303,7 +306,10 @@ public class ModeManager {
                 onAddText.run();
         });
 
-        Button btnImagen = new Button("🖼 Imagen");
+        Button btnImagen = new Button("Imagen");
+        Label iconImagen = new Label("🖼");
+        iconImagen.getStyleClass().add("toolbox-icon");
+        btnImagen.setGraphic(iconImagen);
         btnImagen.setMaxWidth(Double.MAX_VALUE);
         btnImagen.getStyleClass().add("toolbox-btn");
         btnImagen.setOnAction(e -> {
@@ -311,7 +317,10 @@ public class ModeManager {
                 onAddImage.run();
         });
 
-        Button btnFondo = new Button("🎨 Fondo");
+        Button btnFondo = new Button("Fondo");
+        Label iconFondo = new Label("🎨");
+        iconFondo.getStyleClass().add("toolbox-icon");
+        btnFondo.setGraphic(iconFondo);
         btnFondo.setMaxWidth(Double.MAX_VALUE);
         btnFondo.getStyleClass().add("toolbox-btn");
         btnFondo.setOnAction(e -> {
@@ -349,12 +358,15 @@ public class ModeManager {
         shapesSubMenu.getChildren().addAll(btnRectangulo, btnElipse, btnLinea);
 
         // Botón principal que despliega el submenú
-        Button btnToggleFormas = new Button(shapesExpanded ? "▼ Dibujar Forma" : "▶ Dibujar Forma");
+        Button btnToggleFormas = new Button("Dibujar Forma");
+        Label iconFormas = new Label(shapesExpanded ? "▼" : "▶");
+        iconFormas.getStyleClass().add("toolbox-icon");
+        btnToggleFormas.setGraphic(iconFormas);
         btnToggleFormas.setMaxWidth(Double.MAX_VALUE);
         btnToggleFormas.getStyleClass().add("toolbox-btn");
         btnToggleFormas.setOnAction(e -> {
             shapesExpanded = !shapesExpanded;
-            btnToggleFormas.setText(shapesExpanded ? "▼ Dibujar Forma" : "▶ Dibujar Forma");
+            iconFormas.setText(shapesExpanded ? "▼" : "▶");
             
             // Usar el helper de animación para una transición suave
             AnimationHelper.animateAccordion(shapesSubMenu, shapesExpanded);

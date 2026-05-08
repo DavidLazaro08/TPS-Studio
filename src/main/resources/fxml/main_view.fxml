@@ -167,7 +167,7 @@
           visible="false" managed="false">
         <StackPane.alignment>TOP_RIGHT</StackPane.alignment>
         <StackPane.margin>
-            <Insets top="46" />
+            <Insets top="50" />
         </StackPane.margin>
     </VBox>
 

@@ -35,7 +35,7 @@ import java.util.function.Consumer;
  */
 public class PropertiesPanelController {
 
-    private static final double MAX_CONTROL_WIDTH = 200.0;
+    private static final double MAX_CONTROL_WIDTH = Double.MAX_VALUE;
 
     private final Canvas canvas;
 

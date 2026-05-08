@@ -726,18 +726,31 @@
    MODO DISEÑO — PANEL IZQUIERDO (HERRAMIENTAS)
    ===================================================== */
 
-/* Botones de herramienta — más altura, más limpios */
+/* Botones de herramienta — contenido equilibrado, iconos gráficos */
 .toolbox-btn {
     -fx-background-color: #232022;
     -fx-text-fill: #c4c0c2;
-    -fx-font-size: 12px;
-    -fx-padding: 9 14;
+    -fx-font-size: 13px;
+    -fx-padding: 10 12 10 20; /* Más padding izquierdo para equilibrar hacia el centro */
     -fx-background-radius: 5;
     -fx-cursor: hand;
     -fx-border-color: #363234;
     -fx-border-width: 1;
     -fx-border-radius: 5;
     -fx-alignment: center-left;
+    -fx-graphic-text-gap: 12;
+}
+
+/* Iconos de las herramientas (más grandes) */
+.toolbox-icon {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 16px;
+    -fx-min-width: 24;
+    -fx-alignment: center;
+}
+
+.toolbox-btn:hover .toolbox-icon {
+    -fx-text-fill: #c4c0c2;
 }
 
 .toolbox-btn:hover {
@@ -755,18 +768,18 @@
     -fx-opacity: 0.35;
 }
 
-/* Submenú de formas — botones más pequeños con sangría */
+/* Submenú de formas — botones más pequeños, ligeramente sangrados */
 .toolbox-submenu-btn {
-    -fx-background-color: #1e1b1d;
-    -fx-text-fill: #a09ca0;
-    -fx-font-size: 11px;
-    -fx-padding: 7 12;
+    -fx-background-color: #1d1b1c;
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 12px;
+    -fx-padding: 7 14;
     -fx-background-radius: 4;
     -fx-cursor: hand;
     -fx-border-color: #2e2b2d;
     -fx-border-width: 1;
     -fx-border-radius: 4;
-    -fx-alignment: center-left;
+    -fx-alignment: center;
 }
 
 .toolbox-submenu-btn:hover {
@@ -844,40 +857,52 @@
     -fx-background-color: transparent;
 }
 
-/* Item de capa — fila compacta con padding */
+/* Item de capa — estilo tarjeta compacta */
 .layer-item {
-    -fx-background-color: #1e1b1d;
-    -fx-background-radius: 4;
-    -fx-padding: 6 10;
+    -fx-background-color: #1e1a1c;
+    -fx-background-radius: 6;
+    -fx-padding: 7 10;
     -fx-cursor: hand;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
 }
 
 .layer-item:hover {
-    -fx-background-color: #282528;
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
 }
 
-/* Item de capa seleccionado */
+/* Item de capa seleccionado — tarjeta con acento */
 .layer-item-selected {
     -fx-background-color: tps-accent-dark;
-    -fx-background-radius: 4;
-    -fx-padding: 6 10;
+    -fx-background-radius: 6;
+    -fx-padding: 7 10;
     -fx-cursor: hand;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
 }
 
 /* Texto del nombre de capa */
 .layer-item-text {
-    -fx-text-fill: #c4c0c2;
+    -fx-text-fill: #b4b0b2;
     -fx-font-size: 11px;
 }
 
 .layer-item-selected .layer-item-text {
-    -fx-text-fill: #e8e6e7;
+    -fx-text-fill: tps-text-1;
+    -fx-font-weight: bold;
 }
 
 /* Icono de tipo de capa */
 .layer-item-icon {
-    -fx-text-fill: #6a6568;
+    -fx-text-fill: #7a7678;
     -fx-font-size: 11px;
+}
+
+.layer-item-selected .layer-item-icon {
+    -fx-text-fill: tps-accent-light;
 }
 
 /* =====================================================
@@ -900,20 +925,21 @@
     -fx-background-color: #1a1618;
 }
 
-/* Scrollbar vertical del panel de propiedades */
+/* Scrollbar vertical — fino, oscuro, siempre presente cuando hay overflow */
 .panel-scroll-view .scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-pref-width: 5;
-    -fx-padding: 2 1;
+    -fx-background-color: #1a1618;
+    -fx-pref-width: 6;
+    -fx-padding: 0;
 }
 
 .panel-scroll-view .scroll-bar:vertical .track {
-    -fx-background-color: transparent;
+    -fx-background-color: #252123;
+    -fx-background-radius: 3;
     -fx-border-color: transparent;
 }
 
 .panel-scroll-view .scroll-bar:vertical .thumb {
-    -fx-background-color: #3a3638;
+    -fx-background-color: #3d3a3c;
     -fx-background-radius: 3;
 }
 
@@ -947,6 +973,132 @@
 .panel-dark-bg {
     -fx-background-color: #1a1618;
     -fx-min-height: 100%;
+}
+
+/* =====================================================
+   INPUTS OSCUROS EN PANELES DE PROPIEDADES
+   JavaFX TextField, ComboBox, Spinner, TextArea dentro de .panel-scroll-view
+   ===================================================== */
+
+.panel-scroll-view .text-field,
+.panel-scroll-view .text-area .content {
+    -fx-background-color: #252123;
+    -fx-text-fill: #e0dce0;
+    -fx-prompt-text-fill: #5a5658;
+    -fx-highlight-fill: #4a6b7c;
+    -fx-highlight-text-fill: #e8e6e7;
+}
+
+.panel-scroll-view .text-field {
+    -fx-background-radius: 4;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 5 8;
+}
+
+.panel-scroll-view .text-field:focused {
+    -fx-border-color: #4a6b7c;
+    -fx-background-color: #2c2a2c;
+}
+
+.panel-scroll-view .text-area {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-control-inner-background: #252123;
+}
+
+.panel-scroll-view .text-area:focused {
+    -fx-border-color: #4a6b7c;
+}
+
+.panel-scroll-view .text-area .scroll-pane {
+    -fx-background-color: #252123;
+}
+
+.panel-scroll-view .combo-box {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.panel-scroll-view .combo-box:focused {
+    -fx-border-color: #4a6b7c;
+}
+
+.panel-scroll-view .combo-box .label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
+}
+
+.panel-scroll-view .combo-box .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.panel-scroll-view .combo-box .arrow {
+    -fx-background-color: #7a7678;
+}
+
+.panel-scroll-view .combo-box-popup .list-view {
+    -fx-background-color: #252123;
+    -fx-border-color: #4a6b7c;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 2);
+}
+
+.panel-scroll-view .combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-padding: 4 10;
+    -fx-font-size: 12px;
+}
+
+.panel-scroll-view .combo-box-popup .list-cell:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: #e8e6e7;
+}
+
+.panel-scroll-view .combo-box-popup .list-cell:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: #e8e6e7;
+}
+
+.panel-scroll-view .spinner {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.panel-scroll-view .spinner .text-field {
+    -fx-background-color: #252123;
+    -fx-text-fill: #c4c0c2;
+    -fx-border-color: transparent;
+    -fx-padding: 4 6;
+}
+
+.panel-scroll-view .spinner .increment-arrow-button,
+.panel-scroll-view .spinner .decrement-arrow-button {
+    -fx-background-color: #2a2628;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 0 0 0 1;
+}
+
+.panel-scroll-view .spinner .increment-arrow-button:hover,
+.panel-scroll-view .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #3a3638;
+}
+
+.panel-scroll-view .spinner .increment-arrow,
+.panel-scroll-view .spinner .decrement-arrow {
+    -fx-background-color: #9a9598;
 }
 
 /* Label de sección media (12px, gris claro) */
