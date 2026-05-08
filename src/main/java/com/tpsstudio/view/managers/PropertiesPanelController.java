@@ -85,7 +85,7 @@ public class PropertiesPanelController {
      */
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
         VBox props = new VBox(8);
-        props.setPadding(new Insets(30));
+        props.setPadding(new Insets(16, 16, 16, 16));
         props.setFillWidth(true);
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
 
@@ -256,9 +256,9 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        Button btnReemplazar = new Button("Reemplazar Fondo");
+        Button btnReemplazar = new Button("🖼  Reemplazar Fondo");
         btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnReemplazar.getStyleClass().add("toolbox-btn");
+        btnReemplazar.getStyleClass().add("prop-action-btn");
         btnReemplazar.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Fondo");
@@ -289,9 +289,9 @@ public class PropertiesPanelController {
             }
         });
 
-        Button btnEditarExterno = new Button("Editor Externo");
+        Button btnEditarExterno = new Button("✏  Editor Externo");
         btnEditarExterno.setMaxWidth(Double.MAX_VALUE);
-        btnEditarExterno.getStyleClass().add("toolbox-btn");
+        btnEditarExterno.getStyleClass().add("prop-action-btn");
         btnEditarExterno.setOnAction(e -> {
             if (onEditExternal != null) {
                 onEditExternal.accept(fondo);
@@ -300,7 +300,7 @@ public class PropertiesPanelController {
 
         Button btnConfigEditor = new Button("⚙");
         btnConfigEditor.setTooltip(new Tooltip("Configurar editor externo..."));
-        btnConfigEditor.getStyleClass().add("toolbox-btn");
+        btnConfigEditor.getStyleClass().add("prop-action-btn");
         btnConfigEditor.setPrefWidth(40);
         btnConfigEditor.setOnAction(e -> {
             Alert info = new Alert(Alert.AlertType.CONFIRMATION);
@@ -343,9 +343,9 @@ public class PropertiesPanelController {
         HBox.setHgrow(btnEditarExterno, Priority.ALWAYS);
         cajaEdicion.getChildren().addAll(btnEditarExterno, btnConfigEditor);
 
-        Button btnRecargar = new Button("Recargar");
+        Button btnRecargar = new Button("🔄  Recargar");
         btnRecargar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnRecargar.getStyleClass().add("toolbox-btn");
+        btnRecargar.getStyleClass().add("prop-action-btn");
         btnRecargar.setOnAction(e -> {
             if (onReload != null) {
                 onReload.accept(fondo);
@@ -524,9 +524,9 @@ public class PropertiesPanelController {
         }
 
         // Reemplazar Imagen (justo debajo de Datos Variables)
-        Button btnReemplazar = new Button("Reemplazar Imagen");
+        Button btnReemplazar = new Button("🖼  Reemplazar Imagen");
         btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnReemplazar.getStyleClass().add("toolbox-btn");
+        btnReemplazar.getStyleClass().add("prop-action-btn");
         btnReemplazar.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Imagen");

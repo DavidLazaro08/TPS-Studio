@@ -320,28 +320,28 @@ public class ModeManager {
         });
 
         // Contenedor para el submenú de formas (tipo acordeón)
-        VBox shapesSubMenu = new VBox(4);
-        shapesSubMenu.setPadding(new Insets(0, 0, 0, 15)); // Sangría para parecer submenú
+        VBox shapesSubMenu = new VBox(3);
+        shapesSubMenu.setPadding(new Insets(2, 0, 2, 12));
         shapesSubMenu.setVisible(shapesExpanded);
         shapesSubMenu.setManaged(shapesExpanded);
 
-        Button btnRectangulo = new Button("▭ Rectángulo");
+        Button btnRectangulo = new Button("▭  Rectángulo");
         btnRectangulo.setMaxWidth(Double.MAX_VALUE);
-        btnRectangulo.getStyleClass().add("toolbox-btn");
+        btnRectangulo.getStyleClass().add("toolbox-submenu-btn");
         btnRectangulo.setOnAction(e -> {
             if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.RECTANGULO);
         });
 
-        Button btnElipse = new Button("○ Elipse");
+        Button btnElipse = new Button("○  Elipse");
         btnElipse.setMaxWidth(Double.MAX_VALUE);
-        btnElipse.getStyleClass().add("toolbox-btn");
+        btnElipse.getStyleClass().add("toolbox-submenu-btn");
         btnElipse.setOnAction(e -> {
             if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.ELIPSE);
         });
 
-        Button btnLinea = new Button("― Línea");
+        Button btnLinea = new Button("―  Línea");
         btnLinea.setMaxWidth(Double.MAX_VALUE);
-        btnLinea.getStyleClass().add("toolbox-btn");
+        btnLinea.getStyleClass().add("toolbox-submenu-btn");
         btnLinea.setOnAction(e -> {
             if (onAddShape != null) onAddShape.accept(com.tpsstudio.model.elements.FormaElemento.TipoForma.LINEA);
         });
@@ -395,9 +395,9 @@ public class ModeManager {
         lblCapas.getStyleClass().add("panel-title");
 
         ListView<Elemento> listCapas = new ListView<>();
-        listCapas.getStyleClass().add("project-list");
-        listCapas.setPrefHeight(120); // Altura mínima preferida más pequeña
-        VBox.setVgrow(listCapas, Priority.ALWAYS); // Que la lista sea lo que se estire y use scroll
+        listCapas.getStyleClass().add("layers-list");
+        listCapas.setPrefHeight(120);
+        VBox.setVgrow(listCapas, Priority.ALWAYS);
 
         if (proyecto != null) {
             ObservableList<Elemento> allElements = FXCollections.observableArrayList();
@@ -422,12 +422,42 @@ public class ModeManager {
 
                     if (empty || item == null) {
                         setText(null);
+                        setGraphic(null);
                         setContextMenu(null);
+                        setPadding(Insets.EMPTY);
                         return;
                     }
 
-                    String lockIcon = item.isLocked() ? "🔒 " : "";
-                    setText(lockIcon + item.toString());
+                    // Icono según tipo de elemento
+                    String icon;
+                    if (item instanceof com.tpsstudio.model.elements.ImagenFondoElemento) icon = "🎨";
+                    else if (item instanceof com.tpsstudio.model.elements.TextoElemento)  icon = "T";
+                    else if (item instanceof com.tpsstudio.model.elements.ImagenElemento) icon = "🖼";
+                    else if (item instanceof com.tpsstudio.model.elements.FormaElemento)  icon = "▭";
+                    else icon = "·";
+
+                    String lockIcon = item.isLocked() ? " 🔒" : "";
+                    String nombre   = item.toString() + lockIcon;
+
+                    // Fila compacta con icono + texto
+                    javafx.scene.control.Label lblIcon = new javafx.scene.control.Label(icon);
+                    lblIcon.getStyleClass().add("layer-item-icon");
+                    lblIcon.setMinWidth(18);
+
+                    javafx.scene.control.Label lblNombre = new javafx.scene.control.Label(nombre);
+                    lblNombre.getStyleClass().add("layer-item-text");
+
+                    HBox row = new HBox(8, lblIcon, lblNombre);
+                    row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    row.setMaxWidth(Double.MAX_VALUE);
+
+                    // Estilo del contenedor según selección
+                    boolean selected = getListView().getSelectionModel().getSelectedItem() == item;
+                    row.getStyleClass().add(selected ? "layer-item-selected" : "layer-item");
+
+                    setGraphic(row);
+                    setText(null);
+                    setPadding(new Insets(2, 4, 2, 4));
 
                     // Menú contextual según tipo
                     ContextMenu contextMenu = new ContextMenu();

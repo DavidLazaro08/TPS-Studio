@@ -722,31 +722,551 @@
 
 /* (Mode toggle styles removed, integrated into segment styles above) */
 
-/* Toolbox buttons */
+/* =====================================================
+   MODO DISEÑO — PANEL IZQUIERDO (HERRAMIENTAS)
+   ===================================================== */
+
+/* Botones de herramienta — más altura, más limpios */
 .toolbox-btn {
-    -fx-background-color: #2a2628;
+    -fx-background-color: #232022;
     -fx-text-fill: #c4c0c2;
-    -fx-font-size: 13px;
-    -fx-padding: 10 12;
-    -fx-background-radius: 6;
+    -fx-font-size: 12px;
+    -fx-padding: 9 14;
+    -fx-background-radius: 5;
     -fx-cursor: hand;
-    -fx-border-color: #3d3739;
+    -fx-border-color: #363234;
     -fx-border-width: 1;
-    -fx-border-radius: 6;
+    -fx-border-radius: 5;
+    -fx-alignment: center-left;
 }
 
 .toolbox-btn:hover {
-    -fx-background-color: #322e30;
+    -fx-background-color: #2e2a2c;
     -fx-text-fill: #e8e6e7;
     -fx-border-color: #4a6b7c;
 }
 
 .toolbox-btn:pressed {
-    -fx-background-color: #1e1a1c;
+    -fx-background-color: #1a1618;
+    -fx-border-color: #3d6478;
 }
 
 .toolbox-btn:disabled {
-    -fx-opacity: 0.4;
+    -fx-opacity: 0.35;
+}
+
+/* Submenú de formas — botones más pequeños con sangría */
+.toolbox-submenu-btn {
+    -fx-background-color: #1e1b1d;
+    -fx-text-fill: #a09ca0;
+    -fx-font-size: 11px;
+    -fx-padding: 7 12;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-border-color: #2e2b2d;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-alignment: center-left;
+}
+
+.toolbox-submenu-btn:hover {
+    -fx-background-color: #282528;
+    -fx-text-fill: #e8e6e7;
+    -fx-border-color: #4a6b7c;
+}
+
+/* =====================================================
+   MODO DISEÑO — PANEL IZQUIERDO (CAPAS)
+   ===================================================== */
+
+/* Lista de capas — mismo scroll discreto que project-list */
+.layers-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.layers-list .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: -10;
+}
+
+.layers-list .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 5;
+    -fx-padding: 2 1;
+}
+
+.layers-list .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.layers-list .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3638;
+    -fx-background-radius: 3;
+}
+
+.layers-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.layers-list .scroll-bar:vertical .increment-button,
+.layers-list .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.layers-list .scroll-bar:vertical .increment-arrow,
+.layers-list .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
+}
+
+/* Celda base de capas */
+.layers-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.layers-list .list-cell:hover,
+.layers-list .list-cell:focused {
+    -fx-background-color: transparent;
+}
+
+.layers-list .list-cell:selected,
+.layers-list .list-cell:selected:focused {
+    -fx-background-color: transparent;
+}
+
+/* Item de capa — fila compacta con padding */
+.layer-item {
+    -fx-background-color: #1e1b1d;
+    -fx-background-radius: 4;
+    -fx-padding: 6 10;
+    -fx-cursor: hand;
+}
+
+.layer-item:hover {
+    -fx-background-color: #282528;
+}
+
+/* Item de capa seleccionado */
+.layer-item-selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-background-radius: 4;
+    -fx-padding: 6 10;
+    -fx-cursor: hand;
+}
+
+/* Texto del nombre de capa */
+.layer-item-text {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+.layer-item-selected .layer-item-text {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* Icono de tipo de capa */
+.layer-item-icon {
+    -fx-text-fill: #6a6568;
+    -fx-font-size: 11px;
+}
+
+/* =====================================================
+   MODO DISEÑO — PANEL DERECHO (PROPIEDADES)
+   ===================================================== */
+
+/* ScrollPane de propiedades — fondo continuo sin cortes */
+.panel-scroll-view {
+    -fx-background: #1a1618;
+    -fx-background-color: #1a1618;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.panel-scroll-view .viewport {
+    -fx-background-color: #1a1618;
+}
+
+.panel-scroll-view .corner {
+    -fx-background-color: #1a1618;
+}
+
+/* Scrollbar vertical del panel de propiedades */
+.panel-scroll-view .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 5;
+    -fx-padding: 2 1;
+}
+
+.panel-scroll-view .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.panel-scroll-view .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3638;
+    -fx-background-radius: 3;
+}
+
+.panel-scroll-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.panel-scroll-view .scroll-bar:vertical .increment-button,
+.panel-scroll-view .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.panel-scroll-view .scroll-bar:vertical .increment-arrow,
+.panel-scroll-view .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
+}
+
+.panel-scroll-view .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: -10;
+}
+
+/* Contenedor con fondo oscuro liso (sin cortes) */
+.panel-dark-bg {
+    -fx-background-color: #1a1618;
+    -fx-min-height: 100%;
+}
+
+/* Label de sección media (12px, gris claro) */
+.prop-label {
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 2 0;
+}
+
+/* Label pequeño de campo (11px) */
+.prop-label-small {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 10px;
+    -fx-padding: 2 0 1 0;
+}
+
+/* RadioButton en paneles de propiedades */
+.prop-radio {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+.prop-radio .radio {
+    -fx-border-color: #4a4648;
+    -fx-background-color: #252123;
+    -fx-border-width: 1.5;
+}
+
+.prop-radio:selected .radio {
+    -fx-border-color: #4a6b7c;
+}
+
+.prop-radio:selected .dot {
+    -fx-background-color: #4a6b7c;
+    -fx-background-radius: 3;
+}
+
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+.prop-checkbox .box {
+    -fx-background-color: #252123;
+    -fx-border-color: #4a4648;
+    -fx-border-width: 1.5;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+}
+
+.prop-checkbox:hover .box {
+    -fx-border-color: #4a6b7c;
+}
+
+.prop-checkbox:selected .box {
+    -fx-background-color: #3d6478;
+    -fx-border-color: #4a6b7c;
+}
+
+.prop-checkbox:selected .mark {
+    -fx-background-color: #e8e6e7;
+}
+
+/* Separador de sección dentro de propiedades */
+.prop-separator {
+    -fx-background-color: #2a2628;
+    -fx-max-height: 1;
+    -fx-padding: 0;
+}
+
+/* Botón de acción secundario en propiedades */
+.prop-action-btn {
+    -fx-background-color: #232022;
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+    -fx-padding: 7 12;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-border-color: #363234;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-alignment: center-left;
+}
+
+.prop-action-btn:hover {
+    -fx-background-color: #2e2a2c;
+    -fx-text-fill: #e8e6e7;
+    -fx-border-color: #4a6b7c;
+}
+
+.prop-action-btn:pressed {
+    -fx-background-color: #1a1618;
+}
+
+/* =====================================================
+   MODO DISEÑO — PANEL DATOS VARIABLES
+   ===================================================== */
+
+/* Nombre de la columna (cabecera gris pequeña) */
+.dato-columna {
+    -fx-text-fill: #7a7678;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+}
+
+/* Valor del campo (texto claro destacado) */
+.dato-valor {
+    -fx-text-fill: #d8d4d6;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+}
+
+/* Contenedor de cada par columna/valor */
+.dato-campo {
+    -fx-background-color: #1f1d1f;
+    -fx-background-radius: 4;
+    -fx-border-color: #2e2b2d;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+/* Label del contador de registros */
+.toolbar-label {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+}
+
+/* =====================================================
+   ESTILOS INTERNOS DE PANELES (mantenidos + mejorados)
+   ===================================================== */
+
+/* =====================================================
+   ALERT DIALOGOS (Modo Oscuro Completo)
+   ===================================================== */
+.alert-dialog {
+    -fx-background-color: #1e1a1c;
+    -fx-base: #1e1a1c;
+}
+
+.alert-dialog .header-panel {
+    -fx-background-color: #141012;
+}
+
+.alert-dialog .header-panel .label {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.alert-dialog > *.label.content {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.alert-dialog .button-bar {
+    -fx-background-color: #1e1a1c;
+}
+
+.alert-dialog .button {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+}
+
+.alert-dialog .button:hover {
+    -fx-background-color: tps-accent;
+}
+
+.alert-dialog .text-area {
+    -fx-control-inner-background: #0a0809;
+    -fx-background-color: transparent, #0a0809, transparent, #0a0809;
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 13px;
+    -fx-border-color: #3d3739;
+}
+
+/* =====================================================
+   PERFIL DE USUARIO (SIDEBAR FOOTER)
+   ===================================================== */
+.user-profile-panel {
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 13 16;
+}
+
+/* Indicador de sesión activa (punto verde discreto) */
+.session-dot {
+    -fx-text-fill: tps-accent;
+    -fx-font-size: 7px;
+}
+
+/* Línea „Sesión: Admin" */
+.user-profile-name {
+    -fx-text-fill: tps-text-2;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Botón «Cerrar sesión» — secundario, alineado a la derecha */
+.logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 11px;
+    -fx-padding: 1 0 0 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+
+.logout-btn:hover {
+    -fx-text-fill: #c97070;
+    -fx-underline: true;
+}
+
+/* ScrollPane del panel lateral */
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.sidebar-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================
+   PANEL TÍTULO / SUBTÍTULO (Modo Producción)
+   ===================================================== */
+.panel-title {
+    -fx-text-fill: tps-text-1;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4 0;
+}
+
+.panel-placeholder {
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+}
+
+/* Botón nuevo proyecto — tono de acento profundo + texto claro */
+.new-project-btn {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center;
+}
+
+.new-project-btn:hover {
+    -fx-background-color: tps-accent-subtle;
+    -fx-border-color: tps-accent;
+    -fx-text-fill: tps-accent-light;
+}
+
+.new-project-btn:pressed {
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
+}
+
+/* =====================================================
+   SELECTOR INTEGRADO (SOBRE EL LIENZO)
+   ===================================================== */
+.integrated-view-selector {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================
+   SELECTOR DE VISTA DISCRETO (SOBRE EL LIENZO)
+   ===================================================== */
+.view-selector-btn-left, .view-selector-btn-right {
+    -fx-background-color: #1a1f26;
+    -fx-border-color: #2c3440;
+    -fx-border-width: 1;
+    -fx-text-fill: #aeb4be;
+    -fx-font-size: 11px;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+    -fx-padding: 1 15;
+    -fx-text-overrun: clip;
+}
+
+.view-selector-btn-left {
+    -fx-background-radius: 4 0 0 4;
+    -fx-border-radius: 4 0 0 4;
+}
+
+.view-selector-btn-right {
+    -fx-background-radius: 0 4 4 0;
+    -fx-border-radius: 0 4 4 0;
+    -fx-border-insets: 0 0 0 -1;
+}
+
+.view-selector-btn-left:hover, .view-selector-btn-right:hover {
+    -fx-background-color: #2c3440;
+    -fx-text-fill: white;
+}
+
+.view-selector-btn-left:selected, .view-selector-btn-right:selected {
+    -fx-background-color: #3d4b5c;
+    -fx-text-fill: white;
+    -fx-border-color: #4a5a6e;
+    -fx-font-weight: bold;
 }
 
 /* =====================================================
