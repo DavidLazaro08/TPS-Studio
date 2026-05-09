@@ -19,6 +19,8 @@ import com.tpsstudio.model.print.SalidaImpresoraDirecta;
 import com.tpsstudio.model.print.SalidaPDFSistema;
 import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
+import com.tpsstudio.view.controllers.sub.ElementActionsController;
+import com.tpsstudio.view.controllers.sub.ProjectActionsController;
 import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
@@ -110,6 +112,12 @@ public class MainViewController {
 
     // ViewModel: estado observable de la aplicación
     private final MainViewModel viewModel = new MainViewModel();
+
+    // Sub-controlador de acciones de proyecto (crear, abrir, guardar, exportar, imprimir)
+    private ProjectActionsController projectActionsController;
+
+    // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo; eliminar)
+    private ElementActionsController elementActionsController;
 
     // =====================================================
     // Inicialización
@@ -254,6 +262,11 @@ public class MainViewController {
         // -------------------------------------------------
         projectManager = new ProjectManager();
 
+        // Inicializar sub-controlador de acciones de proyecto
+        // onRedraw: lambda que simplemente llama a dibujarCanvas() de este mismo controlador
+        projectActionsController = new ProjectActionsController(
+                viewModel, projectManager, canvas, this::dibujarCanvas);
+
         projectManager.setOnProjectChanged(() -> {
             viewModel.setProyectoActual(projectManager.getProyectoActual());
             if (canvasManager != null) {
@@ -290,6 +303,13 @@ public class MainViewController {
         canvasManager.setZoomLevel(viewModel.getZoomLevel());
         canvasManager.setCurrentMode(viewModel.getCurrentMode());
         canvasManager.setMostrarGuias(true);
+
+        // Inicializar sub-controlador de acciones de elementos
+        elementActionsController = new ElementActionsController(
+                viewModel, projectManager, canvasManager, canvas,
+                this::dibujarCanvas,
+                this::ensurePropertiesPanelVisible,
+                this::mostrarDialogoFitMode);
 
         // -------------------------------------------------
         // Panel de propiedades (edición del elemento seleccionado)
@@ -1053,204 +1073,36 @@ public class MainViewController {
 
     @FXML
     private void onNuevoProyecto() {
-        mostrarDialogoNuevoProyecto();
+        projectActionsController.nuevoProyecto();
     }
 
     @FXML
     private void onAbrirProyecto() {
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Abrir Proyecto");
-        fileChooser.getExtensionFilters().add(
-                new javafx.stage.FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
-
-        File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-        if (file != null) {
-            projectManager.abrirProyectoDesdeArchivo(file);
-        }
+        projectActionsController.abrirProyecto();
     }
 
     @FXML
     private void onGuardarProyecto() {
-        // Guarda el proyecto actual (JSON / .tps)
-        projectManager.guardarProyecto();
+        projectActionsController.guardarProyecto();
     }
 
     @FXML
     private void onExportarProyecto() {
-        if (viewModel.getProyectoActual() == null) {
-            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
-            return;
-        }
-
-        com.tpsstudio.model.project.FuenteDatos fd = projectManager.getFuenteDatos();
-        int totalRegistros = (fd != null) ? fd.getTotalRegistros() : 1;
-
-        // 1. Diálogo de configuración de exportación
-        com.tpsstudio.view.dialogs.ExportDialog exportDialog = new com.tpsstudio.view.dialogs.ExportDialog(
-                canvas.getScene().getWindow(), totalRegistros, viewModel.getProyectoActual().getNombre());
-        java.util.Optional<com.tpsstudio.view.dialogs.ExportDialog.ExportConfig> cfg = exportDialog.showAndWait();
-        if (cfg.isEmpty() || cfg.get() == null)
-            return;
-
-        com.tpsstudio.view.dialogs.ExportDialog.ExportConfig config = cfg.get();
-
-        // 2. Resolver filas a exportar (solo si exportarRegistros es true)
-        java.util.List<Integer> filas = new java.util.ArrayList<>();
-        if (config.exportarRegistros()) {
-            try {
-                filas = com.tpsstudio.view.dialogs.ExportDialog.parseRangoFilas(config.rangoFilas(), totalRegistros);
-            } catch (IllegalArgumentException ex) {
-                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
-                        .showAndWait();
-                return;
-            }
-            if (filas.isEmpty()) {
-                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
-                        .showAndWait();
-                return;
-            }
-        }
-
-        // 3. Elegir dónde guardar (usamos este base name para los generados)
-        javafx.stage.FileChooser fc = new javafx.stage.FileChooser();
-        fc.setTitle("Seleccionar ubicación para la exportación");
-        fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("PDF", "*.pdf"));
-        fc.setInitialFileName(viewModel.getProyectoActual().getNombre().replaceAll("[^a-zA-Z0-9._-]", "_") + ".pdf");
-        File destino = fc.showSaveDialog(canvas.getScene().getWindow());
-        if (destino == null)
-            return;
-
-        // 4. Generar PDFs en hilo de fondo
-        com.tpsstudio.service.PDFExportService pdfService = new com.tpsstudio.service.PDFExportService(
-                viewModel.getProyectoActual(),
-                fd);
-
-        final java.util.List<Integer> filasFinal = filas;
-        final File basePath = destino;
-        final Window ownerWindow = canvas.getScene().getWindow();
-
-        new Thread(() -> {
-            try {
-                String baseUri = basePath.getAbsolutePath().replaceAll("(?i)\\.pdf$", "");
-                int archivosGenerados = 0;
-
-                // A) PDF Mail-Merge
-                if (config.exportarRegistros()) {
-                    File fMerge = new File(baseUri + "_registros.pdf");
-                    pdfService.exportar(config, filasFinal, fMerge);
-                    archivosGenerados++;
-                }
-
-                // B) Prueba A4
-                if (config.configPrueba() != null) {
-                    File fPrueba = new File(baseUri + "_prueba.pdf");
-                    pdfService.generarPruebaA4(config.configPrueba(), fPrueba);
-                    archivosGenerados++;
-                }
-
-                // C) PDF Imprenta
-                if (config.exportarImprenta()) {
-                    File fImprenta = new File(baseUri + "_imprenta.pdf");
-                    pdfService.exportarImprenta(fImprenta);
-                    archivosGenerados++;
-                }
-
-                // Notificar éxito al usuario usando la alerta base Toast
-                int totalGenerados = archivosGenerados;
-                Platform.runLater(() -> TPSToast.mostrar(
-                        ownerWindow,
-                        "Exportación completada (" + totalGenerados + " archivos generados)",
-                        null,
-                        TPSToast.Tipo.EXITO));
-
-            } catch (Throwable ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al exportar");
-                    err.setHeaderText("No se pudo completar la exportación");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
-            }
-        }, "pdf-export-thread").start();
+        projectActionsController.exportarProyecto();
     }
 
     /**
      * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF temporal
      * con el mismo motor que la exportación y lo envía al sistema operativo.
-     *
-     * El hilo de fondo sigue el mismo patrón que onExportarProyecto().
      */
     @FXML
     private void onImprimirProyecto() {
-        if (viewModel.getProyectoActual() == null) {
-            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
-            return;
-        }
-
-        if (!SalidaPDFSistema.isSupported()) {
-            TPSToast.mostrar(canvas.getScene().getWindow(),
-                    "La impresión mediante el sistema no está disponible en este equipo.",
-                    null, TPSToast.Tipo.ERROR);
-            return;
-        }
-
-        com.tpsstudio.model.project.FuenteDatos fd = projectManager.getFuenteDatos();
-
-        ImpresionDialog dialog = new ImpresionDialog(
-                canvas.getScene().getWindow(),
-                viewModel.getProyectoActual(),
-                fd);
-
-        java.util.Optional<TrabajoImpresion> resultado = dialog.showAndWait();
-        if (resultado.isEmpty() || resultado.get() == null) return;
-
-        ejecutarTrabajoImpresion(resultado.get(), viewModel.getProyectoActual(), fd);
+        projectActionsController.imprimirProyecto();
     }
 
-    /**
-     * Ejecuta el trabajo de impresión en un hilo de fondo.
-     *
-     * <p>Construye la estrategia de salida adecuada (impresora directa o visor PDF del SO)
-     * según la configuración del usuario, delega en {@link ImpresionService} para generar
-     * y entregar el PDF, y notifica el resultado en el hilo de UI mediante un toast.</p>
-     *
-     * @param trabajo  configuración elegida por el usuario en {@link ImpresionDialog}.
-     * @param proyecto proyecto activo del que se renderizará el diseño.
-     * @param fd       fuente de datos variables; puede ser {@code null}.
-     */
-    private void ejecutarTrabajoImpresion(TrabajoImpresion trabajo,
-                                          com.tpsstudio.model.project.Proyecto proyecto,
-                                          com.tpsstudio.model.project.FuenteDatos fd) {
-        javafx.stage.Window owner = canvas.getScene().getWindow();
-
-        new Thread(() -> {
-            try {
-                SalidaImpresion salida;
-                if (trabajo.nombreImpresora() != null) {
-                    salida = new SalidaImpresoraDirecta(trabajo.nombreImpresora());
-                } else {
-                    salida = new SalidaPDFSistema();
-                }
-                new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
-
-                Platform.runLater(() -> TPSToast.mostrar(
-                        owner,
-                        "Trabajo enviado a la cola de impresión",
-                        null, TPSToast.Tipo.EXITO));
-
-            } catch (Throwable ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al imprimir");
-                    err.setHeaderText("No se pudo completar la impresión");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
-            }
-        }, "imprimir-thread").start();
+    @FXML
+    private void onNuevoCR80() {
+        projectActionsController.nuevoProyecto();
     }
 
     @FXML
@@ -1259,7 +1111,6 @@ public class MainViewController {
         viewModel.getProyectoActual().setMostrandoFrente(true);
         viewModel.setElementoSeleccionado(null);
         if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
             modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
         }
         dibujarCanvas();
@@ -1271,59 +1122,9 @@ public class MainViewController {
         viewModel.getProyectoActual().setMostrandoFrente(false);
         viewModel.setElementoSeleccionado(null);
         if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
             modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
         }
         dibujarCanvas();
-    }
-
-    @FXML
-    private void onNuevoCR80() {
-        mostrarDialogoNuevoProyecto();
-    }
-
-    private void mostrarDialogoNuevoProyecto() {
-        Window owner = canvas.getScene() != null ? canvas.getScene().getWindow() : null;
-        NuevoProyectoDialog dialog = new NuevoProyectoDialog(owner);
-        java.util.Optional<ProyectoMetadata> result = dialog.showAndWait();
-
-        if (result.isPresent()) {
-            ProyectoMetadata metadata = result.get();
-            Proyecto nuevo = projectManager.crearProyectoDesdeMetadata(metadata);
-
-            if (nuevo != null) {
-                // Configurar propiedades físicas adicionales no incluidas en metadata
-                nuevo.setTipoTroquel(dialog.getTipoTroquelSeleccionado());
-
-                // Mostrar alerta de éxito visual en el Controller
-                Platform.runLater(() -> {
-                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
-                    alert.initOwner(owner);
-                    alert.setTitle("Proyecto Creado");
-                    alert.setHeaderText("Proyecto creado y configurado con éxito");
-                    alert.setContentText(
-                            "Se ha generado la estructura completa para el proyecto:\n\n" +
-                                    "Carpeta principal:\n" + metadata.getCarpetaProyecto() + "\n\n" +
-                                    "Subcarpetas creadas automáticamente:\n" +
-                                    "• Fotos\n" +
-                                    "• Fondos\n" +
-                                    "• Base de Datos (BBDD)");
-
-                    String css = getClass().getResource("/css/dialogs.css").toExternalForm();
-                    alert.getDialogPane().getStylesheets().add(css);
-
-                    if (owner != null) {
-                        alert.setOnShown(e -> {
-                            javafx.stage.Stage stage = (javafx.stage.Stage) alert.getDialogPane().getScene()
-                                    .getWindow();
-                            stage.setX(owner.getX() + (owner.getWidth() - stage.getWidth()) / 2.0);
-                            stage.setY(owner.getY() + (owner.getHeight() - stage.getHeight()) / 2.0);
-                        });
-                    }
-                    alert.showAndWait();
-                });
-            }
-        }
     }
 
     // =====================================================
@@ -1331,101 +1132,23 @@ public class MainViewController {
     // =====================================================
 
     private void onAñadirTexto() {
-        TextoElemento texto = projectManager.añadirTexto();
-        if (texto != null) {
-            viewModel.setElementoSeleccionado(texto);
-            canvasManager.setElementoSeleccionado(texto);
-            ensurePropertiesPanelVisible();
-        }
+        elementActionsController.añadirTexto();
     }
 
     private void onAñadirImagen() {
-        ImagenElemento imagen = projectManager.añadirImagenPlaceholder();
-        if (imagen != null) {
-            viewModel.setElementoSeleccionado(imagen);
-            canvasManager.setElementoSeleccionado(imagen);
-            ensurePropertiesPanelVisible();
-
-            // Avisar al usuario si se detectó y vinculó columna de foto automáticamente
-            if (imagen.getColumnaVinculada() != null) {
-                notificarColumnaAutoVinculada(imagen.getColumnaVinculada());
-            }
-        }
+        elementActionsController.añadirImagen();
     }
 
     private void onAñadirForma(FormaElemento.TipoForma tipo) {
-        FormaElemento forma = projectManager.añadirForma(tipo);
-        if (forma != null) {
-            viewModel.setElementoSeleccionado(forma);
-            canvasManager.setElementoSeleccionado(forma);
-            ensurePropertiesPanelVisible();
-        }
-    }
-
-    /*
-     * Muestra un toast con retraso cuando la auto-detección vincula columna de
-     * foto.
-     */
-    private void notificarColumnaAutoVinculada(String columna) {
-        PauseTransition delay = new PauseTransition(Duration.seconds(1.2));
-        delay.setOnFinished(e -> TPSToast.mostrar(
-                canvas.getScene().getWindow(),
-                "✔ Columna \"" + columna + "\" vinculada automáticamente",
-                "La imagen cambiará al navegar por los registros. Puedes cambiarla en Propiedades.",
-                TPSToast.Tipo.EXITO,
-                5.5));
-        delay.play();
+        elementActionsController.añadirForma(tipo);
     }
 
     private void onEliminarElemento() {
-        if (projectManager.eliminarElemento(viewModel.getElementoSeleccionado())) {
-
-            canvasManager.setElementoSeleccionado(null);
-        }
+        elementActionsController.eliminarElemento();
     }
 
     private void onAñadirFondo() {
-        if (viewModel.getProyectoActual() == null)
-            return;
-
-        ImagenFondoElemento fondoExistente = viewModel.getProyectoActual().getFondoActual();
-        if (fondoExistente != null && !confirmarReemplazoFondo()) {
-            return;
-        }
-
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Seleccionar Imagen de Fondo");
-        fileChooser.getExtensionFilters().addAll(
-                new javafx.stage.FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
-        File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-        if (file == null)
-            return;
-
-        FondoFitMode fitMode;
-        if (viewModel.getProyectoActual().isNoVolverAPreguntarFondo()
-                && viewModel.getProyectoActual().getFondoFitModePreferido() != null) {
-            fitMode = viewModel.getProyectoActual().getFondoFitModePreferido();
-        } else {
-            fitMode = mostrarDialogoFitMode();
-            if (fitMode == null)
-                return;
-        }
-
-        ImagenFondoElemento fondo = projectManager.añadirFondoDesdeArchivo(file, fitMode);
-
-        if (fondo != null) {
-            viewModel.setElementoSeleccionado(fondo);
-            canvasManager.setElementoSeleccionado(fondo);
-        }
-    }
-
-    private boolean confirmarReemplazoFondo() {
-        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Reemplazar Fondo");
-        alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
-        alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
-        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        elementActionsController.añadirFondo();
     }
 
     // =====================================================
@@ -1496,27 +1219,11 @@ public class MainViewController {
     }
 
     /* Abre el diálogo para editar o eliminar un proyecto existente. */
-
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
-
-        Window owner = canvas.getScene().getWindow();
-        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner);
-        java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
-
-        if (dialog.isEliminarProyecto()) {
-            projectManager.eliminarProyecto(proyecto);
-            return;
-        }
-
-        if (resultado.isPresent()) {
-            ProyectoMetadata nuevaMetadata = resultado.get();
-            projectManager.editarProyecto(proyecto, nuevaMetadata);
-
-            // Si la BD vinculada cambió, recargar la fuente de datos y reconstruir paneles
-            projectManager.cargarFuenteDatos(nuevaMetadata.getRutaBBDD());
-            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-                buildEditPanels();
-            }
+        projectActionsController.editarProyecto(proyecto);
+        // Si la BD vinculada pudo haber cambiado, reconstruir paneles
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+            buildEditPanels();
         }
     }
 }
