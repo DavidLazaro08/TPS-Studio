@@ -616,20 +616,30 @@ public class ModeManager {
                         setPadding(Insets.EMPTY);
 
                         // 4. Animaciones
-                        javafx.animation.FadeTransition hIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                        javafx.animation.FadeTransition hIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(350), hoverOverlay);
                         hIn.setToValue(0.6);
-                        javafx.animation.FadeTransition hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                        javafx.animation.FadeTransition hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(300), hoverOverlay);
                         hOut.setToValue(0.0);
 
                         if (isSelected()) {
-                            javafx.animation.FadeTransition sIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(700), selectedOverlay);
+                            javafx.animation.FadeTransition sIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(250), selectedOverlay);
                             sIn.setToValue(1.0);
                             sIn.play();
-                            
-                            actions.setVisible(true);
-                            actions.setOpacity(1.0);
 
+                            // Fade suave de los botones de acción
+                            javafx.animation.FadeTransition actIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(500), actions);
+                            actIn.setFromValue(0.0);
+                            actIn.setToValue(1.0);
+                            actions.setVisible(true);
+                            actIn.play();
+
+                            // Fade suave de la barra lateral
+                            javafx.animation.FadeTransition barIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(400), activeBar);
+                            barIn.setFromValue(0.0);
+                            barIn.setToValue(0.7);
                             activeBar.setVisible(true);
+                            barIn.play();
+
                             if (pulse == null) {
                                 pulse = new javafx.animation.Timeline(
                                     new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH)),
@@ -647,16 +657,33 @@ public class ModeManager {
                         card.setOnMouseEntered(e -> { 
                             if (!isSelected()) {
                                 hIn.playFromStart();
+                                javafx.animation.FadeTransition aHIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(300), actions);
+                                aHIn.setToValue(0.7);
                                 actions.setVisible(true);
-                                actions.setOpacity(0.7);
+                                aHIn.play();
                             }
                         });
                         card.setOnMouseExited(e -> { 
                             if (!isSelected()) {
                                 hOut.playFromStart();
-                                actions.setVisible(false);
-                                actions.setOpacity(0.0);
+                                javafx.animation.FadeTransition aHOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(250), actions);
+                                aHOut.setToValue(0.0);
+                                aHOut.setOnFinished(ev -> actions.setVisible(false));
+                                aHOut.play();
                             }
+                        });
+
+                        card.setOnMousePressed(e -> {
+                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(100), card);
+                            st.setToX(0.97);
+                            st.setToY(0.97);
+                            st.play();
+                        });
+                        card.setOnMouseReleased(e -> {
+                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(150), card);
+                            st.setToX(1.0);
+                            st.setToY(1.0);
+                            st.play();
                         });
 
                         // 5. Drag & Drop (Reordenar)

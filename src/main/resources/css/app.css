@@ -15,25 +15,25 @@
 
     /* ================================================================
        PALETA DE COLORES — TPS Studio Looked-up Colors
-       Hue unificado: 205° (azul/teal frío sobre fondo cálido — contraste de temperatura)
-       Saturación constante ~35% en toda la familia. Solo varía lightness.
+       Hue ~265° (índigo violáceo cálido — 73°→65° respecto al fondo berenjena H330°)
+       Saturación rebajada al ~28% en deep/dark para que se fundan con el fondo.
        ================================================================ */
 
-    /* Familia de acento — Indigo/Navy refinado (mejor integración con tonos vino) */
-    tps-accent-deep:    #1c2238;   /* L 16%, H 227 — Azul Cobalto profundo */
-    tps-accent-dark:    #28304d;   /* L 23%, H 227 — Selección */
-    tps-accent:         #3d4678;   /* L 35%, H 229 — Bordes activos */
-    tps-accent-hover:   #4d578e;   /* L 43% — Hover */
-    tps-accent-subtle:  #212642;   /* L 19% — Hover discreto */
-    tps-accent-border:  #323b60;   /* L 28% — Borde */
-    tps-accent-light:   #aab4ff;   /* L 83%, H 233 — Luz activa (tinte lavanda) */
+    /* Familia de acento — Índigo Violáceo Cálido refinado (H265°, S28-32%) */
+    tps-accent-deep:    #221e3a;   /* L 17%, H 265 — Índigo noche muy oscuro, base botones */
+    tps-accent-dark:    #2e2954;   /* L 24%, H 265 — Índigo oscuro cálido, selección */
+    tps-accent:         #463f74;   /* L 35%, H 265 — Índigo violáceo, borde activo */
+    tps-accent-hover:   #564d8a;   /* L 42%, H 265 — Hover cálido suave */
+    tps-accent-subtle:  #252142;   /* L 19%, H 265 — Hover muy discreto en listas */
+    tps-accent-border:  #3b3570;   /* L 29%, H 265 — Borde cálido, no grita */
+    tps-accent-light:   #c4bcec;   /* L 84%, H 263 — Lavanda neutro-cálido, no neón */
 
-    /* Superficies — tonos cálidos propios de la app */
-    tps-bg-0:     #0d0a0c;
-    tps-bg-1:     #141012;
-    tps-bg-2:     #1a1618;
-    tps-bg-3:     #252123;
-    tps-bg-4:     #2a2628;
+    /* Superficies — tonos berenjena/carbón con tinte violáceo muy sutil (~1-2% de hue 265°) */
+    tps-bg-0:     #0c0a0e;   /* Negro más profundo con toque violáceo */
+    tps-bg-1:     #131018;   /* Panel oscuro: antes #141012, ahora con leve índigo */
+    tps-bg-2:     #19161e;   /* Tarjetas y toolbars: antes #1a1618 */
+    tps-bg-3:     #241f2a;   /* Inputs: antes #252123 */
+    tps-bg-4:     #2a252e;   /* Bordes y separadores: antes #2a2628 */
 
     /* Bordes neutrales */
     tps-border:       #3a3638;
@@ -45,7 +45,6 @@
     tps-text-3:   #9a9598;
     tps-text-4:   #6a6568;
 }
-
 
 /* =====================================================
    LOGIN — DOBLE PANEL (OUTER + INNER)
@@ -108,14 +107,15 @@
 }
 
 .form-field:focused {
-    -fx-border-color: #4a6b7c;
+    -fx-border-color: #554e88;
     -fx-border-width: 2;
     -fx-background-color: #322e30;
 }
 
 
 /* -----------------------------------------------------
-   BOTÓN PRINCIPAL — Burdeos profundo
+   BOTÓN PRINCIPAL LOGIN/ACTIVACIÓN — Burdeos profundo
+   (Solo para flujos de acceso: Entrar, Activar copia)
    ----------------------------------------------------- */
 .success-btn {
     -fx-background-color: #3d1f28;
@@ -124,15 +124,20 @@
     -fx-font-weight: bold;
     -fx-padding: 12 24;
     -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #5a2d38;
+    -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .success-btn:hover {
     -fx-background-color: #4d2a34;
+    -fx-border-color: #7a3d4a;
 }
 
 .success-btn:pressed {
     -fx-background-color: #2d1620;
+    -fx-border-color: #3d1f28;
 }
 
 
@@ -182,16 +187,16 @@
 }
 
 .remember-checkbox:hover .box {
-    -fx-border-color: #4a6b7c;
+    -fx-border-color: tps-accent;
 }
 
 .remember-checkbox:selected .box {
-    -fx-background-color: #4a6b7c;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
 }
 
 .remember-checkbox:selected .mark {
-    -fx-background-color: #e8e6e7;
+    -fx-background-color: tps-accent-light;
     -fx-shape: "M 0 4 L 3 7 L 8 0";
     -fx-scale-shape: true;
     -fx-padding: 0.4em;
@@ -212,14 +217,15 @@
    LINK — Solicitar acceso
    ----------------------------------------------------- */
 .link-text {
-    -fx-text-fill: #5a8599;
+    -fx-text-fill: tps-accent-light;
     -fx-font-size: 13px;
     -fx-underline: false;
     -fx-cursor: hand;
+    -fx-opacity: 0.8;
 }
 
 .link-text:hover {
-    -fx-text-fill: #6a9bb0;
+    -fx-opacity: 1.0;
     -fx-underline: true;
 }
 
@@ -228,15 +234,21 @@
    MAIN VIEW
    ===================================================== */
 .primary-btn {
-    -fx-background-color: #4a6b7c;
-    -fx-text-fill: #e8e6e7;
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-accent-light;
     -fx-font-size: 14px;
+    -fx-font-weight: bold;
     -fx-padding: 8 16;
     -fx-background-radius: 4;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
 }
 
 .primary-btn:hover {
-    -fx-background-color: #5a7b8c;
+    -fx-background-color: tps-accent;
+    -fx-border-color: tps-accent-hover;
 }
 
 .content-bg {
@@ -735,8 +747,8 @@
 
 /* ---- BOTONES PRINCIPALES (40px altura) ---- */
 .tool-button {
-    -fx-background-color: #1c1a1b;
-    -fx-text-fill: #c4c0c2;
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-text-2;
     -fx-font-size: 13px;
     -fx-pref-height: 40;
     -fx-min-height: 40;
@@ -744,7 +756,7 @@
     -fx-padding: 0 12;
     -fx-background-radius: 4;
     -fx-cursor: hand;
-    -fx-border-color: #2e2a2c;
+    -fx-border-color: tps-border;
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-alignment: center-left;
@@ -752,14 +764,14 @@
 }
 
 .tool-button:hover {
-    -fx-background-color: #242022;
-    -fx-text-fill: #ffffff;
-    -fx-border-color: #3f6070;
+    -fx-background-color: tps-bg-2;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent-border;
 }
 
 .tool-button:pressed {
-    -fx-background-color: #181618;
-    -fx-border-color: #3d6478;
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
 }
 
 .tool-button:disabled {
@@ -858,32 +870,21 @@
 }
 
 /* ---- BOTÓN VALIDAR DISEÑO ---- */
+/* Hereda los estilos base de .new-project-btn definidos al final del archivo.
+   Solo se sobreescriben las propiedades de layout específicas del toolbox. */
 .validate-button {
-    -fx-background-color: #16272f;
-    -fx-text-fill: #7ab8cc;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
     -fx-pref-height: 40;
     -fx-min-height: 40;
     -fx-max-height: 40;
     -fx-padding: 0 12;
     -fx-background-radius: 4;
-    -fx-cursor: hand;
-    -fx-border-color: #2a5060;
-    -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-alignment: center-left;
     -fx-graphic-text-gap: 0;
 }
 
-.validate-button:hover {
-    -fx-background-color: #1c3340;
-    -fx-border-color: #4a8090;
-    -fx-text-fill: #a8d8e8;
-}
-
 .validate-button .tool-icon {
-    -fx-text-fill: #5a98b0;
+    -fx-text-fill: tps-accent-light;
     -fx-min-width: 32;
     -fx-max-width: 32;
     -fx-pref-width: 32;
@@ -891,17 +892,17 @@
 }
 
 .validate-button:hover .tool-icon {
-    -fx-text-fill: #7ab8cc;
+    -fx-text-fill: white;
 }
 
 .validate-button .tool-label {
-    -fx-text-fill: #7ab8cc;
+    -fx-text-fill: tps-accent-light;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
 }
 
 .validate-button:hover .tool-label {
-    -fx-text-fill: #a8d8e8;
+    -fx-text-fill: white;
 }
 
 
@@ -1181,7 +1182,8 @@
     -fx-background-color: #252123;
 }
 
-.panel-scroll-view .combo-box {
+.panel-scroll-view .combo-box,
+.panel-scroll-view .color-picker {
     -fx-background-color: #252123;
     -fx-border-color: #3a3638;
     -fx-border-width: 1;
@@ -1189,11 +1191,13 @@
     -fx-background-radius: 4;
 }
 
-.panel-scroll-view .combo-box:focused {
-    -fx-border-color: #4a6b7c;
+.panel-scroll-view .combo-box:focused,
+.panel-scroll-view .color-picker:focused {
+    -fx-border-color: tps-accent;
 }
 
-.panel-scroll-view .combo-box .label {
+.panel-scroll-view .combo-box .label,
+.panel-scroll-view .color-picker .label {
     -fx-text-fill: #ffffff;
     -fx-font-size: 12px;
     -fx-opacity: 1.0;
@@ -1223,17 +1227,20 @@
 }
 
 
-.panel-scroll-view .combo-box .arrow-button {
+.panel-scroll-view .combo-box .arrow-button,
+.panel-scroll-view .color-picker .arrow-button {
     -fx-background-color: transparent;
 }
 
-.panel-scroll-view .combo-box .arrow {
+.panel-scroll-view .combo-box .arrow,
+.panel-scroll-view .color-picker .arrow {
     -fx-background-color: #a4a0a2; /* Flecha más visible */
 }
 
-.panel-scroll-view .combo-box-popup .list-view {
+.panel-scroll-view .combo-box-popup .list-view,
+.panel-scroll-view .color-picker-popup .color-palette {
     -fx-background-color: #252123;
-    -fx-border-color: #4a6b7c;
+    -fx-border-color: tps-accent;
     -fx-border-width: 1;
     -fx-border-radius: 4;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 2);
@@ -1348,16 +1355,16 @@
 }
 
 .prop-checkbox:hover .box {
-    -fx-border-color: #4a6b7c;
+    -fx-border-color: tps-accent;
 }
 
 .prop-checkbox:selected .box {
-    -fx-background-color: #3d6478;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
 }
 
 .prop-checkbox:selected .mark {
-    -fx-background-color: #e8e6e7;
+    -fx-background-color: tps-accent-light;
 }
 
 /* Separador de sección dentro de propiedades */
@@ -1369,22 +1376,21 @@
 
 /* Botón de acción secundario en propiedades */
 .prop-action-btn {
-    -fx-background-color: #232022;
-    -fx-text-fill: #c4c0c2;
-    -fx-font-size: 11px;
-    -fx-padding: 7 12;
-    -fx-background-radius: 5;
-    -fx-cursor: hand;
-    -fx-border-color: #363234;
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-border;
     -fx-border-width: 1;
-    -fx-border-radius: 5;
-    -fx-alignment: center-left;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: tps-text-2;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12;
+    -fx-cursor: hand;
 }
 
 .prop-action-btn:hover {
-    -fx-background-color: #2e2a2c;
-    -fx-text-fill: #e8e6e7;
-    -fx-border-color: #4a6b7c;
+    -fx-background-color: tps-bg-2;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent-border;
 }
 
 .prop-action-btn:pressed {
@@ -1501,7 +1507,7 @@
 /* Botón «Cerrar sesión» — secundario, alineado a la derecha */
 .logout-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: tps-text-4;
+    -fx-text-fill: tps-text-3;
     -fx-font-size: 11px;
     -fx-padding: 1 0 0 0;
     -fx-cursor: hand;
@@ -1509,7 +1515,7 @@
 }
 
 .logout-btn:hover {
-    -fx-text-fill: #c97070;
+    -fx-text-fill: tps-text-1;
     -fx-underline: true;
 }
 
@@ -1540,10 +1546,10 @@
    SELECTOR DE VISTA DISCRETO (SOBRE EL LIENZO)
    ===================================================== */
 .view-selector-btn-left, .view-selector-btn-right {
-    -fx-background-color: #1a1f26;
-    -fx-border-color: #2c3440;
+    -fx-background-color: tps-accent-deep;
+    -fx-border-color: tps-accent-border;
     -fx-border-width: 1;
-    -fx-text-fill: #aeb4be;
+    -fx-text-fill: tps-text-3;
     -fx-font-size: 11px;
     -fx-font-weight: normal;
     -fx-cursor: hand;
@@ -1563,14 +1569,15 @@
 }
 
 .view-selector-btn-left:hover, .view-selector-btn-right:hover {
-    -fx-background-color: #2c3440;
-    -fx-text-fill: white;
+    -fx-background-color: tps-accent-subtle;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent;
 }
 
 .view-selector-btn-left:selected, .view-selector-btn-right:selected {
-    -fx-background-color: #3d4b5c;
-    -fx-text-fill: white;
-    -fx-border-color: #4a5a6e;
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-accent-light;
+    -fx-border-color: tps-accent;
     -fx-font-weight: bold;
 }
 
@@ -1701,27 +1708,7 @@
     -fx-font-size: 7px;
 }
 
-/* Línea „Sesión: Admin“ */
-.user-profile-name {
-    -fx-text-fill: tps-text-2;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-}
-
-/* Botón «Cerrar sesión» — secundario, alineado a la derecha */
-.logout-btn {
-    -fx-background-color: transparent;
-    -fx-text-fill: tps-text-4;
-    -fx-font-size: 11px;
-    -fx-padding: 1 0 0 0;
-    -fx-cursor: hand;
-    -fx-underline: false;
-}
-
-.logout-btn:hover {
-    -fx-text-fill: #c97070;   /* coral discreto: acción destructiva */
-    -fx-underline: true;
-}
+/* Los estilos de perfil de usuario están consolidados arriba (línea ~1480) */
 
 /* ScrollPane del panel lateral */
 .sidebar-scroll {
@@ -1754,7 +1741,7 @@
 }
 
 /* Botón nuevo proyecto — tono de acento profundo + texto claro */
-.new-project-btn, .validate-button {
+.new-project-btn {
     -fx-background-color: tps-accent-deep;
     -fx-text-fill: tps-accent-light;
     -fx-font-size: 12.5px;
@@ -1767,6 +1754,20 @@
     -fx-cursor: hand;
     -fx-max-width: Infinity;
     -fx-alignment: center;
+}
+
+.validate-button {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center-left; /* Restore left alignment grid */
 }
 
 .new-project-btn:hover, .validate-button:hover {
@@ -1788,43 +1789,8 @@
     /* Los ToggleButtons de cara usan las mismas clases .mode-toggle-left y .mode-toggle-right */
 }
 
-/* =====================================================
-   SELECTOR DE VISTA DISCRETO (SOBRE EL LIENZO)
-   ===================================================== */
-.view-selector-btn-left, .view-selector-btn-right {
-    -fx-background-color: #1a1f26;
-    -fx-border-color: #2c3440;
-    -fx-border-width: 1;
-    -fx-text-fill: #aeb4be;
-    -fx-font-size: 11px;
-    -fx-font-weight: normal;
-    -fx-cursor: hand;
-    -fx-padding: 1 15;
-    -fx-text-overrun: clip;
-}
+/* El selector discreto de Frente/Dorso ya está definido arriba en la línea ~1540 */
 
-.view-selector-btn-left {
-    -fx-background-radius: 4 0 0 4;
-    -fx-border-radius: 4 0 0 4;
-}
-
-.view-selector-btn-right {
-    -fx-background-radius: 0 4 4 0;
-    -fx-border-radius: 0 4 4 0;
-    -fx-border-insets: 0 0 0 -1;
-}
-
-.view-selector-btn-left:hover, .view-selector-btn-right:hover {
-    -fx-background-color: #2c3440;
-    -fx-text-fill: white;
-}
-
-.view-selector-btn-left:selected, .view-selector-btn-right:selected {
-    -fx-background-color: #3d4b5c;
-    -fx-text-fill: white;
-    -fx-border-color: #4a5a6e;
-    -fx-font-weight: bold;
-}
 
 /* =====================================================
    SEGMENTED TOOLBAR (PROPIEDADES TEXTO)
@@ -1842,10 +1808,10 @@
     -fx-background-color: transparent;
     -fx-text-fill: #9a9598;
     -fx-font-size: 11px;
-    -fx-padding: 4 8;
+    -fx-padding: 4 6;
     -fx-background-radius: 3;
     -fx-cursor: hand;
-    -fx-min-width: 32;
+    -fx-min-width: 26;
     -fx-alignment: center;
 }
 

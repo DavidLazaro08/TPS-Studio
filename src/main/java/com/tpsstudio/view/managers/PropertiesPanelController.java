@@ -85,7 +85,7 @@ public class PropertiesPanelController {
      * Nota: ahora mismo "proyecto" no se usa, pero lo dejamos por si luego hace falta.
      */
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
-        VBox props = new VBox(8);
+        VBox props = new VBox(10);
         props.setPadding(new Insets(16, 16, 16, 16));
         props.setFillWidth(true);
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
@@ -392,13 +392,16 @@ public class PropertiesPanelController {
 
         props.getChildren().add(new Separator());
 
-        Label lblTexto = new Label("Texto");
-        lblTexto.getStyleClass().add("prop-label");
+        Label lblTexto = new Label("Texto:");
+        lblTexto.getStyleClass().add("prop-label-small");
 
+        // TextArea de 3 filas, wrap habilitado
         TextArea txtContenido = new TextArea(texto.getContenido());
-        txtContenido.setPromptText("Contenido");
+        txtContenido.setPromptText("Contenido del texto...");
         txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtContenido.setPrefRowCount(2); // Reducido de 3 a 2 para ahorrar espacio
+        txtContenido.setPrefRowCount(3);
+        txtContenido.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        txtContenido.setWrapText(true);
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             texto.setContenido(newVal);
             notifyCanvasRedraw();
@@ -412,6 +415,7 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
+        // ---- Fuente ----
         Label lblFuente = new Label("Fuente:");
         lblFuente.getStyleClass().add("prop-label-small");
 
@@ -426,19 +430,84 @@ public class PropertiesPanelController {
             }
         });
 
+        // ---- Tamaño ----
         Label lblTamaño = new Label("Tamaño:");
         lblTamaño.getStyleClass().add("prop-label-small");
 
         Spinner<Integer> spnTamaño = new Spinner<>(8, 72, (int) texto.getFontSize());
         spnTamaño.setEditable(true);
-        spnTamaño.setMaxWidth(MAX_CONTROL_WIDTH);
+        spnTamaño.setPrefWidth(65);
+        spnTamaño.setMinWidth(65);
+        spnTamaño.setMaxWidth(65);
         spnTamaño.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 texto.setFontSize(newVal);
                 notifyCanvasRedraw();
             }
         });
+        
+        VBox colTamaño = new VBox(4, lblTamaño, spnTamaño);
 
+        // ---- Estilo: B / I ----
+        Label lblEstilo = new Label("Estilo:");
+        lblEstilo.getStyleClass().add("prop-label-small");
+
+        ToggleButton btnBold = new ToggleButton("B");
+        btnBold.setTooltip(new Tooltip("Negrita"));
+        btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+        btnBold.setSelected(texto.isNegrita());
+        btnBold.setStyle("-fx-font-weight: bold;");
+        btnBold.setOnAction(e -> { texto.setNegrita(btnBold.isSelected()); notifyCanvasRedraw(); });
+
+        ToggleButton btnItalic = new ToggleButton("I");
+        btnItalic.setTooltip(new Tooltip("Cursiva"));
+        btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
+        btnItalic.setSelected(texto.isCursiva());
+        btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
+        btnItalic.setOnAction(e -> { texto.setCursiva(btnItalic.isSelected()); notifyCanvasRedraw(); });
+
+        HBox groupEstilo = new HBox(0, btnBold, btnItalic);
+        groupEstilo.getStyleClass().add("prop-segmented-group");
+
+        VBox colEstilo = new VBox(4, lblEstilo, groupEstilo);
+
+        // ---- Alineación ----
+        Label lblAlineacion = new Label("Alineación:");
+        lblAlineacion.getStyleClass().add("prop-label-small");
+
+        ToggleGroup groupAlign = new ToggleGroup();
+        ToggleButton btnLeft   = new ToggleButton("\u2261");
+        ToggleButton btnCenter = new ToggleButton("\u2263");
+        ToggleButton btnRight  = new ToggleButton("\u2262");
+
+        btnLeft.setTooltip(new Tooltip("Izquierda"));
+        btnLeft.setToggleGroup(groupAlign);
+        btnLeft.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+        btnLeft.setSelected("LEFT".equals(texto.getAlineacion()));
+        btnLeft.setOnAction(e -> { texto.setAlineacion("LEFT"); notifyCanvasRedraw(); });
+
+        btnCenter.setTooltip(new Tooltip("Centrado"));
+        btnCenter.setToggleGroup(groupAlign);
+        btnCenter.getStyleClass().add("prop-toggle-btn");
+        btnCenter.setSelected("CENTER".equals(texto.getAlineacion()));
+        btnCenter.setOnAction(e -> { texto.setAlineacion("CENTER"); notifyCanvasRedraw(); });
+
+        btnRight.setTooltip(new Tooltip("Derecha"));
+        btnRight.setToggleGroup(groupAlign);
+        btnRight.getStyleClass().add("prop-toggle-btn");
+        btnRight.setSelected("RIGHT".equals(texto.getAlineacion()));
+        btnRight.setOnAction(e -> { texto.setAlineacion("RIGHT"); notifyCanvasRedraw(); });
+
+        HBox groupAlineacion = new HBox(0, btnLeft, btnCenter, btnRight);
+        groupAlineacion.getStyleClass().add("prop-segmented-group");
+
+        VBox colAlineacion = new VBox(4, lblAlineacion, groupAlineacion);
+
+        // Fila combinada para Tamaño, Estilo y Alineación (espacio reducido)
+        HBox filaHerramientas = new HBox(8, colTamaño, colEstilo, colAlineacion);
+        filaHerramientas.setAlignment(javafx.geometry.Pos.BOTTOM_LEFT);
+
+        // ---- Color ----
         Label lblColor = new Label("Color:");
         lblColor.getStyleClass().add("prop-label-small");
 
@@ -453,65 +522,11 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // --- BARRA DE HERRAMIENTAS DE TEXTO (Alineación + Estilo) ---
-        Label lblEstiloToolbar = new Label("Alineación y Estilo:");
-        lblEstiloToolbar.getStyleClass().add("prop-label-small");
-
-        HBox toolbar = new HBox(0); // Segmented look
-        toolbar.getStyleClass().add("prop-segmented-group");
-        toolbar.setMaxWidth(MAX_CONTROL_WIDTH);
-
-        // Alineación (ToggleGroup)
-        ToggleGroup groupAlign = new ToggleGroup();
-        
-        ToggleButton btnLeft = new ToggleButton(""); // Símbolo de líneas izquierda
-        btnLeft.setTooltip(new Tooltip("Izquierda"));
-        btnLeft.setToggleGroup(groupAlign);
-        btnLeft.getStyleClass().addAll("prop-toggle-btn", "btn-first");
-        btnLeft.setSelected("LEFT".equals(texto.getAlineacion()));
-        btnLeft.setOnAction(e -> { texto.setAlineacion("LEFT"); notifyCanvasRedraw(); });
-
-        ToggleButton btnCenter = new ToggleButton(""); // Símbolo de líneas centro
-        btnCenter.setTooltip(new Tooltip("Centro"));
-        btnCenter.setToggleGroup(groupAlign);
-        btnCenter.getStyleClass().add("prop-toggle-btn");
-        btnCenter.setSelected("CENTER".equals(texto.getAlineacion()));
-        btnCenter.setOnAction(e -> { texto.setAlineacion("CENTER"); notifyCanvasRedraw(); });
-
-        ToggleButton btnRight = new ToggleButton(""); // Símbolo de líneas derecha
-        btnRight.setTooltip(new Tooltip("Derecha"));
-        btnRight.setToggleGroup(groupAlign);
-        btnRight.getStyleClass().add("prop-toggle-btn");
-        btnRight.setSelected("RIGHT".equals(texto.getAlineacion()));
-        btnRight.setOnAction(e -> { texto.setAlineacion("RIGHT"); notifyCanvasRedraw(); });
-
-        // Separador visual dentro de la toolbar
-        Region spacer = new Region();
-        spacer.setPrefWidth(10);
-
-        // Estilo (Negrita / Cursiva)
-        ToggleButton btnBold = new ToggleButton("B");
-        btnBold.setTooltip(new Tooltip("Negrita"));
-        btnBold.getStyleClass().add("prop-toggle-btn");
-        btnBold.setSelected(texto.isNegrita());
-        btnBold.setStyle("-fx-font-weight: bold;");
-        btnBold.setOnAction(e -> { texto.setNegrita(btnBold.isSelected()); notifyCanvasRedraw(); });
-
-        ToggleButton btnItalic = new ToggleButton("I");
-        btnItalic.setTooltip(new Tooltip("Cursiva"));
-        btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
-        btnItalic.setSelected(texto.isCursiva());
-        btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Serif';");
-        btnItalic.setOnAction(e -> { texto.setCursiva(btnItalic.isSelected()); notifyCanvasRedraw(); });
-
-        toolbar.getChildren().addAll(btnLeft, btnCenter, btnRight, spacer, btnBold, btnItalic);
-
         props.getChildren().addAll(
                 lblTexto, txtContenido, chkSaltoLinea,
                 lblFuente, cmbFuente,
-                lblTamaño, spnTamaño,
-                lblColor, cpColor,
-                lblEstiloToolbar, toolbar
+                filaHerramientas,
+                lblColor, cpColor
         );
     }
 
