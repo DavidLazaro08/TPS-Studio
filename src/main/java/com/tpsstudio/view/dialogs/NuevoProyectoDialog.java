@@ -90,6 +90,7 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         HBox hboxCliente = new HBox(10);
 
         btnDatosCliente = new Button("📋 Añadir/Editar Datos Cliente");
+        btnDatosCliente.getStyleClass().add("btn-dialog-action");
         btnDatosCliente.setOnAction(e -> abrirDatosCliente());
 
         lblClienteInfo = new Label("(Sin información del cliente)");
@@ -383,7 +384,7 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
     }
 
     private void mostrarError(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
         alert.setTitle("Nuevo Proyecto");
         alert.setHeaderText(titulo);
         alert.setContentText(mensaje);

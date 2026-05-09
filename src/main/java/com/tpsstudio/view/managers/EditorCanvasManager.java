@@ -610,7 +610,7 @@ public class EditorCanvasManager {
             gc.setFill(Color.web("#9a9598"));
             gc.fillText(cName, startCX, staticTopY + 25);
 
-            gc.setFill(Color.web("#7ca4d0")); // Azul botón
+            gc.setFill(Color.web("#8b78d4")); // Índigo-violeta acorde a la paleta actual
             gc.fillText(btnTxt, startCX + wC, staticTopY + 25);
             
             // Registrar hit box para el click de Editar datos (solamente si es clickeable)

@@ -87,6 +87,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         lblClienteInfo.getStyleClass().add("lbl-hint");
 
         Button btnEditarCliente = new Button("📋 Editar Datos Cliente");
+        btnEditarCliente.getStyleClass().add("btn-dialog-action");
         btnEditarCliente.setOnAction(e -> abrirDialogoCliente());
 
         clienteBox.getChildren().addAll(lblClienteInfo, btnEditarCliente);
@@ -174,7 +175,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         Button eliminarButton = (Button) getDialogPane().lookupButton(btnEliminarTipo);
         eliminarButton.getStyleClass().add("btn-danger");
         eliminarButton.setOnAction(e -> {
-            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+            Alert confirmacion = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
             confirmacion.setTitle("Confirmar eliminación");
             confirmacion.setHeaderText("¿Eliminar proyecto de la lista?");
             confirmacion.setContentText(

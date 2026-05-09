@@ -304,7 +304,7 @@ public class PropertiesPanelController {
         btnConfigEditor.getStyleClass().add("prop-action-btn");
         btnConfigEditor.setPrefWidth(40);
         btnConfigEditor.setOnAction(e -> {
-            Alert info = new Alert(Alert.AlertType.CONFIRMATION);
+            Alert info = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
             info.setTitle("Configurar Editor Externo");
             info.setHeaderText("Vincula tu editor de imágenes");
             info.setContentText(
@@ -330,7 +330,7 @@ public class PropertiesPanelController {
                 if (editor != null) {
                     new SettingsManager().setExternalEditorPath(editor.getAbsolutePath());
 
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     alert.setTitle("Editor Configurado");
                     alert.setHeaderText(null);
                     alert.setContentText("Se usará: " + editor.getName());
@@ -381,21 +381,10 @@ public class PropertiesPanelController {
         // Etiqueta del elemento (nombre lógico)
         addEtiquetaControl(props, texto.getEtiqueta(), texto::setEtiqueta, "Ej: NOMBRE, Nº SOCIO...");
 
-        // Sección Datos Variables (justo después de la etiqueta, antes de posición)
-        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
-            addSeccionDatosVariablesTexto(props, texto);
-            props.getChildren().add(new Separator());
-        }
-
-        // Posición / Tamaño (X/Y/W/H)
-        addPositionSizeControls(props, texto);
-
-        props.getChildren().add(new Separator());
-
+        // Controles de Texto - se crean aquí para poder pasarlos a Datos Variables
         Label lblTexto = new Label("Texto:");
         lblTexto.getStyleClass().add("prop-label-small");
 
-        // TextArea de 3 filas, wrap habilitado
         TextArea txtContenido = new TextArea(texto.getContenido());
         txtContenido.setPromptText("Contenido del texto...");
         txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
@@ -406,6 +395,24 @@ public class PropertiesPanelController {
             texto.setContenido(newVal);
             notifyCanvasRedraw();
         });
+
+        // Aplicar estado inicial según vinculación actual
+        boolean vinculadoInicial = texto.getColumnaVinculada() != null;
+        txtContenido.setDisable(vinculadoInicial);
+        if (vinculadoInicial) {
+            lblTexto.setText("Texto (vinculado a la base de datos):");
+        }
+
+        // Sección Datos Variables (justo después de la etiqueta, antes de posición)
+        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
+            addSeccionDatosVariablesTexto(props, texto, lblTexto, txtContenido);
+            props.getChildren().add(new Separator());
+        }
+
+        // Posición / Tamaño (X/Y/W/H)
+        addPositionSizeControls(props, texto);
+
+        props.getChildren().add(new Separator());
 
         CheckBox chkSaltoLinea = new CheckBox("Pasar a la línea inferior si no cabe");
         chkSaltoLinea.setSelected(texto.isSaltoLinea());
@@ -691,8 +698,9 @@ public class PropertiesPanelController {
 
     // ===================== SECCIÓN DATOS VARIABLES =====================
 
-    /* Añade al panel de texto la sección para vincular a una columna del Excel. */
-    private void addSeccionDatosVariablesTexto(VBox props, TextoElemento texto) {
+    /* Añade al panel de texto la sección para vincular a una columna del Excel.
+     * Recibe lblTexto y txtContenido para actualizar su estado según la vinculación. */
+    private void addSeccionDatosVariablesTexto(VBox props, TextoElemento texto, Label lblTexto, TextArea txtContenido) {
         Label lblSeccion = new Label("Datos Variables");
         lblSeccion.getStyleClass().add("prop-label");
 
@@ -711,11 +719,17 @@ public class PropertiesPanelController {
         cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
 
         cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
-            if ("(sin vincular)".equals(newVal)) {
+            boolean isVinculado = !"(sin vincular)".equals(newVal);
+            if (!isVinculado) {
                 texto.setColumnaVinculada(null);
             } else {
                 texto.setColumnaVinculada(newVal);
             }
+
+            // Actualizar estado del cuadro de texto dinámicamente
+            txtContenido.setDisable(isVinculado);
+            lblTexto.setText(isVinculado ? "Texto (vinculado a la base de datos):" : "Texto:");
+
             notifyCanvasRedraw();
         });
 

@@ -7,24 +7,30 @@
    que se hereda al llamar initOwner() con la ventana principal.
    ===================================================== */
 
-/* Fondo claro del cuerpo del diálogo */
+/* Fondo claro del cuerpo del diálogo — tinte violeta muy sutil sobre blanco */
 .dialog-pane {
-    -fx-background-color: #f2f0f1;
+    -fx-background-color: #f3f1f4;
 }
 
 /* Zona de botones al pie */
 .dialog-pane > .button-bar > .container {
-    -fx-background-color: #f2f0f1;
+    -fx-background-color: #eceaee;
 }
 
 /* Cabecera (título y header-text) */
 .dialog-pane > .header-panel {
-    -fx-background-color: #e6e4e5;
+    -fx-background-color: #e4e1e8;
 }
 
 /* Todos los labels dentro del diálogo: texto oscuro sobre fondo claro */
 .dialog-pane .label {
     -fx-text-fill: #2a2628;
+}
+
+/* Permitir wrap en el texto principal (content) de las Alertas para evitar que se corte con '...' */
+.dialog-pane > *.content.label {
+    -fx-wrap-text: true;
+    -fx-min-width: 350;
 }
 
 /* CheckBox: texto oscuro */
@@ -46,8 +52,53 @@
 
 /* Separadores en diálogos: línea gris discreta */
 .dialog-pane .separator *.line {
-    -fx-border-color: #d0ced0;
+    -fx-border-color: #ccc9d2;
     -fx-border-width: 1 0 0 0;
+}
+
+/* ===========================================================
+   BOTONES NATIVOS DEL DIALOGO (Guardar, Crear, Cancelar)
+   JavaFX mapea el ButtonBar.ButtonData al tipo de botón.
+   .button-bar .button es el selector para todos ellos.
+   =========================================================== */
+.dialog-pane .button-bar .button {
+    -fx-background-color: #e4e1e8;
+    -fx-text-fill: #3a3540;
+    -fx-border-color: #c2bed0;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 6 16;
+}
+
+.dialog-pane .button-bar .button:hover {
+    -fx-background-color: #d8d4e8;
+    -fx-border-color: #9b8ec4;
+    -fx-text-fill: #1e1a2a;
+}
+
+.dialog-pane .button-bar .button:pressed {
+    -fx-background-color: #ccc8dc;
+}
+
+/* Botón primario (OK / Guardar / Crear): acento índigo-violeta */
+.dialog-pane .button-bar .button:default {
+    -fx-background-color: #3d3070;
+    -fx-text-fill: #d8d0f4;
+    -fx-border-color: #5a48a0;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .button-bar .button:default:hover {
+    -fx-background-color: #4a3a88;
+    -fx-border-color: #7060b8;
+    -fx-text-fill: white;
+}
+
+.dialog-pane .button-bar .button:default:pressed {
+    -fx-background-color: #2d2258;
 }
 
 
@@ -82,10 +133,33 @@
     -fx-font-size: 13px;
 }
 
-/* --- Texto de info pequeño (azul/verde tenue) --- */
+/* --- Texto de info pequeño (violeta tenue, acorde a paleta actual) --- */
 .lbl-info-link {
     -fx-font-size: 10px;
-    -fx-text-fill: #5a8599;
+    -fx-text-fill: #7060b8;
+}
+
+/* --- Botón de acción secundario dentro de diálogos (Editar Datos Cliente, etc.) --- */
+.btn-dialog-action {
+    -fx-background-color: #e4e1ee;
+    -fx-text-fill: #3d3070;
+    -fx-border-color: #b0a8d4;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 5 12;
+}
+
+.btn-dialog-action:hover {
+    -fx-background-color: #d5d0ea;
+    -fx-border-color: #7060b8;
+    -fx-text-fill: #1e1a2a;
+}
+
+.btn-dialog-action:pressed {
+    -fx-background-color: #c8c2e0;
 }
 
 /* --- Botón de acción destructiva (eliminar) --- */

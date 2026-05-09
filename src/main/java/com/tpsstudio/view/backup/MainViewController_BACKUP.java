@@ -1255,7 +1255,7 @@ public class MainViewController_BACKUP {
      */
     private void abrirEditorExterno(ImagenFondoElemento fondo) {
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede abrir el editor externo");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -1265,7 +1265,7 @@ public class MainViewController_BACKUP {
 
         File file = new File(fondo.getRutaArchivo());
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText("El archivo " + file.getName() + " no existe en el disco.");
@@ -1275,7 +1275,7 @@ public class MainViewController_BACKUP {
 
         try {
             // Mostrar aviso
-            Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+            Alert aviso = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
             aviso.setTitle("Editor Externo");
             aviso.setHeaderText("Abriendo editor externo...");
             aviso.setContentText(
@@ -1289,7 +1289,7 @@ public class MainViewController_BACKUP {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo abrir el editor externo");
             alert.setContentText("Error: " + ex.getMessage());
@@ -1302,7 +1302,7 @@ public class MainViewController_BACKUP {
      */
     private void recargarFondo(ImagenFondoElemento fondo) {
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede recargar");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -1312,7 +1312,7 @@ public class MainViewController_BACKUP {
 
         File file = new File(fondo.getRutaArchivo());
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
@@ -1332,7 +1332,7 @@ public class MainViewController_BACKUP {
             dibujarCanvas();
 
             // Confirmación
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
             alert.setTitle("Éxito");
             alert.setHeaderText("Fondo recargado");
             alert.setContentText("La imagen se ha recargado correctamente desde el disco.");
@@ -1340,7 +1340,7 @@ public class MainViewController_BACKUP {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo recargar la imagen");
             alert.setContentText(
@@ -1485,7 +1485,7 @@ public class MainViewController_BACKUP {
         // Check if background already exists
         ImagenFondoElemento fondoExistente = proyectoActual.getFondoActual();
         if (fondoExistente != null) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Reemplazar Fondo");
             alert.setHeaderText("Ya existe un fondo en esta cara");
             alert.setContentText("¿Desea reemplazar el fondo actual?");
@@ -1529,7 +1529,7 @@ public class MainViewController_BACKUP {
                 dibujarCanvas();
             } catch (Exception ex) {
                 ex.printStackTrace();
-                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                Alert errorAlert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
                 errorAlert.setTitle("Error");
                 errorAlert.setHeaderText("No se pudo cargar la imagen");
                 errorAlert.setContentText(ex.getMessage());

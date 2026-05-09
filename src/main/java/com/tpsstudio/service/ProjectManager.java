@@ -575,7 +575,7 @@ public class ProjectManager {
     // =====================================================
 
     private boolean confirmarReemplazoFondo() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reemplazar Fondo");
         alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
         alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
@@ -583,7 +583,7 @@ public class ProjectManager {
     }
 
     private void mostrarErrorCargaImagen(String mensaje) {
-        Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+        Alert errorAlert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
         errorAlert.setTitle("Ups...");
         errorAlert.setHeaderText("Problema con la imagen");
         errorAlert.setContentText(mensaje);
@@ -595,7 +595,7 @@ public class ProjectManager {
             onNotificacion.accept("error", mensaje);
         } else {
             // Fallback si no hay callback aún (durante inicialización)
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Algo salió mal");
             alert.setContentText(mensaje);

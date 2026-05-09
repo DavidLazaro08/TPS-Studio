@@ -143,7 +143,7 @@ public class MainViewController {
     @FXML
     private void onLogout() {
         // Confirmar cierre de sesión con diálogo estándar
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Cerrar Sesión");
         alert.setHeaderText("Vas a salir de la sesión actual.");
         alert.setContentText("¿Estás seguro de que quieres volver al login?");
@@ -492,7 +492,7 @@ public class MainViewController {
         DesignValidatorService validator = new DesignValidatorService();
         java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
         alert.setTitle("Validación de Diseño");
         alert.setHeaderText(avisos.isEmpty() ? "¡Diseño correcto!" : "Se han encontrado problemas potenciales:");
 
@@ -851,7 +851,7 @@ public class MainViewController {
     private void abrirEditorExterno(ImagenFondoElemento fondo) {
 
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede abrir el editor externo");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -909,7 +909,7 @@ public class MainViewController {
         }
 
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
@@ -932,7 +932,7 @@ public class MainViewController {
 
                 if (editorFile.exists()) {
 
-                    Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                    Alert aviso = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     aviso.setTitle("Editando externamente");
                     aviso.setHeaderText("Abriendo con " + settings.getExternalEditorName() + "...");
                     aviso.setContentText(
@@ -948,7 +948,7 @@ public class MainViewController {
             }
 
             if (!opened) {
-                Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                Alert aviso = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                 aviso.setTitle("Editando externamente");
                 aviso.setHeaderText("Abriendo editor predeterminado...");
                 aviso.setContentText(
@@ -969,7 +969,7 @@ public class MainViewController {
         } catch (Exception ex) {
             ex.printStackTrace();
 
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo abrir el editor externo");
             alert.setContentText("Error: " + ex.getMessage());
@@ -984,7 +984,7 @@ public class MainViewController {
     private void recargarFondo(ImagenFondoElemento fondo) {
 
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede recargar");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -994,7 +994,7 @@ public class MainViewController {
 
         File file = new File(fondo.getRutaArchivo());
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
@@ -1028,7 +1028,7 @@ public class MainViewController {
 
             dibujarCanvas();
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
             alert.setTitle("Éxito");
             alert.setHeaderText("Fondo recargado");
             alert.setContentText("La imagen se ha recargado y ajustado correctamente.");
@@ -1037,7 +1037,7 @@ public class MainViewController {
         } catch (Exception ex) {
             ex.printStackTrace();
 
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo recargar la imagen");
             alert.setContentText(
@@ -1078,7 +1078,7 @@ public class MainViewController {
     @FXML
     private void onExportarProyecto() {
         if (viewModel.getProyectoActual() == null) {
-            new Alert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
+            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
             return;
         }
 
@@ -1100,12 +1100,12 @@ public class MainViewController {
             try {
                 filas = com.tpsstudio.view.dialogs.ExportDialog.parseRangoFilas(config.rangoFilas(), totalRegistros);
             } catch (IllegalArgumentException ex) {
-                new Alert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
+                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
                         .showAndWait();
                 return;
             }
             if (filas.isEmpty()) {
-                new Alert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
+                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
                         .showAndWait();
                 return;
             }
@@ -1166,7 +1166,7 @@ public class MainViewController {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
                     err.setTitle("Error al exportar");
                     err.setHeaderText("No se pudo completar la exportación");
                     err.setContentText(ex.getMessage());
@@ -1185,7 +1185,7 @@ public class MainViewController {
     @FXML
     private void onImprimirProyecto() {
         if (viewModel.getProyectoActual() == null) {
-            new Alert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
+            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
             return;
         }
 
@@ -1228,7 +1228,7 @@ public class MainViewController {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
                     err.setTitle("Error al imprimir");
                     err.setHeaderText("No se pudo completar la impresión");
                     err.setContentText(ex.getMessage());
@@ -1282,7 +1282,7 @@ public class MainViewController {
 
                 // Mostrar alerta de éxito visual en el Controller
                 Platform.runLater(() -> {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     alert.initOwner(owner);
                     alert.setTitle("Proyecto Creado");
                     alert.setHeaderText("Proyecto creado y configurado con éxito");
@@ -1406,7 +1406,7 @@ public class MainViewController {
     }
 
     private boolean confirmarReemplazoFondo() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reemplazar Fondo");
         alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
         alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
