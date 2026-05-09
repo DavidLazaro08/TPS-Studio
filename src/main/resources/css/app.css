@@ -511,27 +511,6 @@
 }
 
 /* =====================================================
-   CHECKBOX & RADIO BUTTON
-   ===================================================== */
-.check-box .box,
-.radio-button .radio {
-    -fx-background-color: tps-bg-3;
-    -fx-border-color: tps-border;
-    -fx-border-width: 1;
-}
-
-.check-box:focused .box,
-.radio-button:focused .radio {
-    -fx-border-color: tps-accent;
-}
-
-.check-box:selected .mark,
-.radio-button:selected .dot {
-    -fx-background-color: tps-accent-light;
-}
-
-.toolbar-combo .list-cell {
-    -fx-background-color: transparent;
     -fx-text-fill: tps-text-2;
 }
 
@@ -1840,10 +1819,238 @@
     -fx-text-fill: #e8e6e7;
 }
 
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* =====================================================
+   ESTILOS INTERNOS DE PANELES (Reemplazo de inline)
+   ===================================================== */
+
+/* ScrollPane interno (datos, propiedades) sin bordes */
+.panel-scroll-view {
+    -fx-background: #1e1b1c;
+    -fx-background-color: #1e1b1c;
+    -fx-border-color: transparent;
+}
+
+/* Contenedor con fondo oscuro liso */
+.panel-dark-bg {
+    -fx-background-color: #1e1b1c;
+}
+
+/* =====================================================
+   ALERT DIALOGOS (Modo Oscuro Completo)
+   ===================================================== */
+.alert-dialog {
+    -fx-background-color: #1e1a1c;
+    -fx-base: #1e1a1c;
+}
+
+.alert-dialog .header-panel {
+    -fx-background-color: #141012;
+}
+
+.alert-dialog .header-panel .label {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.alert-dialog > *.label.content {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.alert-dialog .button-bar {
+    -fx-background-color: #1e1a1c;
+}
+
+.alert-dialog .button {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+    -fx-padding: 6 12;
+    -fx-background-radius: 4;
+}
+
+.alert-dialog .button:hover {
+    -fx-background-color: tps-accent;
+}
+
+.alert-dialog .text-area {
+    -fx-control-inner-background: #0a0809;
+    -fx-background-color: transparent, #0a0809, transparent, #0a0809;
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 13px;
+    -fx-border-color: #3d3739;
+}
+
+/* =====================================================
+   PERFIL DE USUARIO (SIDEBAR FOOTER)
+   ===================================================== */
+.user-profile-panel {
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 13 16;
+}
+
+/* Indicador de sesión activa (punto verde discreto) */
+.session-dot {
+    -fx-text-fill: tps-accent;   /* Usa el acento principal */
+    -fx-font-size: 7px;
+}
+
+/* Los estilos de perfil de usuario están consolidados arriba (línea ~1480) */
+
+/* ScrollPane del panel lateral */
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.sidebar-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================
+   PANEL TÍTULO / SUBTÍTULO (Modo Producción)
+   ===================================================== */
+.panel-title {
+    -fx-text-fill: tps-text-1;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.panel-placeholder {
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 11px;
+}
+
+/* Botón nuevo proyecto — tono de acento profundo + texto claro */
+.new-project-btn {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center;
+}
+
+.validate-button {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center-left; /* Restore left alignment grid */
+}
+
+.new-project-btn:hover, .validate-button:hover {
+    -fx-background-color: tps-accent-subtle;
+    -fx-border-color: tps-accent;
+    -fx-text-fill: tps-accent-light;
+}
+
+.new-project-btn:pressed, .validate-button:pressed {
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
+}
+
+/* =====================================================
+   SELECTOR INTEGRADO (SOBRE EL LIENZO)
+   ===================================================== */
+.integrated-view-selector {
+    -fx-background-color: transparent;
+    /* Los ToggleButtons de cara usan las mismas clases .mode-toggle-left y .mode-toggle-right */
+}
+
+/* El selector discreto de Frente/Dorso ya está definido arriba en la línea ~1540 */
+
+
+/* =====================================================
+   SEGMENTED TOOLBAR (PROPIEDADES TEXTO)
+   ===================================================== */
+.prop-segmented-group {
+    -fx-background-color: #252123;
+    -fx-background-radius: 4;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 2;
+}
+
+.prop-toggle-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+    -fx-padding: 4 6;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-min-width: 26;
+    -fx-alignment: center;
+}
+
+.prop-toggle-btn:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: #e8e6e7;
+}
+
 .prop-toggle-btn:selected {
     -fx-background-color: tps-accent;
     -fx-text-fill: white;
 }
 
 .prop-toggle-btn.btn-first { -fx-background-radius: 3 0 0 3; }
-.prop-toggle-btn.btn-last { -fx-background-radius: 0 3 3 0; }
+.prop-toggle-btn.btn-last { -fx-background-radius: 0 3 3 0; }
+/* =====================================================
+   CHECKBOX & RADIO BUTTON
+   ===================================================== */
+.check-box, .radio-button {
+    /* Respetamos las formas base de Modena pero inyectamos nuestros colores */
+    -fx-accent: tps-accent-hover; /* Borde y focus de selección */
+    -fx-mark-color: tps-accent-light; /* Color del tick y del punto */
+    -fx-color: tps-bg-3; /* Fondo base del cajetín */
+}
+/* =====================================================
+   ESTILOS AUXILIARES (Refactor de inline styles)
+   ===================================================== */
+.canvas-guide-tooltip {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-accent-light;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+    -fx-padding: 6 10;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.transition-overlay {
+    -fx-background-color: #0e1217;
+}
+
+.error-label {
+    -fx-text-fill: #ffa07a;
+    -fx-font-weight: bold;
+}
+

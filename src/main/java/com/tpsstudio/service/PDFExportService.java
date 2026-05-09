@@ -397,6 +397,7 @@ public class PDFExportService {
     }
 
     /** Misma lógica de word-wrap que EditorCanvasManager para coherencia visual */
+    // SYNC: mantener coherente con EditorCanvasManager#computeLines para evitar diferencias entre vista y PDF.
     private List<String> computeLines(String contenido, boolean saltoLinea, Font font, double maxWidth) {
         List<String> rawLines = java.util.Arrays.asList(contenido.split("\n", -1));
         List<String> finalLines = new ArrayList<>();

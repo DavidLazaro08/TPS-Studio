@@ -4,6 +4,7 @@ import com.tpsstudio.model.project.ClienteInfo;
 import com.tpsstudio.model.project.ProyectoMetadata;
 import com.tpsstudio.model.enums.TipoTroquel;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
@@ -88,6 +89,7 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         Label lblCliente = new Label("Datos del Cliente:");
         lblCliente.getStyleClass().add("lbl-section");
         HBox hboxCliente = new HBox(10);
+        hboxCliente.setAlignment(Pos.CENTER_LEFT);
 
         btnDatosCliente = new Button("📋 Añadir/Editar Datos Cliente");
         btnDatosCliente.getStyleClass().add("btn-dialog-action");
