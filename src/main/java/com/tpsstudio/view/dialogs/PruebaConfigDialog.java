@@ -47,7 +47,7 @@ public class PruebaConfigDialog extends Dialog<PruebaConfigDialog.PruebaConfig> 
         txtEstudio.setPromptText("Nombre visible en la cabecera del PDF");
         txtEstudio.setPrefWidth(300);
         Label lblEstudioHint = new Label("Aparece como remitente en el documento.");
-        lblEstudioHint.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
+        lblEstudioHint.getStyleClass().add("hint-label");
 
         grid.add(lblEstudio, 0, row++);
         grid.add(txtEstudio, 0, row++);

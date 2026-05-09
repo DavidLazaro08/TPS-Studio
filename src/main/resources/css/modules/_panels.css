@@ -1,0 +1,909 @@
+/* =====================================================
+   MODO DISEÑO — PANEL IZQUIERDO (HERRAMIENTAS)
+   Retícula fija: columna de icono 32px | texto alineado
+   ===================================================== */
+
+/* Contenedor principal del panel de herramientas */
+.tools-panel {
+    /* Eliminamos el padding forzado de CSS para permitir que Java controle los Insets equilibrados */
+    -fx-spacing: 4;
+}
+
+/* ---- BOTONES PRINCIPALES (40px altura) ---- */
+.tool-button {
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-text-2;
+    -fx-font-size: 13px;
+    -fx-pref-height: 40;
+    -fx-min-height: 40;
+    -fx-max-height: 40;
+    -fx-padding: 0 12;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-border-color: tps-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 0;
+}
+
+.tool-button:hover {
+    -fx-background-color: tps-bg-2;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent-border;
+}
+
+.tool-button:pressed {
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
+}
+
+.tool-button:disabled {
+    -fx-opacity: 0.35;
+}
+
+/* Caja fija del icono — SIEMPRE 32px de ancho, centrado */
+.tool-icon-box {
+    -fx-min-width: 32;
+    -fx-max-width: 32;
+    -fx-pref-width: 32;
+    -fx-alignment: center;
+}
+
+/* Icono dentro de la caja fija */
+.tool-icon {
+    -fx-text-fill: #8a8688;
+    -fx-font-size: 15px; /* Unificado con capas */
+    -fx-font-family: "Segoe UI Symbol", "Arial", sans-serif;
+    -fx-alignment: center;
+    -fx-min-width: 32;
+    -fx-max-width: 32;
+    -fx-pref-width: 32;
+}
+
+.tool-button:hover .tool-icon {
+    -fx-text-fill: #c4c0c2;
+}
+
+/* Texto del botón principal */
+.tool-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.tool-button:hover .tool-label {
+    -fx-text-fill: #ffffff;
+}
+
+/* ---- SUBHERRAMIENTAS (34px altura, indentadas) ---- */
+.tool-subbutton {
+    -fx-background-color: transparent;
+    -fx-text-fill: #888486;
+    -fx-font-size: 12px;
+    -fx-pref-height: 34;
+    -fx-min-height: 34;
+    -fx-max-height: 34;
+    -fx-padding: 0 12 0 12;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 0;
+}
+
+.tool-subbutton:hover {
+    -fx-background-color: #1e1b1d;
+    -fx-text-fill: #e0dce0;
+    -fx-border-color: #2e2a2c;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-padding: 0 11 0 11;
+}
+
+/* El icono de los sub-botones comparte el mismo ancho pero el texto empieza más adentro */
+.tool-subbutton .tool-icon {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6a6668;
+    -fx-min-width: 28;
+    -fx-max-width: 28;
+    -fx-pref-width: 28;
+}
+
+.tool-subbutton:hover .tool-icon {
+    -fx-text-fill: #a0a0a0;
+}
+
+.tool-subbutton .tool-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #888486;
+}
+
+.tool-subbutton:hover .tool-label {
+    -fx-text-fill: #e0dce0;
+}
+
+/* Bloque visual del grupo Dibujar Forma */
+.tool-subtools {
+    -fx-padding: 2 0 4 12;
+    -fx-spacing: 1;
+    -fx-background-color: #161416;
+    -fx-background-radius: 0 0 6 6;
+    -fx-border-color: #2e2a2c;
+    -fx-border-width: 0 1 1 1;
+    -fx-border-radius: 0 0 6 6;
+}
+
+/* ---- BOTÓN VALIDAR DISEÑO ---- */
+/* Hereda los estilos base de .new-project-btn definidos al final del archivo.
+   Solo se sobreescriben las propiedades de layout específicas del toolbox. */
+.validate-button {
+    -fx-pref-height: 40;
+    -fx-min-height: 40;
+    -fx-max-height: 40;
+    -fx-padding: 0 12;
+    -fx-background-radius: 4;
+    -fx-border-radius: 6;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 0;
+}
+
+.validate-button .tool-icon {
+    -fx-text-fill: tps-accent-light;
+    -fx-min-width: 32;
+    -fx-max-width: 32;
+    -fx-pref-width: 32;
+    -fx-font-size: 15px;
+}
+
+.validate-button:hover .tool-icon {
+    -fx-text-fill: white;
+}
+
+.validate-button .tool-label {
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.validate-button:hover .tool-label {
+    -fx-text-fill: white;
+}
+
+
+
+/* =====================================================
+   MODO DISEÑO — PANEL IZQUIERDO (CAPAS)
+   ===================================================== */
+
+/* Lista de capas — mismo scroll discreto que project-list */
+.layers-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.layers-list .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: -10;
+}
+
+/* Scrollbar vertical idéntico al de propiedades */
+.layers-list .scroll-bar:vertical {
+    -fx-background-color: #141012;
+    -fx-pref-width: 6;
+    -fx-padding: 0;
+}
+
+.layers-list .scroll-bar:vertical .track {
+    -fx-background-color: #1a1618;
+    -fx-background-radius: 3;
+    -fx-border-color: transparent;
+}
+
+.layers-list .scroll-bar:vertical .thumb {
+    -fx-background-color: #3d3a3c;
+    -fx-background-radius: 3;
+}
+
+.layers-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.layers-list .scroll-bar:vertical .increment-button,
+.layers-list .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.layers-list .scroll-bar:vertical .increment-arrow,
+.layers-list .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
+}
+
+/* Celda base de capas */
+.layers-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.layers-list .list-cell:hover,
+.layers-list .list-cell:focused {
+    -fx-background-color: transparent;
+}
+
+.layers-list .list-cell:selected,
+.layers-list .list-cell:selected:focused {
+    -fx-background-color: transparent;
+}
+
+/* Tarjeta base de la capa (sin bordes redondeados) */
+.layer-card {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+}
+
+/* Overlay de hover muy sutil */
+.layer-hover-overlay {
+    -fx-background-color: #1e1a1c;
+    -fx-background-radius: 0;
+}
+
+/* Overlay de selección */
+.layer-selected-overlay {
+    -fx-background-color: tps-accent-dark;
+    -fx-background-radius: 0;
+}
+
+/* Barra de luz animada */
+.layer-active-bar {
+    -fx-background-color: tps-accent;
+}
+
+/* Separador entre capas */
+.layer-separator {
+    -fx-background-color: #2a2628;
+}
+
+/* Botones de acción en capas (Reordenar/Eliminar) */
+.layer-action-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #7a7678;
+    -fx-font-size: 9px;
+    -fx-padding: 2 4;
+    -fx-background-radius: 2;
+    -fx-cursor: hand;
+}
+
+.layer-action-btn:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: tps-accent-light;
+}
+
+.layer-action-btn-del {
+    -fx-background-color: transparent;
+    -fx-text-fill: #7a7678;
+    -fx-font-size: 10px;
+    -fx-padding: 2 4;
+    -fx-background-radius: 2;
+    -fx-cursor: hand;
+}
+
+.layer-action-btn-del:hover {
+    -fx-background-color: #4a2628;
+    -fx-text-fill: #ff8a8a;
+}
+
+/* Texto del nombre de capa */
+.layer-item-text {
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 11px;
+}
+
+.layer-item-selected .layer-item-text {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.layer-item-selected .layer-item-icon {
+    -fx-text-fill: white;
+}
+
+.layer-item-selected .layer-card {
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+}
+
+/* Icono de tipo de capa */
+.layer-item-icon {
+    -fx-text-fill: #7a7678;
+    -fx-font-size: 15px; /* Unificado con herramientas */
+    -fx-font-family: "Segoe UI Symbol", "Arial", sans-serif;
+    -fx-alignment: center;
+}
+
+.layer-item-selected .layer-item-icon {
+    -fx-text-fill: tps-accent-light;
+}
+
+/* =====================================================
+   MODO DISEÑO — PANEL DERECHO (PROPIEDADES)
+   ===================================================== */
+
+/* ScrollPane de propiedades — fondo continuo sin cortes */
+.panel-scroll-view {
+    -fx-background: #1a1618;
+    -fx-background-color: #1a1618;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.panel-scroll-view .viewport {
+    -fx-background-color: #1a1618;
+}
+
+.panel-scroll-view .corner {
+    -fx-background-color: #1a1618;
+}
+
+/* Scrollbar vertical — fino, oscuro, siempre presente cuando hay overflow */
+.panel-scroll-view .scroll-bar:vertical {
+    -fx-background-color: #1a1618;
+    -fx-pref-width: 6;
+    -fx-padding: 0;
+}
+
+.panel-scroll-view .scroll-bar:vertical .track {
+    -fx-background-color: #252123;
+    -fx-background-radius: 3;
+    -fx-border-color: transparent;
+}
+
+.panel-scroll-view .scroll-bar:vertical .thumb {
+    -fx-background-color: #3d3a3c;
+    -fx-background-radius: 3;
+}
+
+.panel-scroll-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.panel-scroll-view .scroll-bar:vertical .increment-button,
+.panel-scroll-view .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.panel-scroll-view .scroll-bar:vertical .increment-arrow,
+.panel-scroll-view .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
+}
+
+.panel-scroll-view .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: -10;
+}
+
+/* Contenedor con fondo oscuro liso (sin cortes) */
+.panel-dark-bg {
+    -fx-background-color: #1a1618;
+    -fx-min-height: 100%;
+}
+
+/* =====================================================
+   INPUTS OSCUROS EN PANELES DE PROPIEDADES
+   JavaFX TextField, ComboBox, Spinner, TextArea dentro de .panel-scroll-view
+   ===================================================== */
+
+.panel-scroll-view .text-field,
+.panel-scroll-view .text-area .content {
+    -fx-background-color: #252123;
+    -fx-text-fill: #ffffff;
+    -fx-prompt-text-fill: #d0ccd0; /* Placeholder muy visible sobre fondo oscuro */
+    -fx-highlight-fill: #4a6b7c;
+    -fx-highlight-text-fill: #ffffff;
+}
+
+.panel-scroll-view .text-field {
+    -fx-background-radius: 4;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 5 8;
+}
+
+.panel-scroll-view .text-field:focused {
+    -fx-border-color: #4a6b7c;
+    -fx-background-color: #2c2a2c;
+}
+
+.panel-scroll-view .text-area {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-control-inner-background: #252123;
+}
+
+.panel-scroll-view .text-area:focused {
+    -fx-border-color: #4a6b7c;
+}
+
+.panel-scroll-view .text-area .scroll-pane {
+    -fx-background-color: #252123;
+}
+
+.panel-scroll-view .combo-box,
+.panel-scroll-view .color-picker {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.panel-scroll-view .combo-box:focused,
+.panel-scroll-view .color-picker:focused {
+    -fx-border-color: tps-accent;
+}
+
+.panel-scroll-view .combo-box .label,
+.panel-scroll-view .color-picker .label,
+.panel-scroll-view .combo-box > .list-cell {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
+    -fx-opacity: 1.0;
+}
+
+/* El valor seleccionado del ComboBox se renderiza como un list-cell interno.
+   Sin esta regla, hereda el color oscuro por defecto de JavaFX */
+.panel-scroll-view .combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
+    -fx-opacity: 1.0;
+    -fx-padding: 0 4;
+}
+
+.panel-scroll-view .combo-box-base > .button-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff;
+    -fx-opacity: 1.0;
+}
+
+/* Cuando no hay selección, mostrar un gris visible */
+.panel-scroll-view .combo-box:no-selection .label,
+.panel-scroll-view .combo-box:no-selection .list-cell {
+    -fx-text-fill: #d0ccd0;
+    -fx-opacity: 1.0;
+}
+
+
+.panel-scroll-view .combo-box .arrow-button,
+.panel-scroll-view .color-picker .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.panel-scroll-view .combo-box .arrow,
+.panel-scroll-view .color-picker .arrow {
+    -fx-background-color: #a4a0a2; /* Flecha más visible */
+}
+
+.panel-scroll-view .combo-box-popup .list-view,
+.panel-scroll-view .color-picker-popup .color-palette {
+    -fx-background-color: #252123;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 2);
+}
+
+.panel-scroll-view .combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-padding: 4 10;
+    -fx-font-size: 12px;
+}
+
+.panel-scroll-view .combo-box-popup .list-cell:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: #e8e6e7;
+}
+
+.panel-scroll-view .combo-box-popup .list-cell:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: #e8e6e7;
+}
+
+.panel-scroll-view .spinner {
+    -fx-background-color: #252123;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.panel-scroll-view .spinner .text-field {
+    -fx-background-color: #252123;
+    -fx-text-fill: #f5f3f5; /* Número más brillante */
+    -fx-border-color: transparent;
+    -fx-padding: 4 6;
+}
+
+.panel-scroll-view .spinner .increment-arrow-button,
+.panel-scroll-view .spinner .decrement-arrow-button {
+    -fx-background-color: #2a2628;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 0 0 0 1;
+}
+
+.panel-scroll-view .spinner .increment-arrow-button:hover,
+.panel-scroll-view .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #3a3638;
+}
+
+.panel-scroll-view .spinner .increment-arrow,
+.panel-scroll-view .spinner .decrement-arrow {
+    -fx-background-color: #9a9598;
+}
+
+/* Label de sección media (12px, gris claro) */
+.prop-label {
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 2 0;
+}
+
+/* Label pequeño de campo (11px) */
+.prop-label-small {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 10px;
+    -fx-padding: 2 0 1 0;
+}
+
+/* RadioButton en paneles de propiedades */
+.prop-radio {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+.prop-radio .radio {
+    -fx-border-color: #4a4648;
+    -fx-background-color: #252123;
+    -fx-border-width: 1.5;
+}
+
+.prop-radio:selected .radio {
+    -fx-border-color: tps-accent;
+}
+
+.prop-radio:selected .dot {
+    -fx-background-color: tps-accent-light;
+    -fx-background-radius: 3;
+}
+
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+.prop-checkbox .box {
+    -fx-background-color: #252123;
+    -fx-border-color: #4a4648;
+    -fx-border-width: 1.5;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+}
+
+/* Mensajes informativos en paneles de propiedades */
+.prop-info-message {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 10.5px;
+    -fx-font-style: italic;
+    -fx-wrap-text: true;
+    -fx-padding: 8 4;
+}
+
+.prop-checkbox:hover .box {
+    -fx-border-color: tps-accent;
+}
+
+.prop-checkbox:selected .box {
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
+}
+
+.prop-checkbox:selected .mark {
+    -fx-background-color: tps-accent-light;
+}
+
+/* Separador de sección dentro de propiedades */
+.prop-separator {
+    -fx-background-color: #2a2628;
+    -fx-max-height: 1;
+    -fx-padding: 0;
+}
+
+/* Botón de acción secundario en propiedades */
+.prop-action-btn {
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: tps-text-2;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12;
+    -fx-cursor: hand;
+}
+
+.prop-action-btn:hover {
+    -fx-background-color: tps-bg-2;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent-border;
+}
+
+.prop-action-btn:pressed {
+    -fx-background-color: #1a1618;
+}
+
+/* =====================================================
+   MODO DISEÑO — PANEL DATOS VARIABLES
+   ===================================================== */
+
+/* Nombre de la columna (cabecera gris pequeña) */
+.dato-columna {
+    -fx-text-fill: #7a7678;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+}
+
+/* Valor del campo (texto claro destacado) */
+.dato-valor {
+    -fx-text-fill: #d8d4d6;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+}
+
+/* Contenedor de cada par columna/valor */
+.dato-campo {
+    -fx-background-color: #1f1d1f;
+    -fx-background-radius: 4;
+    -fx-border-color: #2e2b2d;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+/* Label del contador de registros */
+.toolbar-label {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+}
+
+/* =====================================================
+   ESTILOS INTERNOS DE PANELES (mantenidos + mejorados)
+   ===================================================== */
+
+/* =====================================================
+   PERFIL DE USUARIO (SIDEBAR FOOTER)
+   ===================================================== */
+.user-profile-panel {
+    -fx-background-color: tps-bg-1;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 13 16;
+}
+
+/* Indicador de sesión activa (punto verde discreto) */
+.session-dot {
+    -fx-text-fill: tps-accent;
+    -fx-font-size: 7px;
+}
+
+/* Línea „Sesión: Admin" */
+.user-profile-name {
+    -fx-text-fill: tps-text-2;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Botón «Cerrar sesión» — secundario, alineado a la derecha */
+.logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: tps-text-3;
+    -fx-font-size: 11px;
+    -fx-padding: 1 0 0 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+
+.logout-btn:hover {
+    -fx-text-fill: tps-text-1;
+    -fx-underline: true;
+}
+
+/* ScrollPane del panel lateral */
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.sidebar-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================
+   PANEL DATOS VARIABLES — Campos columna/valor
+   ===================================================== */
+
+/* Nombre de la columna (cabecera gris pequeña) */
+.dato-columna {
+    -fx-text-fill: #847e82;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+/* Valor del campo (texto claro destacado) */
+.dato-valor {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 12px;
+}
+
+/* Contenedor de cada par columna/valor */
+.dato-campo {
+    -fx-background-color: #252122;
+    -fx-background-radius: 4;
+}
+
+/* =====================================================
+   PANEL DE PROPIEDADES
+   ===================================================== */
+
+/* Label de sección media (12px, gris claro) */
+.prop-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 12px;
+}
+
+/* Label pequeño de campo (11px) */
+.prop-label-small {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 11px;
+}
+
+/* RadioButton en paneles de propiedades */
+.prop-radio {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #e8e6e7;
+}
+
+/* =====================================================
+   ESTILOS INTERNOS DE PANELES (Reemplazo de inline)
+   ===================================================== */
+
+/* ScrollPane interno (datos, propiedades) sin bordes */
+.panel-scroll-view {
+    -fx-background: #1e1b1c;
+    -fx-background-color: #1e1b1c;
+    -fx-border-color: transparent;
+}
+
+/* Contenedor con fondo oscuro liso */
+.panel-dark-bg {
+    -fx-background-color: #1e1b1c;
+}
+
+/* =====================================================
+   PANEL TÍTULO / SUBTÍTULO (Modo Producción)
+   ===================================================== */
+.panel-title {
+    -fx-text-fill: tps-text-1;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.panel-placeholder {
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 11px;
+}
+
+/* Botón nuevo proyecto — tono de acento profundo + texto claro */
+.new-project-btn {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center;
+}
+
+.validate-button {
+    -fx-background-color: tps-accent-deep;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-border-radius: 6;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: center-left; /* Restore left alignment grid */
+}
+
+.new-project-btn:hover, .validate-button:hover {
+    -fx-background-color: tps-accent-subtle;
+    -fx-border-color: tps-accent;
+    -fx-text-fill: tps-accent-light;
+}
+
+.new-project-btn:pressed, .validate-button:pressed {
+    -fx-background-color: tps-bg-0;
+    -fx-border-color: tps-accent-border;
+}
+
+/* =====================================================
+   SEGMENTED TOOLBAR (PROPIEDADES TEXTO)
+   ===================================================== */
+.prop-segmented-group {
+    -fx-background-color: #252123;
+    -fx-background-radius: 4;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 2;
+}
+
+.prop-toggle-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 11px;
+    -fx-padding: 4 6;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-min-width: 26;
+    -fx-alignment: center;
+}
+
+.prop-toggle-btn:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: #e8e6e7;
+}
+
+/* CheckBox en paneles de propiedades */
+.prop-checkbox {
+    -fx-text-fill: #e8e6e7;
+}
+

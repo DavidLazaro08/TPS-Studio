@@ -54,7 +54,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         chkMailMerge.setSelected(true);
 
         Label lblBDInfo = new Label("BD: " + totalRegistrosBD + " registros cargados");
-        lblBDInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        lblBDInfo.getStyleClass().add("hint-label");
 
         Button btnConfigurarMailMerge = new Button("⚙ Configurar...");
 
@@ -76,7 +76,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
             txtMMRango.setPrefWidth(300);
 
             Label lblRangoHint = new Label("Ej: TODOS. O por comas: 1, 3. O por guiones: 1-5");
-            lblRangoHint.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
+            lblRangoHint.getStyleClass().add("hint-label");
 
             VBox boxRango = new VBox(4, new Label("Registros a exportar:"), txtMMRango, lblRangoHint);
 
@@ -131,7 +131,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         chkPrueba.getStyleClass().add("lbl-section");
 
         Label lblPruebaHint = new Label("Genera un PDF A4 listo para enviar al cliente con el diseño y área de firma.");
-        lblPruebaHint.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
+        lblPruebaHint.getStyleClass().add("hint-label");
         lblPruebaHint.setWrapText(true);
 
         Button btnConfigurarPrueba = new Button("⚙ Configurar...");
@@ -162,7 +162,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         Label lblImprentaHint = new Label(
                 "Genera un PDF de 2 páginas (Frente/Dorso) con solo el fondo, sin textos ni imágenes variables. "
                         + "Ideal para enviar a imprenta antes de tener los datos.");
-        lblImprentaHint.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
+        lblImprentaHint.getStyleClass().add("hint-label");
         lblImprentaHint.setWrapText(true);
 
         VBox boxImprenta = new VBox(6, lblImprentaHint);

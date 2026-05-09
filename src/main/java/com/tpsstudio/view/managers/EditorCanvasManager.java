@@ -136,7 +136,7 @@ public class EditorCanvasManager {
         this.currentMode = AppMode.PRODUCTION;
 
         guideTooltip = new Tooltip();
-        guideTooltip.setStyle("-fx-font-size: 11px; -fx-background-color: #333; -fx-text-fill: white;");
+        guideTooltip.getStyleClass().add("canvas-guide-tooltip");
         tooltipDelay = new PauseTransition(Duration.millis(400));
         tooltipDelay.setOnFinished(ev -> {
             if (currentTooltipTarget != null) {

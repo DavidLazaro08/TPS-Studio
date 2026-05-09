@@ -121,7 +121,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
         lblAvisoBD = new Label("");
         lblAvisoBD.getStyleClass().add("lbl-hint");
-        lblAvisoBD.setStyle("-fx-text-fill: #1976d2; -fx-font-style: italic;");
+        lblAvisoBD.getStyleClass().add("aviso-bd-info");
         lblAvisoBD.setVisible(false);
         lblAvisoBD.setManaged(false);
 
@@ -265,13 +265,15 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
         if (carpetaProy != null && rutaAlmacenadaBD.startsWith(carpetaProy)) {
             // Es la copia interna
             txtRutaBD.setText("📄 [COPIA INTERNA] " + arch.getName());
-            lblAvisoBD.setStyle("-fx-text-fill: #2e7d32; -fx-font-style: italic; -fx-font-size: 11px;");
-            lblAvisoBD.setText("✔ Leyendo datos desde la protección remota interna del proyecto.\nDirectorio: "
+            lblAvisoBD.getStyleClass().removeAll("aviso-bd-info", "aviso-bd-ok");
+            lblAvisoBD.getStyleClass().add("aviso-bd-ok");
+            lblAvisoBD.setText("✓ Leyendo datos desde la protección remota interna del proyecto.\nDirectorio: "
                     + arch.getParent());
         } else {
             // Es un archivo externo nuevo que se va a vincular
             txtRutaBD.setText(rutaAlmacenadaBD);
-            lblAvisoBD.setStyle("-fx-text-fill: #1976d2; -fx-font-style: italic; -fx-font-size: 11px;");
+            lblAvisoBD.getStyleClass().removeAll("aviso-bd-info", "aviso-bd-ok");
+            lblAvisoBD.getStyleClass().add("aviso-bd-info");
             lblAvisoBD.setText(
                     "ℹ Al guardar cambios, Studio aislará y hará una copia interna del archivo para el proyecto.");
         }

@@ -208,3 +208,25 @@
     -fx-text-fill: #c0392b;
     -fx-font-size: 10px;
 }
+
+/* =====================================================
+   ESTILOS DE TEXTO SECUNDARIOS (Refactor de inline styles)
+   ===================================================== */
+.dialog-pane .hint-label, .hint-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666666;
+    -fx-font-style: italic;
+}
+
+.dialog-pane .aviso-bd-info, .aviso-bd-info {
+    -fx-text-fill: #1976d2;
+    -fx-font-style: italic;
+    -fx-font-size: 11px;
+}
+
+.dialog-pane .aviso-bd-ok, .aviso-bd-ok {
+    -fx-text-fill: #2e7d32;
+    -fx-font-style: italic;
+    -fx-font-size: 11px;
+}
+

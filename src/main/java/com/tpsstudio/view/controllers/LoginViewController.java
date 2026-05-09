@@ -73,7 +73,7 @@ public class LoginViewController {
         // Comprobación de activación
         if (!com.tpsstudio.service.AuthService.getInstance().isActivated()) {
             lblError.setText("SISTEMA NO ACTIVADO. Por favor, solicita acceso o introduce tu licencia.");
-            lblError.setStyle("-fx-text-fill: #ffa07a; -fx-font-weight: bold;"); // Color naranja suave/alerta
+            lblError.getStyleClass().add("error-label"); // Color naranja suave/alerta
         }
 
         // Cargar usuario guardado si existe
@@ -260,7 +260,7 @@ public class LoginViewController {
             // JavaFX reparenting: si añades un nodo a otro padre, se quita del anterior.
             // Pero primero creamos el StackPane vacío.
             javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
-            transitionContainer.setStyle("-fx-background-color: #0e1217;"); // Fondo oscuro para evitar flashes blancos
+            transitionContainer.getStyleClass().add("transition-overlay"); // Fondo oscuro para evitar flashes blancos
 
             // Añadir vistas: Primero Login (fondo), luego Main (frente)
             // Nota: Al cambiar setRoot, la escena libera el root anterior.

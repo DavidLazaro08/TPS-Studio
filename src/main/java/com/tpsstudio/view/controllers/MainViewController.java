@@ -171,7 +171,7 @@ public class MainViewController {
 
                 // 4. Crear contenedor de transición
                 javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
-                transitionContainer.setStyle("-fx-background-color: #0e1217;"); 
+                transitionContainer.getStyleClass().add("transition-overlay"); 
                 
                 // Intercambiamos el root por el contenedor temporal
                 scene.setRoot(transitionContainer);

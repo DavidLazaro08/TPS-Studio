@@ -1,0 +1,9 @@
+/* =====================================================
+   CHECKBOX & RADIO BUTTON
+   ===================================================== */
+.check-box, .radio-button {
+    /* Respetamos las formas base de Modena pero inyectamos nuestros colores */
+    -fx-accent: tps-accent-hover; /* Borde y focus de selección */
+    -fx-mark-color: tps-accent-light; /* Color del tick y del punto */
+    -fx-color: tps-bg-3; /* Fondo base del cajetín */
+}

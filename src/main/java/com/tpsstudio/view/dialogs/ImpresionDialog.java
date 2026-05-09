@@ -100,7 +100,7 @@ public class ImpresionDialog extends Dialog<TrabajoImpresion> {
         txtRango.setDisable(true);
 
         Label lblRangoHint = new Label("TODOS, rangos (1-5) o valores separados por coma (2,4,7)");
-        lblRangoHint.setStyle("-fx-font-size: 10px; -fx-text-fill: #888;");
+        lblRangoHint.getStyleClass().add("hint-label");
 
         HBox hbRango = new HBox(4, rbRango, txtRango);
         hbRango.setAlignment(Pos.CENTER_LEFT);
@@ -132,7 +132,7 @@ public class ImpresionDialog extends Dialog<TrabajoImpresion> {
 
         // ── MODO DE SALIDA (informativo) ───────────────────────────────────────
         Label lblModo = new Label();
-        lblModo.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-style: italic;");
+        lblModo.getStyleClass().add("hint-label");
         lblModo.setWrapText(true);
 
         // Actualizar el texto descriptivo dinámicamente según el destino elegido
