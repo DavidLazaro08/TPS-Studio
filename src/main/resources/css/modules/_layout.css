@@ -1,0 +1,469 @@
+/* =====================================================
+   LOGIN — DOBLE PANEL (OUTER + INNER)
+   ===================================================== */
+
+/* CAJA 1: Panel exterior — Casi negro con tinte berenjena */
+.login-outer {
+    -fx-background-color: #141012;
+    -fx-padding: 20;
+    -fx-background-radius: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 25, 0, 0, 5);
+}
+
+/* CAJA 2: Panel interior — Gris neutro-cálido */
+.login-inner {
+    -fx-background-color: #1e1a1c;
+    -fx-padding: 35 40;
+    -fx-background-radius: 14;
+}
+
+
+/* -----------------------------------------------------
+   TÍTULOS — Blancos neutros
+   ----------------------------------------------------- */
+.login-title {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+}
+
+.login-subtitle {
+    -fx-text-fill: #9a9598;
+    -fx-font-size: 14px;
+}
+
+
+/* -----------------------------------------------------
+   LABELS DE CAMPOS — Gris claro neutro
+   ----------------------------------------------------- */
+.field-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+}
+
+
+/* -----------------------------------------------------
+   CAMPOS DE TEXTO — Fondo gris neutro, borde discreto
+   ----------------------------------------------------- */
+.form-field {
+    -fx-background-color: #2a2628;
+    -fx-text-fill: #e8e6e7;
+    -fx-prompt-text-fill: #6a6568;
+    -fx-font-size: 14px;
+    -fx-padding: 10 12;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-border-color: #3d3739;
+}
+
+.form-field:focused {
+    -fx-border-color: #554e88;
+    -fx-border-width: 2;
+    -fx-background-color: #322e30;
+}
+
+
+/* -----------------------------------------------------
+   BOTÓN PRINCIPAL LOGIN/ACTIVACIÓN — Burdeos profundo
+   (Solo para flujos de acceso: Entrar, Activar copia)
+   ----------------------------------------------------- */
+.success-btn {
+    -fx-background-color: #3d1f28;
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 24;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #5a2d38;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.success-btn:hover {
+    -fx-background-color: #4d2a34;
+    -fx-border-color: #7a3d4a;
+}
+
+.success-btn:pressed {
+    -fx-background-color: #2d1620;
+    -fx-border-color: #3d1f28;
+}
+
+
+/* -----------------------------------------------------
+   BOTÓN OJO (MOSTRAR / OCULTAR CONTRASEÑA)
+   ----------------------------------------------------- */
+.eye-button {
+    -fx-background-color: transparent;
+    -fx-padding: 5;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+}
+
+.eye-button:hover {
+    -fx-background-color: rgba(74, 107, 124, 0.06);
+}
+
+.eye-button:pressed {
+    -fx-background-color: rgba(74, 107, 124, 0.12);
+}
+
+.eye-icon {
+    -fx-fill: #9a9598;
+    -fx-scale-x: 0.7;
+    -fx-scale-y: 0.7;
+}
+
+.eye-button:hover .eye-icon {
+    -fx-fill: #c4c0c2;
+}
+
+
+/* -----------------------------------------------------
+   CHECKBOX — Recordar usuario
+   ----------------------------------------------------- */
+.remember-checkbox {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 13px;
+}
+
+.remember-checkbox .box {
+    -fx-background-color: #2a2628;
+    -fx-border-color: #3d3739;
+    -fx-border-width: 1.5;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.remember-checkbox:hover .box {
+    -fx-border-color: tps-accent;
+}
+
+.remember-checkbox:selected .box {
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
+}
+
+.remember-checkbox:selected .mark {
+    -fx-background-color: tps-accent-light;
+    -fx-shape: "M 0 4 L 3 7 L 8 0";
+    -fx-scale-shape: true;
+    -fx-padding: 0.4em;
+}
+
+
+/* -----------------------------------------------------
+   TEXTO DE ERROR — Rojo desaturado
+   ----------------------------------------------------- */
+.error-text {
+    -fx-text-fill: #d48a8a;
+    -fx-font-size: 13px;
+    -fx-alignment: center;
+}
+
+
+/* -----------------------------------------------------
+   LINK — Solicitar acceso
+   ----------------------------------------------------- */
+.link-text {
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 13px;
+    -fx-underline: false;
+    -fx-cursor: hand;
+    -fx-opacity: 0.8;
+}
+
+.link-text:hover {
+    -fx-opacity: 1.0;
+    -fx-underline: true;
+}
+
+
+/* =====================================================
+   MAIN VIEW
+   ===================================================== */
+.primary-btn {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-accent-light;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 4;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+}
+
+.primary-btn:hover {
+    -fx-background-color: tps-accent;
+    -fx-border-color: tps-accent-hover;
+}
+
+.content-bg {
+    -fx-background-color: #1e1a1c;
+    -fx-padding: 20;
+}
+
+.status-label {
+    -fx-text-fill: #c4c0c2;
+    -fx-font-size: 16px;
+}
+
+.topbar {
+    -fx-background-color: #141012;
+    -fx-padding: 15;
+    -fx-spacing: 20;
+}
+
+.title {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+
+/* =====================================================
+   WORKSPACE — Toolbar, Paneles, Listas
+   ===================================================== */
+
+/* Canvas area */
+.canvas-area {
+    -fx-background-color: #0a0809;
+    -fx-padding: 20;
+}
+
+/* =====================================================
+   WORKSPACE — Professional Toolbar (Final Premium Polish)
+   ===================================================== */
+
+.main-toolbar {
+    -fx-background-color: #1a1618;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 0 1 0;
+}
+
+.subtle-separator {
+    -fx-background-color: #2e2b2d;
+    -fx-min-width: 1;
+    -fx-max-width: 1;
+    -fx-max-height: 18;
+    -fx-border-color: transparent;
+}
+
+.subtle-separator .line {
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.micro-separator {
+    -fx-background-color: #2a2628;
+    -fx-min-width: 1;
+    -fx-max-width: 1;
+    -fx-max-height: 12;
+}
+
+/* 1. Modo Selector — Producción / Diseño */
+.mode-toggle-left, .mode-toggle-right {
+    -fx-background-color: transparent;
+    -fx-text-fill: tps-text-3;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-min-width: 112;
+    -fx-cursor: hand;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1;
+    -fx-opacity: 1.0;
+}
+
+.mode-toggle-left {
+    -fx-background-radius: 4 0 0 4;
+    -fx-border-radius: 4 0 0 4;
+}
+
+.mode-toggle-right {
+    -fx-background-radius: 0 4 4 0;
+    -fx-border-radius: 0 4 4 0;
+    -fx-border-width: 1 1 1 0;
+}
+
+.mode-toggle-left:selected, .mode-toggle-right:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
+}
+
+.mode-toggle-left:hover:not(:selected), .mode-toggle-right:hover:not(:selected) {
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
+}
+
+/* 2. Iconos de Archivo */
+.icon-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 15px;  /* Icono emoji más visible */
+    -fx-padding: 2 10;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-min-width: 34;
+    -fx-alignment: center;
+}
+
+.icon-btn:hover {
+    -fx-background-color: #252123;
+    -fx-text-fill: #e8e6e7;
+}
+
+.icon-btn:pressed {
+    -fx-background-color: #1e1a1c;
+}
+
+/* 3. Salida / Producción — PDF e Imprimir */
+.action-btn, .action-btn-primary {
+    -fx-text-fill: tps-text-1;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 14;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-cursor: hand;
+    -fx-border-width: 1;
+    -fx-alignment: center;
+}
+
+/* PDF: neutro oscuro */
+.action-btn {
+    -fx-background-color: tps-bg-3;
+    -fx-border-color: tps-border;
+}
+
+.action-btn:hover {
+    -fx-background-color: tps-bg-4;
+    -fx-border-color: tps-accent;
+}
+
+.action-btn:pressed {
+    -fx-background-color: tps-bg-1;
+}
+
+/* Imprimir: acento principal */
+.action-btn-primary {
+    -fx-background-color: tps-accent-dark;
+    -fx-border-color: tps-accent;
+}
+
+.action-btn-primary:hover {
+    -fx-background-color: tps-accent;
+    -fx-border-color: tps-accent-hover;
+    -fx-text-fill: tps-text-1;
+}
+
+.action-btn-primary:pressed {
+    -fx-background-color: tps-accent-deep;
+}
+
+/* 4. Zoom Integrado */
+.integrated-zoom {
+    -fx-background-color: #0d0a0c;
+    -fx-background-radius: 4;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1;
+}
+
+.zoom-btn-minimal {
+    -fx-background-color: transparent;
+    -fx-text-fill: #847e82;
+    -fx-font-weight: bold;
+    -fx-padding: 0 12;
+    -fx-cursor: hand;
+}
+
+.zoom-btn-minimal:hover {
+    -fx-text-fill: white;
+    -fx-background-color: #231f21;
+}
+
+.zoom-label-fixed {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-min-width: 50;
+    -fx-alignment: center;
+}
+
+/* Frente / Guías / Dorso — Vista toggles
+   IMPORTANTE: el borde base siempre visible garantiza que
+   "Dorso" (estado deseleccionado) tenga apariencia de control,
+   no de texto suelto. */
+.view-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: tps-text-3;
+    -fx-font-size: 11px;
+    -fx-padding: 0 10;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-color: tps-border;    /* siempre visible — indica que es un control */
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.view-toggle:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
+}
+
+.view-toggle:hover:not(:selected) {
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent-border;
+}
+
+.control-label {
+    -fx-text-fill: #b4b0b2;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.troquel-group {
+    -fx-padding: 0 4;
+}
+
+.toolbar-combo {
+    -fx-background-color: tps-bg-4;
+    -fx-background-radius: 4;
+    -fx-border-color: tps-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-max-width: 130; /* Limitar ancho para no empujar la barra */
+}
+
+.toolbar-combo:focused {
+    -fx-border-color: tps-accent;
+}
+
+.toolbar-combo .label, .toolbar-combo > .list-cell {
+    -fx-text-fill: #e8e6e7; /* Texto mucho más brillante */
+    -fx-font-size: 11px;
+    -fx-opacity: 1.0;
+}
+
+.toolbar-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.toolbar-combo .arrow {
+    -fx-background-color: #847e82;
+}
+
+.toolbar-combo .list-view {
+    -fx-background-color: tps-bg-2;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+

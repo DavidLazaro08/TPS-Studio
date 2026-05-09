@@ -1,0 +1,316 @@
+/* =====================================================
+   TPS Studio — Tema Dark Profesional
+   Paleta: Vino oscuro/berenjena + Azul petróleo discreto
+   Estilo: Herramienta industrial, sobria, seria
+   ===================================================== */
+
+/* -----------------------------------------------------
+   ROOT — Fondo casi negro con degradado mínimo
+   ----------------------------------------------------- */
+.root {
+    -fx-background-color:
+        radial-gradient(center 30% 25%, radius 70%, rgba(40, 30, 35, 0.08), transparent),
+        linear-gradient(to bottom right, #0a0809, #120e10);
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+
+    /* ================================================================
+       PALETA DE COLORES — TPS Studio Looked-up Colors
+       Hue ~265° (índigo violáceo cálido — 73°→65° respecto al fondo berenjena H330°)
+       Saturación rebajada al ~28% en deep/dark para que se fundan con el fondo.
+       ================================================================ */
+
+    /* Familia de acento — Índigo Violáceo Cálido refinado (H265°, S28-32%) */
+    tps-accent-deep:    #221e3a;   /* L 17%, H 265 — Índigo noche muy oscuro, base botones */
+    tps-accent-dark:    #2e2954;   /* L 24%, H 265 — Índigo oscuro cálido, selección */
+    tps-accent:         #463f74;   /* L 35%, H 265 — Índigo violáceo, borde activo */
+    tps-accent-hover:   #564d8a;   /* L 42%, H 265 — Hover cálido suave */
+    tps-accent-subtle:  #252142;   /* L 19%, H 265 — Hover muy discreto en listas */
+    tps-accent-border:  #3b3570;   /* L 29%, H 265 — Borde cálido, no grita */
+    tps-accent-light:   #c4bcec;   /* L 84%, H 263 — Lavanda neutro-cálido, no neón */
+
+    /* Superficies — tonos berenjena/carbón con tinte violáceo muy sutil (~1-2% de hue 265°) */
+    tps-bg-0:     #0c0a0e;   /* Negro más profundo con toque violáceo */
+    tps-bg-1:     #131018;   /* Panel oscuro: antes #141012, ahora con leve índigo */
+    tps-bg-2:     #19161e;   /* Tarjetas y toolbars: antes #1a1618 */
+    tps-bg-3:     #241f2a;   /* Inputs: antes #252123 */
+    tps-bg-4:     #2a252e;   /* Bordes y separadores: antes #2a2628 */
+
+    /* Bordes neutrales */
+    tps-border:       #3a3638;
+    tps-border-dark:  #2a2628;
+
+    /* Textos */
+    tps-text-1:   #e8e6e7;
+    tps-text-2:   #c4c0c2;
+    tps-text-3:   #9a9598;
+    tps-text-4:   #6a6568;
+
+    /* ================================================================
+       SOBREESCRITURA DE VARIABLES BASE DE MODENA (ELIMINA EL CYAN Y BORDES GRUESOS)
+       ================================================================ */
+    -fx-accent: tps-accent-dark;         /* Color base de selección en toda la app */
+    -fx-focus-color: transparent;        /* Eliminamos el borde grueso de focus de Modena */
+    -fx-faint-focus-color: transparent;
+    -fx-selection-bar: tps-accent-dark;  /* Fondo de listas/combobox seleccionados */
+    -fx-selection-bar-non-focused: tps-accent-subtle;
+}
+
+/* =====================================================
+    -fx-text-fill: tps-text-2;
+}
+
+.toolbar-combo .list-cell:hover {
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-1;
+}
+
+.toolbar-combo .list-cell:selected {
+    -fx-background-color: tps-accent;
+    -fx-text-fill: tps-text-1;
+}
+
+/* 5. Paneles — Propiedades / Datos */
+.panel-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: tps-text-3;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 12;
+    -fx-background-radius: 4;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-min-width: 90;
+}
+
+.panel-toggle:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-text-1;
+    -fx-border-color: tps-accent;
+}
+
+.panel-toggle:hover {
+    -fx-background-color: tps-bg-4;
+    -fx-text-fill: tps-text-2;
+}
+
+/* Paneles laterales */
+.side-panel {
+    -fx-background-color: #141012;
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 1 0 0;
+}
+
+/* Títulos de panel */
+.panel-title {
+    -fx-text-fill: #e8e6e7;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+/* Placeholder text en paneles */
+.panel-placeholder {
+    -fx-text-fill: #6a6568;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+/* Lista de proyectos */
+.project-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* Ocultar scroll horizontal */
+.project-list .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: -10;
+}
+
+/* Scrollbar vertical personalizado — integrado con la estética oscura */
+.project-list .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6;
+    -fx-padding: 2 1;
+}
+
+.project-list .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.project-list .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3638;
+    -fx-background-radius: 4;
+}
+
+.project-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #4a6b7c;
+}
+
+.project-list .scroll-bar:vertical .increment-button,
+.project-list .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+}
+
+.project-list .scroll-bar:vertical .increment-arrow,
+.project-list .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "";
+    -fx-pref-height: 0;
+}
+
+/* Celda base: sin fondo, sin padding (lo gestiona Java) */
+.project-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4c0c2;
+    -fx-padding: 0;
+}
+.project-list .list-cell:hover,
+.project-list .list-cell:selected,
+.project-list .list-cell:selected:focused,
+.project-list .list-cell:focused {
+    -fx-background-color: transparent;
+}
+
+/* Tarjeta base */
+.project-card {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+}
+
+/* Tarjeta seleccionada — usa el mismo tps-accent-dark que el modo activo */
+.project-card-selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-background-radius: 8;
+}
+
+/* Overlay de hover: tint muy sutil */
+.project-hover-overlay {
+    -fx-background-color: rgba(255,255,255,0.03);
+    -fx-background-radius: 8;
+}
+
+/* Overlay de selección: mismo fondo que project-card-selected */
+.project-selected-overlay {
+    -fx-background-color: tps-accent-dark;
+    -fx-background-radius: 8;
+}
+
+/* Barra de luz izquierda */
+.project-active-bar {
+    -fx-background-color: tps-accent-light;
+}
+
+/* Separador entre tarjetas */
+.project-separator {
+    -fx-background-color: rgba(255,255,255,0.05);
+}
+
+/* Nombre del proyecto */
+.project-cell-name {
+    -fx-text-fill: tps-text-1;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+/* Línea de cliente */
+.project-cell-type {
+    -fx-text-fill: tps-text-4;
+    -fx-font-size: 10px;
+}
+
+.project-list .list-cell:selected .project-cell-name {
+    -fx-text-fill: tps-accent-light;
+}
+
+.project-list .list-cell:selected .project-card {
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.project-list .list-cell:selected .project-cell-type {
+    -fx-text-fill: tps-text-2;
+}
+
+/* Badge CR80 — estado normal */
+.project-badge {
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-text-3;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 6;
+    -fx-background-radius: 3;
+    -fx-border-color: tps-bg-4;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+}
+
+/* Badge CR80 — tarjeta seleccionada */
+.project-list .list-cell:selected .project-badge {
+    -fx-background-color: tps-bg-0;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent;
+}
+
+/* (bloque legacy eliminado — estilos reales en la sección PERFIL DE USUARIO al final) */
+
+/* Separadores */
+.separator {
+    -fx-background-color: #2a2628;
+}
+
+.separator:vertical .line {
+    -fx-border-color: #2a2628;
+    -fx-border-width: 0 1 0 0;
+}
+
+.separator:horizontal .line {
+    -fx-border-color: #2a2628;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* =====================================================
+   GLOBAL INPUT STYLES (Placeholders)
+   ===================================================== */
+.text-input, .combo-box > .list-cell {
+    -fx-prompt-text-fill: #d0ccd0; /* Gris más claro para placeholders */
+}
+
+/* Forzar color del prompt text en ComboBox no editables */
+.combo-box:no-selection > .list-cell {
+    -fx-text-fill: #d0ccd0;
+}
+
+/* (Mode toggle styles removed, integrated into segment styles above) */
+
+/* =====================================================
+   ESTILOS AUXILIARES (Refactor de inline styles)
+   ===================================================== */
+.canvas-guide-tooltip {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-background-color: tps-bg-1;
+    -fx-text-fill: tps-accent-light;
+    -fx-border-color: tps-accent;
+    -fx-border-width: 1;
+    -fx-padding: 6 10;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.transition-overlay {
+    -fx-background-color: #0e1217;
+}
+
+.error-label {
+    -fx-text-fill: #ffa07a;
+    -fx-font-weight: bold;
+}
+

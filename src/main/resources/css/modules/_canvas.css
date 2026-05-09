@@ -1,0 +1,46 @@
+/* =====================================================
+   SELECTOR INTEGRADO (SOBRE EL LIENZO)
+   ===================================================== */
+.integrated-view-selector {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================
+   SELECTOR DE VISTA DISCRETO (SOBRE EL LIENZO)
+   ===================================================== */
+.view-selector-btn-left, .view-selector-btn-right {
+    -fx-background-color: tps-accent-deep;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-text-fill: tps-text-3;
+    -fx-font-size: 11px;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+    -fx-padding: 1 15;
+    -fx-text-overrun: clip;
+}
+
+.view-selector-btn-left {
+    -fx-background-radius: 4 0 0 4;
+    -fx-border-radius: 4 0 0 4;
+}
+
+.view-selector-btn-right {
+    -fx-background-radius: 0 4 4 0;
+    -fx-border-radius: 0 4 4 0;
+    -fx-border-insets: 0 0 0 -1;
+}
+
+.view-selector-btn-left:hover, .view-selector-btn-right:hover {
+    -fx-background-color: tps-accent-subtle;
+    -fx-text-fill: tps-text-2;
+    -fx-border-color: tps-accent;
+}
+
+.view-selector-btn-left:selected, .view-selector-btn-right:selected {
+    -fx-background-color: tps-accent-dark;
+    -fx-text-fill: tps-accent-light;
+    -fx-border-color: tps-accent;
+    -fx-font-weight: bold;
+}
+
