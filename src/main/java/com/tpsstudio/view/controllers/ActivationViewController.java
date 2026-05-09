@@ -59,7 +59,7 @@ public class ActivationViewController {
 
     @FXML
     private void handleHelp() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
         alert.setTitle("Ayuda de Activación");
         alert.setHeaderText("Clave de Licencia");
         alert.setContentText("Puedes encontrar tu clave en el correo de confirmación de compra configurado por el administrador.\n\n" +

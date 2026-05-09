@@ -464,7 +464,7 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         if (!imagenesFaltantes.isEmpty()) {
             Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
+                Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
                 alert.setTitle("Imágenes faltantes");
                 alert.setHeaderText("Algunas imágenes no se encontraron");
                 alert.setContentText("Archivos faltantes:\n" + String.join("\n", imagenesFaltantes));

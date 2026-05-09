@@ -17,6 +17,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -35,7 +36,7 @@ import java.util.function.Consumer;
  */
 public class PropertiesPanelController {
 
-    private static final double MAX_CONTROL_WIDTH = 200.0;
+    private static final double MAX_CONTROL_WIDTH = Double.MAX_VALUE;
 
     private final Canvas canvas;
 
@@ -84,8 +85,8 @@ public class PropertiesPanelController {
      * Nota: ahora mismo "proyecto" no se usa, pero lo dejamos por si luego hace falta.
      */
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
-        VBox props = new VBox(8);
-        props.setPadding(new Insets(30));
+        VBox props = new VBox(10);
+        props.setPadding(new Insets(16, 16, 16, 16));
         props.setFillWidth(true);
         props.setAlignment(javafx.geometry.Pos.TOP_LEFT);
 
@@ -256,9 +257,9 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        Button btnReemplazar = new Button("Reemplazar Fondo");
+        Button btnReemplazar = new Button("🖼  Reemplazar Fondo");
         btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnReemplazar.getStyleClass().add("toolbox-btn");
+        btnReemplazar.getStyleClass().add("prop-action-btn");
         btnReemplazar.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Fondo");
@@ -289,9 +290,9 @@ public class PropertiesPanelController {
             }
         });
 
-        Button btnEditarExterno = new Button("Editor Externo");
+        Button btnEditarExterno = new Button("✏  Editor Externo");
         btnEditarExterno.setMaxWidth(Double.MAX_VALUE);
-        btnEditarExterno.getStyleClass().add("toolbox-btn");
+        btnEditarExterno.getStyleClass().add("prop-action-btn");
         btnEditarExterno.setOnAction(e -> {
             if (onEditExternal != null) {
                 onEditExternal.accept(fondo);
@@ -300,10 +301,10 @@ public class PropertiesPanelController {
 
         Button btnConfigEditor = new Button("⚙");
         btnConfigEditor.setTooltip(new Tooltip("Configurar editor externo..."));
-        btnConfigEditor.getStyleClass().add("toolbox-btn");
+        btnConfigEditor.getStyleClass().add("prop-action-btn");
         btnConfigEditor.setPrefWidth(40);
         btnConfigEditor.setOnAction(e -> {
-            Alert info = new Alert(Alert.AlertType.CONFIRMATION);
+            Alert info = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
             info.setTitle("Configurar Editor Externo");
             info.setHeaderText("Vincula tu editor de imágenes");
             info.setContentText(
@@ -329,7 +330,7 @@ public class PropertiesPanelController {
                 if (editor != null) {
                     new SettingsManager().setExternalEditorPath(editor.getAbsolutePath());
 
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     alert.setTitle("Editor Configurado");
                     alert.setHeaderText(null);
                     alert.setContentText("Se usará: " + editor.getName());
@@ -343,9 +344,9 @@ public class PropertiesPanelController {
         HBox.setHgrow(btnEditarExterno, Priority.ALWAYS);
         cajaEdicion.getChildren().addAll(btnEditarExterno, btnConfigEditor);
 
-        Button btnRecargar = new Button("Recargar");
+        Button btnRecargar = new Button("🔄  Recargar");
         btnRecargar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnRecargar.getStyleClass().add("toolbox-btn");
+        btnRecargar.getStyleClass().add("prop-action-btn");
         btnRecargar.setOnAction(e -> {
             if (onReload != null) {
                 onReload.accept(fondo);
@@ -380,9 +381,31 @@ public class PropertiesPanelController {
         // Etiqueta del elemento (nombre lógico)
         addEtiquetaControl(props, texto.getEtiqueta(), texto::setEtiqueta, "Ej: NOMBRE, Nº SOCIO...");
 
+        // Controles de Texto - se crean aquí para poder pasarlos a Datos Variables
+        Label lblTexto = new Label("Texto:");
+        lblTexto.getStyleClass().add("prop-label-small");
+
+        TextArea txtContenido = new TextArea(texto.getContenido());
+        txtContenido.setPromptText("Contenido del texto...");
+        txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtContenido.setPrefRowCount(3);
+        txtContenido.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        txtContenido.setWrapText(true);
+        txtContenido.textProperty().addListener((obs, old, newVal) -> {
+            texto.setContenido(newVal);
+            notifyCanvasRedraw();
+        });
+
+        // Aplicar estado inicial según vinculación actual
+        boolean vinculadoInicial = texto.getColumnaVinculada() != null;
+        txtContenido.setDisable(vinculadoInicial);
+        if (vinculadoInicial) {
+            lblTexto.setText("Texto (vinculado a la base de datos):");
+        }
+
         // Sección Datos Variables (justo después de la etiqueta, antes de posición)
         if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
-            addSeccionDatosVariablesTexto(props, texto);
+            addSeccionDatosVariablesTexto(props, texto, lblTexto, txtContenido);
             props.getChildren().add(new Separator());
         }
 
@@ -390,19 +413,6 @@ public class PropertiesPanelController {
         addPositionSizeControls(props, texto);
 
         props.getChildren().add(new Separator());
-
-        Label lblTexto = new Label("Texto");
-        lblTexto.getStyleClass().add("prop-label");
-
-        TextArea txtContenido = new TextArea(texto.getContenido());
-        txtContenido.setPromptText("Contenido");
-        txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtContenido.setPrefRowCount(3);
-        txtContenido.setWrapText(true);
-        txtContenido.textProperty().addListener((obs, old, newVal) -> {
-            texto.setContenido(newVal);
-            notifyCanvasRedraw();
-        });
 
         CheckBox chkSaltoLinea = new CheckBox("Pasar a la línea inferior si no cabe");
         chkSaltoLinea.setSelected(texto.isSaltoLinea());
@@ -412,6 +422,7 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
+        // ---- Fuente ----
         Label lblFuente = new Label("Fuente:");
         lblFuente.getStyleClass().add("prop-label-small");
 
@@ -426,19 +437,84 @@ public class PropertiesPanelController {
             }
         });
 
+        // ---- Tamaño ----
         Label lblTamaño = new Label("Tamaño:");
         lblTamaño.getStyleClass().add("prop-label-small");
 
         Spinner<Integer> spnTamaño = new Spinner<>(8, 72, (int) texto.getFontSize());
         spnTamaño.setEditable(true);
-        spnTamaño.setMaxWidth(MAX_CONTROL_WIDTH);
+        spnTamaño.setPrefWidth(65);
+        spnTamaño.setMinWidth(65);
+        spnTamaño.setMaxWidth(65);
         spnTamaño.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 texto.setFontSize(newVal);
                 notifyCanvasRedraw();
             }
         });
+        
+        VBox colTamaño = new VBox(4, lblTamaño, spnTamaño);
 
+        // ---- Estilo: B / I ----
+        Label lblEstilo = new Label("Estilo:");
+        lblEstilo.getStyleClass().add("prop-label-small");
+
+        ToggleButton btnBold = new ToggleButton("B");
+        btnBold.setTooltip(new Tooltip("Negrita"));
+        btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+        btnBold.setSelected(texto.isNegrita());
+        btnBold.setStyle("-fx-font-weight: bold;");
+        btnBold.setOnAction(e -> { texto.setNegrita(btnBold.isSelected()); notifyCanvasRedraw(); });
+
+        ToggleButton btnItalic = new ToggleButton("I");
+        btnItalic.setTooltip(new Tooltip("Cursiva"));
+        btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
+        btnItalic.setSelected(texto.isCursiva());
+        btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
+        btnItalic.setOnAction(e -> { texto.setCursiva(btnItalic.isSelected()); notifyCanvasRedraw(); });
+
+        HBox groupEstilo = new HBox(0, btnBold, btnItalic);
+        groupEstilo.getStyleClass().add("prop-segmented-group");
+
+        VBox colEstilo = new VBox(4, lblEstilo, groupEstilo);
+
+        // ---- Alineación ----
+        Label lblAlineacion = new Label("Alineación:");
+        lblAlineacion.getStyleClass().add("prop-label-small");
+
+        ToggleGroup groupAlign = new ToggleGroup();
+        ToggleButton btnLeft   = new ToggleButton("\u2261");
+        ToggleButton btnCenter = new ToggleButton("\u2263");
+        ToggleButton btnRight  = new ToggleButton("\u2262");
+
+        btnLeft.setTooltip(new Tooltip("Izquierda"));
+        btnLeft.setToggleGroup(groupAlign);
+        btnLeft.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+        btnLeft.setSelected("LEFT".equals(texto.getAlineacion()));
+        btnLeft.setOnAction(e -> { texto.setAlineacion("LEFT"); notifyCanvasRedraw(); });
+
+        btnCenter.setTooltip(new Tooltip("Centrado"));
+        btnCenter.setToggleGroup(groupAlign);
+        btnCenter.getStyleClass().add("prop-toggle-btn");
+        btnCenter.setSelected("CENTER".equals(texto.getAlineacion()));
+        btnCenter.setOnAction(e -> { texto.setAlineacion("CENTER"); notifyCanvasRedraw(); });
+
+        btnRight.setTooltip(new Tooltip("Derecha"));
+        btnRight.setToggleGroup(groupAlign);
+        btnRight.getStyleClass().add("prop-toggle-btn");
+        btnRight.setSelected("RIGHT".equals(texto.getAlineacion()));
+        btnRight.setOnAction(e -> { texto.setAlineacion("RIGHT"); notifyCanvasRedraw(); });
+
+        HBox groupAlineacion = new HBox(0, btnLeft, btnCenter, btnRight);
+        groupAlineacion.getStyleClass().add("prop-segmented-group");
+
+        VBox colAlineacion = new VBox(4, lblAlineacion, groupAlineacion);
+
+        // Fila combinada para Tamaño, Estilo y Alineación (espacio reducido)
+        HBox filaHerramientas = new HBox(8, colTamaño, colEstilo, colAlineacion);
+        filaHerramientas.setAlignment(javafx.geometry.Pos.BOTTOM_LEFT);
+
+        // ---- Color ----
         Label lblColor = new Label("Color:");
         lblColor.getStyleClass().add("prop-label-small");
 
@@ -453,59 +529,11 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        Label lblAlineacion = new Label("Alineación:");
-        lblAlineacion.getStyleClass().add("prop-label-small");
-
-        ComboBox<String> cmbAlineacion = new ComboBox<>();
-        cmbAlineacion.getItems().addAll("Izquierda", "Centro", "Derecha");
-
-        String currentAlign = texto.getAlineacion();
-        cmbAlineacion.setValue(
-                "LEFT".equals(currentAlign) ? "Izquierda"
-                        : "CENTER".equals(currentAlign) ? "Centro"
-                        : "Derecha"
-        );
-
-        cmbAlineacion.setMaxWidth(MAX_CONTROL_WIDTH);
-        cmbAlineacion.valueProperty().addListener((obs, old, newVal) -> {
-            if (newVal != null) {
-                texto.setAlineacion(
-                        "Izquierda".equals(newVal) ? "LEFT"
-                                : "Centro".equals(newVal) ? "CENTER"
-                                : "RIGHT"
-                );
-                notifyCanvasRedraw();
-            }
-        });
-
-        Label lblEstilo = new Label("Estilo:");
-        lblEstilo.getStyleClass().add("prop-label-small");
-
-        CheckBox chkNegrita = new CheckBox("Negrita");
-        chkNegrita.setSelected(texto.isNegrita());
-        chkNegrita.getStyleClass().add("prop-checkbox");
-        chkNegrita.setMaxWidth(MAX_CONTROL_WIDTH);
-        chkNegrita.selectedProperty().addListener((obs, old, newVal) -> {
-            texto.setNegrita(newVal);
-            notifyCanvasRedraw();
-        });
-
-        CheckBox chkCursiva = new CheckBox("Cursiva");
-        chkCursiva.setSelected(texto.isCursiva());
-        chkCursiva.getStyleClass().add("prop-checkbox");
-        chkCursiva.setMaxWidth(MAX_CONTROL_WIDTH);
-        chkCursiva.selectedProperty().addListener((obs, old, newVal) -> {
-            texto.setCursiva(newVal);
-            notifyCanvasRedraw();
-        });
-
         props.getChildren().addAll(
                 lblTexto, txtContenido, chkSaltoLinea,
                 lblFuente, cmbFuente,
-                lblTamaño, spnTamaño,
-                lblColor, cpColor,
-                lblAlineacion, cmbAlineacion,
-                lblEstilo, chkNegrita, chkCursiva
+                filaHerramientas,
+                lblColor, cpColor
         );
     }
 
@@ -518,15 +546,22 @@ public class PropertiesPanelController {
         addEtiquetaControl(props, imagen.getEtiqueta(), imagen::setEtiqueta, "Ej: FOTO, LOGO...");
 
         // Sección Datos Variables (justo después de la etiqueta)
+        Label lblAviso = new Label("💡 Para ver las imágenes, estas deben estar en la carpeta 'Fotos' de tu proyecto con mismo nombre y extensión que en la base de datos.");
+        lblAviso.getStyleClass().add("prop-info-message");
+        lblAviso.setMaxWidth(MAX_CONTROL_WIDTH);
+        lblAviso.setVisible(false);
+        lblAviso.setManaged(false);
+
+        Button btnReemplazar = new Button("🖼  Reemplazar Imagen");
+        btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
+        btnReemplazar.getStyleClass().add("prop-action-btn");
+
         if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
-            addSeccionDatosVariablesImagen(props, imagen);
+            addSeccionDatosVariablesImagen(props, imagen, btnReemplazar, lblAviso);
             props.getChildren().add(new Separator());
         }
 
         // Reemplazar Imagen (justo debajo de Datos Variables)
-        Button btnReemplazar = new Button("Reemplazar Imagen");
-        btnReemplazar.setMaxWidth(MAX_CONTROL_WIDTH);
-        btnReemplazar.getStyleClass().add("toolbox-btn");
         btnReemplazar.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Reemplazar Imagen");
@@ -551,7 +586,7 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(btnReemplazar, new Separator());
+        props.getChildren().addAll(btnReemplazar, lblAviso, new Separator());
 
         // Posición / Tamaño (X/Y/W/H)
         addPositionSizeControls(props, imagen);
@@ -663,8 +698,9 @@ public class PropertiesPanelController {
 
     // ===================== SECCIÓN DATOS VARIABLES =====================
 
-    /* Añade al panel de texto la sección para vincular a una columna del Excel. */
-    private void addSeccionDatosVariablesTexto(VBox props, TextoElemento texto) {
+    /* Añade al panel de texto la sección para vincular a una columna del Excel.
+     * Recibe lblTexto y txtContenido para actualizar su estado según la vinculación. */
+    private void addSeccionDatosVariablesTexto(VBox props, TextoElemento texto, Label lblTexto, TextArea txtContenido) {
         Label lblSeccion = new Label("Datos Variables");
         lblSeccion.getStyleClass().add("prop-label");
 
@@ -683,11 +719,17 @@ public class PropertiesPanelController {
         cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
 
         cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
-            if ("(sin vincular)".equals(newVal)) {
+            boolean isVinculado = !"(sin vincular)".equals(newVal);
+            if (!isVinculado) {
                 texto.setColumnaVinculada(null);
             } else {
                 texto.setColumnaVinculada(newVal);
             }
+
+            // Actualizar estado del cuadro de texto dinámicamente
+            txtContenido.setDisable(isVinculado);
+            lblTexto.setText(isVinculado ? "Texto (vinculado a la base de datos):" : "Texto:");
+
             notifyCanvasRedraw();
         });
 
@@ -695,7 +737,7 @@ public class PropertiesPanelController {
     }
 
     /* Añade al panel de imagen la sección para vincular a una columna del Excel. */
-    private void addSeccionDatosVariablesImagen(VBox props, ImagenElemento imagen) {
+    private void addSeccionDatosVariablesImagen(VBox props, ImagenElemento imagen, Button btnReemplazar, Label lblAviso) {
         Label lblSeccion = new Label("Datos Variables");
         lblSeccion.getStyleClass().add("prop-label");
 
@@ -715,12 +757,27 @@ public class PropertiesPanelController {
         String actual = imagen.getColumnaVinculada();
         cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
 
+        // Lógica de visibilidad inicial
+        boolean vinculado = actual != null;
+        btnReemplazar.setVisible(!vinculado);
+        btnReemplazar.setManaged(!vinculado);
+        lblAviso.setVisible(vinculado);
+        lblAviso.setManaged(vinculado);
+
         cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
-            if ("(sin vincular)".equals(newVal)) {
+            boolean isVinculado = !"(sin vincular)".equals(newVal);
+            if (!isVinculado) {
                 imagen.setColumnaVinculada(null);
             } else {
                 imagen.setColumnaVinculada(newVal);
             }
+
+            // Actualizar visibilidad dinámicamente
+            btnReemplazar.setVisible(!isVinculado);
+            btnReemplazar.setManaged(!isVinculado);
+            lblAviso.setVisible(isVinculado);
+            lblAviso.setManaged(isVinculado);
+
             notifyCanvasRedraw();
         });
 

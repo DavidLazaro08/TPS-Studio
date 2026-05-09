@@ -31,6 +31,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 
 import java.io.File;
@@ -69,9 +71,15 @@ public class MainViewController {
     @FXML
     private Label lblZoom;
     @FXML
-    private ToggleButton toggleFrenteDorso;
-    @FXML
     private ToggleButton toggleGuias;
+    @FXML
+    private HBox selectorCaraBox;
+    @FXML
+    private ToggleButton btnCaraFrente;
+    @FXML
+    private ToggleButton btnCaraDorso;
+    @FXML
+    private Pane canvasOverlay;
     @FXML
     private ComboBox<TipoTroquel> cmbTroquelToolbar;
     @FXML
@@ -135,7 +143,7 @@ public class MainViewController {
     @FXML
     private void onLogout() {
         // Confirmar cierre de sesión con diálogo estándar
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Cerrar Sesión");
         alert.setHeaderText("Vas a salir de la sesión actual.");
         alert.setContentText("¿Estás seguro de que quieres volver al login?");
@@ -347,8 +355,13 @@ public class MainViewController {
                 ensurePropertiesPanelVisible();
             }
 
-            modeManager.switchMode(viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                    viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                
+                if (togglePropiedades.isSelected()) {
+                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
+                }
+            }
             dibujarCanvas();
         });
 
@@ -356,6 +369,13 @@ public class MainViewController {
             viewModel.setProyectoActual(proyecto);
             projectManager.setProyectoActual(proyecto);
             canvasManager.setProyectoActual(proyecto);
+            
+            // Animación de entrada para la tarjeta
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
+            ft.setFromValue(0.4);
+            ft.setToValue(1.0);
+            ft.play();
+            
             dibujarCanvas();
         });
 
@@ -364,8 +384,9 @@ public class MainViewController {
 
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
-            modeManager.switchMode(viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                    viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+            }
             dibujarCanvas();
         });
 
@@ -427,7 +448,41 @@ public class MainViewController {
         clipRect.heightProperty().bind(canvasContainer.heightProperty());
         canvasContainer.setClip(clipRect);
 
+        canvasContainer.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        canvasContainer.heightProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        if (canvasOverlay != null) {
+            canvasOverlay.prefWidthProperty().bind(canvasContainer.widthProperty());
+            canvasOverlay.prefHeightProperty().bind(canvasContainer.heightProperty());
+        }
+        if (selectorCaraBox != null) selectorCaraBox.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+        
         dibujarCanvas();
+    }
+
+    private void posicionarSelectorCara() {
+        if (selectorCaraBox != null && canvasContainer != null) {
+            double zoom = viewModel.getZoomLevel();
+            double cardScaledWidth = EditorCanvasManager.CARD_WIDTH * zoom;
+            double cardScaledHeight = EditorCanvasManager.CARD_HEIGHT * zoom;
+            double bleedScaled = EditorCanvasManager.BLEED_MARGIN * zoom;
+            
+            double cw = canvasContainer.getWidth();
+            double ch = canvasContainer.getHeight();
+            
+            // Posición de la tarjeta absoluta dentro del contenedor (asumiendo centrado)
+            double cardX = (cw / 2) - (cardScaledWidth / 2);
+            double cardY = (ch / 2) - (cardScaledHeight / 2);
+            
+            // Borde superior de la tarjeta con sangre
+            double topEdge = cardY - bleedScaled;
+            
+            // Margen vertical equilibrado (altura botón 20px + margen 30px)
+            double offset = 50; 
+            
+            // Alineación al borde izquierdo del área con sangre (ajuste final de -20px)
+            selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
+            selectorCaraBox.setLayoutY(topEdge - offset);
+        }
     }
 
     private void onValidarDiseno() {
@@ -437,7 +492,7 @@ public class MainViewController {
         DesignValidatorService validator = new DesignValidatorService();
         java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
         alert.setTitle("Validación de Diseño");
         alert.setHeaderText(avisos.isEmpty() ? "¡Diseño correcto!" : "Se han encontrado problemas potenciales:");
 
@@ -517,11 +572,15 @@ public class MainViewController {
 
         // En Producción, los paneles de diseño no aplican: los ocultamos
         if (newMode == AppMode.PRODUCTION) {
-            if (bloqueContextual != null) {
-                bloqueContextual.setVisible(false);
-                bloqueContextual.setManaged(false);
+            if (bloqueContextual != null && bloqueContextual.isVisible()) {
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), bloqueContextual);
+                ft.setToValue(0.0);
+                ft.setOnFinished(e -> {
+                    bloqueContextual.setVisible(false);
+                    bloqueContextual.setManaged(false);
+                });
+                ft.play();
             }
-            // Si había algún panel abierto, lo cerramos
             cerrarPanelDerecho();
 
             // Iniciar parpadeo (respiración suave) en el botón Diseño invitando a pulsarlo
@@ -539,20 +598,23 @@ public class MainViewController {
                                     designColorAdjust.brightnessProperty(), 0.0, Interpolator.EASE_BOTH)));
                     designPulse.setCycleCount(javafx.animation.Animation.INDEFINITE);
                 }
-                designPulse.play();
+                designPulse.playFromStart(); // Sincronizado
             }
 
         } else {
-            if (bloqueContextual != null) {
+            if (bloqueContextual != null && !bloqueContextual.isVisible()) {
+                bloqueContextual.setOpacity(0.0);
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), bloqueContextual);
+                ft.setToValue(1.0);
+                ft.play();
             }
 
             // Apagar y frenar la respiración del botón Diseño
             if (designPulse != null) {
                 designPulse.stop();
             }
-            designColorAdjust.setBrightness(0.0);
             if (btnModeEdit != null) {
                 btnModeEdit.setEffect(null);
             }
@@ -585,6 +647,7 @@ public class MainViewController {
     private void actualizarZoom() {
         lblZoom.setText(String.format("%.0f%%", viewModel.getZoomLevel() * 100));
         canvasManager.setZoomLevel(viewModel.getZoomLevel());
+        posicionarSelectorCara();
         dibujarCanvas();
     }
 
@@ -616,6 +679,32 @@ public class MainViewController {
      * Dibuja el canvas delegando en EditorCanvasManager.
      */
     private void dibujarCanvas() {
+        posicionarSelectorCara();
+        if (selectorCaraBox != null) {
+            boolean hasProject = viewModel.getProyectoActual() != null;
+            boolean shouldShow = hasProject && viewModel.getCurrentMode() == AppMode.DESIGN;
+            
+            if (shouldShow && !selectorCaraBox.isVisible()) {
+                selectorCaraBox.setOpacity(0.0);
+                selectorCaraBox.setVisible(true);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), selectorCaraBox);
+                ft.setToValue(1.0);
+                ft.play();
+            } else if (!shouldShow && selectorCaraBox.isVisible() && selectorCaraBox.getOpacity() > 0) {
+                selectorCaraBox.setOpacity(0.0); // Prevenimos multiples animaciones superpuestas
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), selectorCaraBox);
+                ft.setFromValue(1.0);
+                ft.setToValue(0.0);
+                ft.setOnFinished(e -> selectorCaraBox.setVisible(false));
+                ft.play();
+            }
+            
+            if (hasProject) {
+                boolean isFrente = viewModel.getProyectoActual().isMostrandoFrente();
+                btnCaraFrente.setSelected(isFrente);
+                btnCaraDorso.setSelected(!isFrente);
+            }
+        }
         canvasManager.dibujarCanvas();
     }
 
@@ -762,7 +851,7 @@ public class MainViewController {
     private void abrirEditorExterno(ImagenFondoElemento fondo) {
 
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede abrir el editor externo");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -820,7 +909,7 @@ public class MainViewController {
         }
 
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
@@ -843,7 +932,7 @@ public class MainViewController {
 
                 if (editorFile.exists()) {
 
-                    Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                    Alert aviso = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     aviso.setTitle("Editando externamente");
                     aviso.setHeaderText("Abriendo con " + settings.getExternalEditorName() + "...");
                     aviso.setContentText(
@@ -859,7 +948,7 @@ public class MainViewController {
             }
 
             if (!opened) {
-                Alert aviso = new Alert(Alert.AlertType.INFORMATION);
+                Alert aviso = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                 aviso.setTitle("Editando externamente");
                 aviso.setHeaderText("Abriendo editor predeterminado...");
                 aviso.setContentText(
@@ -880,7 +969,7 @@ public class MainViewController {
         } catch (Exception ex) {
             ex.printStackTrace();
 
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo abrir el editor externo");
             alert.setContentText("Error: " + ex.getMessage());
@@ -895,7 +984,7 @@ public class MainViewController {
     private void recargarFondo(ImagenFondoElemento fondo) {
 
         if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
             alert.setTitle("Advertencia");
             alert.setHeaderText("No se puede recargar");
             alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
@@ -905,7 +994,7 @@ public class MainViewController {
 
         File file = new File(fondo.getRutaArchivo());
         if (!file.exists()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Archivo no encontrado");
             alert.setContentText(
@@ -939,7 +1028,7 @@ public class MainViewController {
 
             dibujarCanvas();
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
             alert.setTitle("Éxito");
             alert.setHeaderText("Fondo recargado");
             alert.setContentText("La imagen se ha recargado y ajustado correctamente.");
@@ -948,7 +1037,7 @@ public class MainViewController {
         } catch (Exception ex) {
             ex.printStackTrace();
 
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("No se pudo recargar la imagen");
             alert.setContentText(
@@ -989,7 +1078,7 @@ public class MainViewController {
     @FXML
     private void onExportarProyecto() {
         if (viewModel.getProyectoActual() == null) {
-            new Alert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
+            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
             return;
         }
 
@@ -1011,12 +1100,12 @@ public class MainViewController {
             try {
                 filas = com.tpsstudio.view.dialogs.ExportDialog.parseRangoFilas(config.rangoFilas(), totalRegistros);
             } catch (IllegalArgumentException ex) {
-                new Alert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
+                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
                         .showAndWait();
                 return;
             }
             if (filas.isEmpty()) {
-                new Alert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
+                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
                         .showAndWait();
                 return;
             }
@@ -1077,7 +1166,7 @@ public class MainViewController {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
                     err.setTitle("Error al exportar");
                     err.setHeaderText("No se pudo completar la exportación");
                     err.setContentText(ex.getMessage());
@@ -1096,7 +1185,7 @@ public class MainViewController {
     @FXML
     private void onImprimirProyecto() {
         if (viewModel.getProyectoActual() == null) {
-            new Alert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
+            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
             return;
         }
 
@@ -1139,7 +1228,7 @@ public class MainViewController {
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
                     err.setTitle("Error al imprimir");
                     err.setHeaderText("No se pudo completar la impresión");
                     err.setContentText(ex.getMessage());
@@ -1150,20 +1239,26 @@ public class MainViewController {
     }
 
     @FXML
-    private void onToggleFrenteDorso() {
-        if (viewModel.getProyectoActual() == null)
-            return;
-
-        viewModel.getProyectoActual().setMostrandoFrente(toggleFrenteDorso.isSelected());
-        toggleFrenteDorso.setText(toggleFrenteDorso.isSelected() ? "Frente" : "Dorso");
-
-        // Cambiar de cara invalida la selección actual
+    private void onShowFrente() {
+        if (viewModel.getProyectoActual() == null) return;
+        viewModel.getProyectoActual().setMostrandoFrente(true);
         viewModel.setElementoSeleccionado(null);
-
         if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            buildEditPanels();
+            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
+            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
         }
+        dibujarCanvas();
+    }
 
+    @FXML
+    private void onShowDorso() {
+        if (viewModel.getProyectoActual() == null) return;
+        viewModel.getProyectoActual().setMostrandoFrente(false);
+        viewModel.setElementoSeleccionado(null);
+        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
+            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+        }
         dibujarCanvas();
     }
 
@@ -1187,7 +1282,7 @@ public class MainViewController {
 
                 // Mostrar alerta de éxito visual en el Controller
                 Platform.runLater(() -> {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
                     alert.initOwner(owner);
                     alert.setTitle("Proyecto Creado");
                     alert.setHeaderText("Proyecto creado y configurado con éxito");
@@ -1311,7 +1406,7 @@ public class MainViewController {
     }
 
     private boolean confirmarReemplazoFondo() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reemplazar Fondo");
         alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
         alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
@@ -1380,6 +1475,9 @@ public class MainViewController {
 
         double targetX = panelVisible ? -(rightPanel.getPrefWidth() / 2.0) : 0;
         AnimationHelper.shiftCanvas(canvas, targetX);
+        if (canvasOverlay != null) {
+            AnimationHelper.shiftCanvas(canvasOverlay, targetX);
+        }
     }
 
     /* Abre el diálogo para editar o eliminar un proyecto existente. */

@@ -244,8 +244,15 @@ public class EditorCanvasManager {
 
         if (proyectoActual == null) {
             gc.setFill(Color.web("#9a9598"));
-            gc.fillText("Seleccione un proyecto o cree uno nuevo",
-                    canvas.getWidth() / 2 - 120, canvas.getHeight() / 2);
+            gc.setFont(Font.font("System", 16)); // Texto más grande y legible
+            String msg = "Seleccione un proyecto o cree uno nuevo";
+            
+            // Centrado preciso
+            javafx.scene.text.Text t = new javafx.scene.text.Text(msg);
+            t.setFont(gc.getFont());
+            double tw = t.getLayoutBounds().getWidth();
+            
+            gc.fillText(msg, (canvas.getWidth() - tw) / 2, canvas.getHeight() / 2);
             return;
         }
 
@@ -556,10 +563,7 @@ public class EditorCanvasManager {
         gc.setLineDashes();
         
         // --- 6.1: FRENTE / DORSO a la izquierda ---
-        gc.setFill(Color.web("#e8e6e7"));
-        gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 16));
-        String lado = proyectoActual.isMostrandoFrente() ? "FRENTE" : "DORSO";
-        gc.fillText(lado, cardX, cardY - 30);
+        // (Renderizado de texto eliminado: ahora se usa el selector interactivo HBox sobre el lienzo)
 
         // --- 6.2: PROYECTO y CLIENTE CENTRADOS DE FORMA ESTÁTICA ARRIBA ---
         // (Se animan suavemente por código leyendo hudOpacity, entre modo diseño y producción)
@@ -606,7 +610,7 @@ public class EditorCanvasManager {
             gc.setFill(Color.web("#9a9598"));
             gc.fillText(cName, startCX, staticTopY + 25);
 
-            gc.setFill(Color.web("#7ca4d0")); // Azul botón
+            gc.setFill(Color.web("#8b78d4")); // Índigo-violeta acorde a la paleta actual
             gc.fillText(btnTxt, startCX + wC, staticTopY + 25);
             
             // Registrar hit box para el click de Editar datos (solamente si es clickeable)
