@@ -4,6 +4,7 @@ import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.project.ClienteInfo;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.util.TextUtils;
 import com.tpsstudio.view.dialogs.ExportDialog;
 import com.tpsstudio.view.dialogs.PruebaConfigDialog;
 import com.tpsstudio.view.managers.EditorCanvasManager;
@@ -323,7 +324,7 @@ public class PDFExportService {
             }
 
             // Multi-línea con auto-wrap (mismo algoritmo que EditorCanvasManager)
-            List<String> lines = computeLines(contenido, texto.isSaltoLinea(), gc.getFont(), ew);
+            List<String> lines = TextUtils.computeLines(contenido, texto.isSaltoLinea(), gc.getFont(), ew);
 
             double lineH = texto.getFontSize() * scale * 1.2;
             double curY  = ey + (texto.getFontSize() * scale);
@@ -396,44 +397,6 @@ public class PDFExportService {
         }
     }
 
-    /** Misma lógica de word-wrap que EditorCanvasManager para coherencia visual */
-    // SYNC: mantener coherente con EditorCanvasManager#computeLines para evitar diferencias entre vista y PDF.
-    private List<String> computeLines(String contenido, boolean saltoLinea, Font font, double maxWidth) {
-        List<String> rawLines = java.util.Arrays.asList(contenido.split("\n", -1));
-        List<String> finalLines = new ArrayList<>();
-
-        if (saltoLinea) {
-            javafx.scene.text.Text helper = new javafx.scene.text.Text();
-            helper.setFont(font);
-            for (String raw : rawLines) {
-                if (raw.isEmpty()) { finalLines.add(""); continue; }
-                String[] words = raw.split(" ", -1);
-                StringBuilder current = new StringBuilder();
-                for (String word : words) {
-                    String test = current.length() == 0 ? word : current + " " + word;
-                    helper.setText(test);
-                    if (helper.getLayoutBounds().getWidth() > maxWidth) {
-                        if (current.length() > 0) { finalLines.add(current.toString()); current = new StringBuilder(); }
-                        helper.setText(word);
-                        if (helper.getLayoutBounds().getWidth() > maxWidth) {
-                            StringBuilder partial = new StringBuilder();
-                            for (char c : word.toCharArray()) {
-                                helper.setText(partial.toString() + c);
-                                if (helper.getLayoutBounds().getWidth() > maxWidth && partial.length() > 0) {
-                                    finalLines.add(partial.toString()); partial = new StringBuilder().append(c);
-                                } else { partial.append(c); }
-                            }
-                            current = partial;
-                        } else { current = new StringBuilder(word); }
-                    } else { current = new StringBuilder(test); }
-                }
-                if (current.length() > 0) finalLines.add(current.toString());
-            }
-        } else {
-            finalLines.addAll(rawLines);
-        }
-        return finalLines;
-    }
 
     /** Intenta cargar una imagen desde la columna de datos (nombre de archivo) */
     private Image resolverImagenVariable(String nombreArchivo) {

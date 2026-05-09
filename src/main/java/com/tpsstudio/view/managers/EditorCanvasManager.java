@@ -6,10 +6,13 @@ import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.enums.AppMode;
-import com.tpsstudio.model.enums.TipoTroquel;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.util.ImageUtils;
+import com.tpsstudio.util.TextUtils;
+import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -332,63 +335,8 @@ public class EditorCanvasManager {
                     if (valorVariable != null) contenidoFinal = valorVariable;
                 }
 
-                // Procesamiento multi-linea y auto-wrap
-                java.util.List<String> rawLines = java.util.Arrays.asList(contenidoFinal.split("\n"));
-                java.util.List<String> finalLines = new java.util.ArrayList<>();
-
-                if (texto.isSaltoLinea()) {
-                    javafx.scene.text.Text helper = new javafx.scene.text.Text();
-                    helper.setFont(gc.getFont());
-                    for (String raw : rawLines) {
-                        if (raw.isEmpty()) {
-                            finalLines.add("");
-                            continue;
-                        }
-                        String[] words = raw.split(" ", -1);
-                        StringBuilder currentLine = new StringBuilder();
-                        
-                        for (String word : words) {
-                            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
-                            helper.setText(testLine);
-                            
-                            if (helper.getLayoutBounds().getWidth() > ew) {
-                                // Si ya había algo en la línea, lo guardamos y bajamos
-                                if (currentLine.length() > 0) {
-                                    finalLines.add(currentLine.toString());
-                                    currentLine = new StringBuilder();
-                                }
-                                
-                                // Evaluamos si la palabra por sí sola supera el ancho
-                                helper.setText(word);
-                                if (helper.getLayoutBounds().getWidth() > ew) {
-                                    // Palabra mega-larga (ej: textooooooooooooo)
-                                    // La partimos letra a letra forzosamente
-                                    StringBuilder partialWord = new StringBuilder();
-                                    for (int i = 0; i < word.length(); i++) {
-                                        char c = word.charAt(i);
-                                        helper.setText(partialWord.toString() + c);
-                                        if (helper.getLayoutBounds().getWidth() > ew && partialWord.length() > 0) {
-                                            finalLines.add(partialWord.toString());
-                                            partialWord = new StringBuilder().append(c);
-                                        } else {
-                                            partialWord.append(c);
-                                        }
-                                    }
-                                    currentLine = partialWord;
-                                } else {
-                                    currentLine = new StringBuilder(word);
-                                }
-                            } else {
-                                currentLine = new StringBuilder(testLine);
-                            }
-                        }
-                        if (currentLine.length() > 0) {
-                            finalLines.add(currentLine.toString());
-                        }
-                    }
-                } else {
-                    finalLines.addAll(rawLines);
-                }
+                // Procesamiento multi-linea y auto-wrap centralizado
+                java.util.List<String> finalLines = TextUtils.computeLines(contenidoFinal, texto.isSaltoLinea(), gc.getFont(), ew);
 
                 // =======================================================
                 // Auto-ajuste Inteligente de Dimensiones de Caja
