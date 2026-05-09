@@ -1,5 +1,7 @@
 package com.tpsstudio.service;
 
+import com.tpsstudio.model.print.SalidaImpresion;
+import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.view.dialogs.ExportDialog;

@@ -14,10 +14,10 @@ import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.service.DesignValidatorService;
 import com.tpsstudio.service.ImpresionService;
-import com.tpsstudio.service.SalidaImpresion;
-import com.tpsstudio.service.SalidaImpresoraDirecta;
-import com.tpsstudio.service.SalidaPDFSistema;
-import com.tpsstudio.service.TrabajoImpresion;
+import com.tpsstudio.model.print.SalidaImpresion;
+import com.tpsstudio.model.print.SalidaImpresoraDirecta;
+import com.tpsstudio.model.print.SalidaPDFSistema;
+import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
 import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
@@ -1206,8 +1206,23 @@ public class MainViewController {
         java.util.Optional<TrabajoImpresion> resultado = dialog.showAndWait();
         if (resultado.isEmpty() || resultado.get() == null) return;
 
-        TrabajoImpresion trabajo = resultado.get();
-        com.tpsstudio.model.project.Proyecto proyecto = viewModel.getProyectoActual();
+        ejecutarTrabajoImpresion(resultado.get(), viewModel.getProyectoActual(), fd);
+    }
+
+    /**
+     * Ejecuta el trabajo de impresión en un hilo de fondo.
+     *
+     * <p>Construye la estrategia de salida adecuada (impresora directa o visor PDF del SO)
+     * según la configuración del usuario, delega en {@link ImpresionService} para generar
+     * y entregar el PDF, y notifica el resultado en el hilo de UI mediante un toast.</p>
+     *
+     * @param trabajo  configuración elegida por el usuario en {@link ImpresionDialog}.
+     * @param proyecto proyecto activo del que se renderizará el diseño.
+     * @param fd       fuente de datos variables; puede ser {@code null}.
+     */
+    private void ejecutarTrabajoImpresion(TrabajoImpresion trabajo,
+                                          com.tpsstudio.model.project.Proyecto proyecto,
+                                          com.tpsstudio.model.project.FuenteDatos fd) {
         javafx.stage.Window owner = canvas.getScene().getWindow();
 
         new Thread(() -> {

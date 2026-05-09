@@ -1,4 +1,4 @@
-package com.tpsstudio.service;
+package com.tpsstudio.model.print;
 
 import java.io.File;
 
