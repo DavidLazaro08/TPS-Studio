@@ -510,6 +510,26 @@
     -fx-border-radius: 4;
 }
 
+/* =====================================================
+   CHECKBOX & RADIO BUTTON
+   ===================================================== */
+.check-box .box,
+.radio-button .radio {
+    -fx-background-color: tps-bg-3;
+    -fx-border-color: tps-border;
+    -fx-border-width: 1;
+}
+
+.check-box:focused .box,
+.radio-button:focused .radio {
+    -fx-border-color: tps-accent;
+}
+
+.check-box:selected .mark,
+.radio-button:selected .dot {
+    -fx-background-color: tps-accent-light;
+}
+
 .toolbar-combo .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: tps-text-2;
@@ -1323,11 +1343,11 @@
 }
 
 .prop-radio:selected .radio {
-    -fx-border-color: #4a6b7c;
+    -fx-border-color: tps-accent;
 }
 
 .prop-radio:selected .dot {
-    -fx-background-color: #4a6b7c;
+    -fx-background-color: tps-accent-light;
     -fx-background-radius: 3;
 }
 
