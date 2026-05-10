@@ -81,6 +81,8 @@ public class MainViewController {
     @FXML
     private ToggleButton btnCaraDorso;
     @FXML
+    private Label lblProyectoActivo;
+    @FXML
     private Pane canvasOverlay;
     @FXML
     private ComboBox<TipoTroquel> cmbTroquelToolbar;
@@ -119,6 +121,9 @@ public class MainViewController {
     // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo; eliminar)
     private ElementActionsController elementActionsController;
 
+    // Estado para el chip de proyecto colapsable (Cerrado por defecto)
+    private boolean isProjectChipCollapsed = true;
+
     // =====================================================
     // Inicialización
     // =====================================================
@@ -126,6 +131,11 @@ public class MainViewController {
     private void initialize() {
         setupCanvas();
         initUI();
+        
+        lblProyectoActivo.setOnMouseClicked(e -> {
+            isProjectChipCollapsed = !isProjectChipCollapsed;
+            actualizarLabelProyecto(true);
+        });
 
         projectManager.cargarProyectosRecientes(8);
 
@@ -276,6 +286,7 @@ public class MainViewController {
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 buildEditPanels();
             }
+            actualizarLabelProyecto(false);
             dibujarCanvas();
         });
 
@@ -496,12 +507,13 @@ public class MainViewController {
             // Borde superior de la tarjeta con sangre
             double topEdge = cardY - bleedScaled;
             
-            // Margen vertical equilibrado (altura botón 20px + margen 30px)
-            double offset = 50; 
-            
-            // Alineación al borde izquierdo del área con sangre (ajuste final de -20px)
+            double offset = 50;
+            // Restaurar la posición "perfecta" original a la izquierda
             selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
             selectorCaraBox.setLayoutY(topEdge - offset);
+            
+            // Dejar que el HBox tome el tamaño natural de sus botones
+            selectorCaraBox.autosize();
         }
     }
 
@@ -642,6 +654,7 @@ public class MainViewController {
 
         modeManager.switchMode(newMode, viewModel.getProyectoActual(),
                 viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+        actualizarLabelProyecto(false);
     }
 
     // =====================================================
@@ -1221,9 +1234,88 @@ public class MainViewController {
     /* Abre el diálogo para editar o eliminar un proyecto existente. */
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
         projectActionsController.editarProyecto(proyecto);
+        actualizarLabelProyecto(false);
         // Si la BD vinculada pudo haber cambiado, reconstruir paneles
         if (viewModel.getCurrentMode() == AppMode.DESIGN) {
             buildEditPanels();
+        }
+    }
+
+    private void actualizarLabelProyecto(boolean animate) {
+        if (lblProyectoActivo != null) {
+            if (viewModel.getProyectoActual() != null) {
+                String nombre = viewModel.getProyectoActual().getNombre();
+                String inicial = nombre.isEmpty() ? "P" : nombre.substring(0, 1).toUpperCase();
+
+                // Si la escena no está lista O indicamos no animar, configuramos el estado inicial de golpe
+                if (lblProyectoActivo.getScene() == null || !animate) {
+                    if (isProjectChipCollapsed) {
+                        lblProyectoActivo.setText(inicial);
+                        lblProyectoActivo.setPrefWidth(28);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
+                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;"); // Muy oscuro
+                    } else {
+                        lblProyectoActivo.setText("Proyecto · " + nombre);
+                        lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                        lblProyectoActivo.setStyle("");
+                    }
+                    return;
+                }
+
+                // Transición suave
+                javafx.animation.Timeline timeline = new javafx.animation.Timeline();
+                if (isProjectChipCollapsed) {
+                    // Animación de CERRAR: mantener el texto completo para que se recorte desde la derecha
+                    lblProyectoActivo.setText("Proyecto · " + nombre);
+                    lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0 0 0 15;"); 
+                    
+                    // Fijar ancho actual para que empiece a encoger
+                    double currentWidth = lblProyectoActivo.getWidth();
+                    if (currentWidth > 30) {
+                        lblProyectoActivo.setPrefWidth(currentWidth);
+                    }
+                    
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), 28, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(250), kv);
+                    timeline.getKeyFrames().add(kf);
+                    
+                    timeline.setOnFinished(e -> {
+                        // Al terminar de cerrar, ponemos la inicial y centramos
+                        lblProyectoActivo.setText(inicial);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
+                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;");
+                    });
+                } else {
+                    // Animación de ABRIR: preparar el texto completo desde el principio
+                    lblProyectoActivo.setText("Proyecto · " + nombre);
+                    lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    lblProyectoActivo.setStyle(""); 
+                    
+                    // Medimos cuánto va a ocupar expandido
+                    lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+                    lblProyectoActivo.applyCss();
+                    lblProyectoActivo.layout();
+                    double targetWidth = lblProyectoActivo.prefWidth(-1);
+                    
+                    // Empezamos desde el cuadradito
+                    lblProyectoActivo.setPrefWidth(28);
+                    
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), targetWidth, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(250), kv);
+                    timeline.getKeyFrames().add(kf);
+                    
+                    timeline.setOnFinished(e -> lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE));
+                }
+                timeline.play();
+
+            } else {
+                lblProyectoActivo.setText("");
+            }
+            if (selectorCaraBox != null) {
+                selectorCaraBox.autosize();
+            }
         }
     }
 }

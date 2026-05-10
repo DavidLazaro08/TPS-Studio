@@ -146,14 +146,17 @@
                 
                 <!-- Overlay para controles posicionados sobre el lienzo -->
                 <Pane fx:id="canvasOverlay" pickOnBounds="false" StackPane.alignment="TOP_LEFT">
-                    <HBox fx:id="selectorCaraBox" spacing="0" styleClass="integrated-view-selector" pickOnBounds="false" managed="false">
-                        <fx:define>
-                            <ToggleGroup fx:id="caraToggleGroup" />
-                        </fx:define>
-                        <ToggleButton fx:id="btnCaraFrente" text="Frente" toggleGroup="$caraToggleGroup"
-                                      onAction="#onShowFrente" styleClass="view-selector-btn-left" selected="true" prefHeight="20" minWidth="80" />
-                        <ToggleButton fx:id="btnCaraDorso" text="Dorso" toggleGroup="$caraToggleGroup"
-                                      onAction="#onShowDorso" styleClass="view-selector-btn-right" prefHeight="20" minWidth="80" />
+                    <HBox fx:id="selectorCaraBox" spacing="12" styleClass="integrated-view-selector" pickOnBounds="false" managed="false" alignment="CENTER_LEFT">
+                        <HBox spacing="0">
+                            <fx:define>
+                                <ToggleGroup fx:id="caraToggleGroup" />
+                            </fx:define>
+                            <ToggleButton fx:id="btnCaraFrente" text="Frente" toggleGroup="$caraToggleGroup"
+                                          onAction="#onShowFrente" styleClass="view-selector-btn-left" selected="true" minWidth="80" />
+                            <ToggleButton fx:id="btnCaraDorso" text="Dorso" toggleGroup="$caraToggleGroup"
+                                          onAction="#onShowDorso" styleClass="view-selector-btn-right" minWidth="80" />
+                        </HBox>
+                        <Label fx:id="lblProyectoActivo" minWidth="-Infinity" styleClass="design-project-chip" />
                     </HBox>
                 </Pane>
             </StackPane>

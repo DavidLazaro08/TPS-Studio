@@ -585,7 +585,13 @@ public class EditorCanvasManager {
         );
 
         double bleedScaled = BLEED_MARGIN * zoomLevel;
-        gc.fillText(infoDimensiones, cardX + scaledWidth - 380, cardY + scaledHeight + bleedScaled + 20);
+        
+        javafx.scene.text.Text tmpText = new javafx.scene.text.Text(infoDimensiones);
+        tmpText.setFont(gc.getFont());
+        double textWidth = tmpText.getLayoutBounds().getWidth();
+        double centerTextX = cardX + (scaledWidth / 2) - (textWidth / 2);
+        
+        gc.fillText(infoDimensiones, centerTextX, cardY + scaledHeight + bleedScaled + 25);
 
         gc.setGlobalAlpha(1.0);
         gc.restore();
