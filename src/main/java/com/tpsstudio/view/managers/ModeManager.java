@@ -4,9 +4,11 @@ import com.tpsstudio.model.elements.Elemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.enums.AppMode;
 import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.project.Etiqueta;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
+import com.tpsstudio.service.EtiquetasManager;
 import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -18,8 +20,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.input.*;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import java.util.Collections;
 
 import java.util.Map;
@@ -57,6 +61,21 @@ public class ModeManager {
 
     // Estado actual (Diseño / Producción)
     private AppMode currentMode;
+
+    // Gestor de categorías/etiquetas del usuario (inyectado mediante setter)
+    private EtiquetasManager etiquetasManager;
+    // IDs de categorías activas en el filtro (vacío = Todos)
+    private java.util.List<String> filtroActivo = new java.util.ArrayList<>();
+    // Lista filtrada que se muestra en el ListView
+    private ObservableList<Proyecto> proyectosFiltrados;
+    // UI para mostrar cuántos proyectos hay ocultos
+    private HBox panelOcultos;
+    private Label lblOcultosText;
+    private javafx.stage.Popup filtroPopup;
+    private Button btnFiltro; // Referencia para actualizar el icono/estado
+    private boolean omitirConfirmacionBorradoEtiqueta = false;
+    private HBox filtroInfoBox;
+    private Label lblFiltroActual;
 
     // Contenedores físicos de UI (se rellenan dinámicamente)
     private final VBox leftPanel;
@@ -110,6 +129,14 @@ public class ModeManager {
         this.rightPanel = rightPanel;
         this.propertiesPanelController = propertiesPanelController;
         this.currentMode = AppMode.DESIGN;
+    }
+
+    /** Inyecta el gestor de categorías después de la construcción. */
+    public void setEtiquetasManager(EtiquetasManager etiquetasManager) {
+        this.etiquetasManager = etiquetasManager;
+        if (etiquetasManager != null) {
+            filtroActivo = new java.util.ArrayList<>(etiquetasManager.getFiltroActivo());
+        }
     }
 
     // ===================== SETTERS DE CALLBACKS =====================
@@ -955,16 +982,23 @@ public class ModeManager {
         projectPanel.setPadding(new Insets(14, 12, 14, 12));
         VBox.setVgrow(projectPanel, Priority.ALWAYS);
 
-        // Cabecera Equilibrada
-        VBox header = new VBox(2);
+        // Cabecera con filtro de categorías a la derecha
         Label lblTrabajos = new Label("Gestión de Trabajos");
         lblTrabajos.getStyleClass().add("panel-title");
         Label lblSubtitulo = new Label("Administración y exportación");
         lblSubtitulo.getStyleClass().add("panel-placeholder");
-        header.getChildren().addAll(lblTrabajos, lblSubtitulo);
+        VBox titulos = new VBox(2, lblTrabajos, lblSubtitulo);
+        HBox.setHgrow(titulos, Priority.ALWAYS);
 
-        ListView<Proyecto> listProyectos = new ListView<>();
-        listProyectos.setItems(projects);
+        // Botón de filtro de categorías
+        Button btnFiltro = crearBotonFiltro(projects);
+
+        HBox header = new HBox(titulos, btnFiltro);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        // Lista de proyectos — filtrada o completa
+        proyectosFiltrados = construirListaFiltrada(projects);
+        ListView<Proyecto> listProyectos = new ListView<>(proyectosFiltrados);
         listProyectos.getStyleClass().add("project-list");
         VBox.setVgrow(listProyectos, Priority.ALWAYS);
 
@@ -1141,8 +1175,340 @@ public class ModeManager {
             if (onNewCR80 != null) onNewCR80.run();
         });
 
-        projectPanel.getChildren().addAll(header, listProyectos, btnNuevoCR80);
+        // Panel de proyectos ocultos
+        panelOcultos = new HBox(5);
+        panelOcultos.setAlignment(Pos.CENTER);
+        panelOcultos.setPadding(new Insets(4, 0, 8, 0));
+        panelOcultos.setVisible(false);
+        panelOcultos.setManaged(false);
+
+        lblOcultosText = new Label();
+        lblOcultosText.setStyle("-fx-text-fill: #a0a5cc; -fx-font-size: 11px;");
+
+        Hyperlink linkVerTodos = new Hyperlink("Ver todos");
+        linkVerTodos.setStyle("-fx-text-fill: #6c63ff; -fx-font-size: 11px; -fx-padding: 0; -fx-border-color: transparent; -fx-underline: false;");
+        linkVerTodos.setOnAction(e -> {
+            filtroActivo.clear();
+            if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+            actualizarListaFiltrada(projects);
+            actualizarIconoFiltro(btnFiltro);
+        });
+        this.btnFiltro = btnFiltro;
+
+        panelOcultos.getChildren().addAll(lblOcultosText, new Label("-"), linkVerTodos);
+        // Ajustar color del guion
+        ((Label)panelOcultos.getChildren().get(1)).setStyle("-fx-text-fill: #5a6090; -fx-font-size: 11px;");
+
+        // Cabecera dinámica de filtro
+        filtroInfoBox = new HBox(8);
+        filtroInfoBox.setAlignment(Pos.TOP_LEFT);
+        filtroInfoBox.setPadding(new Insets(6, 10, 6, 10));
+        filtroInfoBox.setVisible(false);
+        filtroInfoBox.setManaged(false);
+        filtroInfoBox.setStyle("-fx-background-color: rgba(108, 99, 255, 0.05); -fx-border-color: rgba(108, 99, 255, 0.15); -fx-border-width: 0 0 1 0;");
+        
+        lblFiltroActual = new Label();
+        lblFiltroActual.setStyle("-fx-text-fill: #6c63ff; -fx-font-weight: bold; -fx-font-size: 11px;");
+        lblFiltroActual.setWrapText(true);
+        HBox.setHgrow(lblFiltroActual, Priority.ALWAYS);
+
+        Label lblIcon = new Label("📂");
+        lblIcon.setStyle("-fx-font-size: 12px; -fx-padding: 2 0 0 0;"); // Un poco de padding arriba para centrar con la primera línea
+        
+        filtroInfoBox.getChildren().addAll(lblIcon, lblFiltroActual);
+
+        // Refrescar estado inicial
+        actualizarVisibilidadOcultos(projects);
+
+        projectPanel.getChildren().addAll(header, filtroInfoBox, listProyectos, panelOcultos, btnNuevoCR80);
         return projectPanel;
+    }
+
+    // =========================================================
+    // Filtro de Categorías
+    // =========================================================
+
+    /** Construye la lista filtrada según las categorías activas. */
+    private ObservableList<Proyecto> construirListaFiltrada(ObservableList<Proyecto> todos) {
+        ObservableList<Proyecto> filtrados = FXCollections.observableArrayList();
+        if (filtroActivo.isEmpty() || etiquetasManager == null) {
+            filtrados.addAll(todos);
+            return filtrados;
+        }
+        for (Proyecto p : todos) {
+            for (String id : filtroActivo) {
+                if (p.getEtiquetaIds().contains(id)) {
+                    filtrados.add(p);
+                    break;
+                }
+            }
+        }
+        return filtrados;
+    }
+
+    /** Crea el botón de filtro y su popup. */
+    private Button crearBotonFiltro(ObservableList<Proyecto> todosLosProyectos) {
+        Button btn = new Button();
+        this.btnFiltro = btn; // Guardar referencia
+        actualizarIconoFiltro(btn);
+        btn.getStyleClass().add("filter-btn");
+        btn.setTooltip(new Tooltip("Filtrar por categoría"));
+
+        btn.setOnAction(e -> {
+            if (filtroPopup != null && filtroPopup.isShowing()) {
+                if (!filtroPopup.getContent().isEmpty() && filtroPopup.getContent().get(0) instanceof VBox) {
+                    VBox content = (VBox) filtroPopup.getContent().get(0);
+                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), content);
+                    ft.setToValue(0);
+                    ft.setOnFinished(ev -> filtroPopup.hide());
+                    ft.play();
+                } else {
+                    filtroPopup.hide();
+                }
+            } else {
+                mostrarFiltroPopup(btn, todosLosProyectos);
+            }
+        });
+        return btn;
+    }
+
+    private void actualizarIconoFiltro(Button btn) {
+        if (btn == null) return;
+        int activas = filtroActivo.size();
+        if (activas > 0) {
+            btn.setText("🏷️ " + activas);
+            btn.setStyle("-fx-text-fill: #6c63ff; -fx-font-weight: bold;");
+        } else {
+            btn.setText("🏷️");
+            btn.setStyle("");
+        }
+    }
+
+    /** Muestra el popup inline con las opciones de filtro. */
+    private void mostrarFiltroPopup(Button anchor, ObservableList<Proyecto> todosLosProyectos) {
+        if (filtroPopup != null && filtroPopup.isShowing()) {
+            filtroPopup.hide();
+        }
+        filtroPopup = new javafx.stage.Popup();
+        filtroPopup.setAutoHide(true);
+
+        VBox contenido = new VBox(8);
+        contenido.getStyleClass().add("filter-popup");
+        contenido.setPadding(new Insets(12));
+        contenido.setStyle("-fx-background-color: #1a1b2e; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4);");
+        contenido.setPrefWidth(210);
+        
+        contenido.setOpacity(0);
+        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
+        ft.setToValue(1);
+        ft.play();
+
+        // --- Opción: TODOS ---
+        ToggleButton btnTodos = new ToggleButton("★ Todos los proyectos");
+        btnTodos.setMaxWidth(Double.MAX_VALUE);
+        btnTodos.getStyleClass().add("filter-option-btn");
+        btnTodos.setSelected(filtroActivo.isEmpty());
+        btnTodos.setOnAction(ev -> {
+            filtroActivo.clear();
+            if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+            actualizarListaFiltrada(todosLosProyectos);
+            
+            // Animación de salida antes de esconder
+            javafx.animation.FadeTransition hideFt = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
+            hideFt.setToValue(0);
+            hideFt.setOnFinished(e -> filtroPopup.hide());
+            hideFt.play();
+        });
+        contenido.getChildren().add(btnTodos);
+
+        if (etiquetasManager != null && !etiquetasManager.getAll().isEmpty()) {
+            contenido.getChildren().add(new Separator());
+            Label lblCats = new Label("CATEGORÍAS");
+            lblCats.setStyle("-fx-text-fill: #5a6090; -fx-font-size: 10px; -fx-font-weight: bold;");
+            contenido.getChildren().add(lblCats);
+
+            for (Etiqueta cat : etiquetasManager.getAll()) {
+                HBox fila = new HBox(8);
+                fila.setAlignment(Pos.CENTER_LEFT);
+
+                Circle dot = new Circle(5);
+                try { dot.setFill(Color.web(cat.getColor())); } catch (Exception ex) { dot.setFill(Color.GRAY); }
+
+                CheckBox chk = new CheckBox(cat.getNombre());
+                chk.setSelected(filtroActivo.contains(cat.getId()));
+                chk.setMaxWidth(Double.MAX_VALUE);
+                chk.setStyle("-fx-text-fill: #c8cde8;");
+                HBox.setHgrow(chk, Priority.ALWAYS);
+
+                chk.selectedProperty().addListener((obs, old, val) -> {
+                    if (val) {
+                        if (!filtroActivo.contains(cat.getId())) filtroActivo.add(cat.getId());
+                    } else {
+                        filtroActivo.remove(cat.getId());
+                    }
+                    if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+                    actualizarListaFiltrada(todosLosProyectos);
+                    // Desmarcar "Todos" si hay alguna categoría activa
+                    btnTodos.setSelected(filtroActivo.isEmpty());
+                });
+
+                Label btnDelete = new Label("✕");
+                btnDelete.setTooltip(new Tooltip("Eliminar categoría"));
+                btnDelete.setStyle("-fx-text-fill: #E74C6C; -fx-cursor: hand; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 0 4px;");
+                btnDelete.setOnMouseClicked(ev -> {
+                    if (omitirConfirmacionBorradoEtiqueta) {
+                        ejecutarEliminacionEtiqueta(cat, anchor, todosLosProyectos);
+                        return;
+                    }
+
+                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
+                    alert.setTitle("Eliminar Categoría");
+                    alert.setHeaderText(null);
+                    
+                    String msg = "¿Seguro que quieres eliminar la categoría '" + cat.getNombre() + "'?\n\n"
+                               + "ADVERTENCIA: Los proyectos que usen esta etiqueta dejarán de estar asociados a ella y no podrás filtrarlos hasta que les asignes una nueva.";
+
+                    Label lblMsg = new Label(msg);
+                    lblMsg.setWrapText(true);
+                    lblMsg.setMaxWidth(380);
+                    lblMsg.setStyle("-fx-line-spacing: 5;");
+                    
+                    CheckBox chkOmitir = new CheckBox("No volver a mostrar este mensaje");
+                    chkOmitir.setStyle("-fx-font-size: 11px; -fx-text-fill: #5a6090;");
+                    
+                    VBox alertContent = new VBox(15, lblMsg, chkOmitir);
+                    alertContent.setPrefWidth(400);
+                    alert.getDialogPane().setContent(alertContent);
+
+                    if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                        if (chkOmitir.isSelected()) omitirConfirmacionBorradoEtiqueta = true;
+                        ejecutarEliminacionEtiqueta(cat, anchor, todosLosProyectos);
+                    }
+                });
+
+                fila.getChildren().addAll(dot, chk, btnDelete);
+                contenido.getChildren().add(fila);
+            }
+        }
+
+        contenido.getChildren().add(new Separator());
+        Button btnNuevaCat = new Button("+ Nueva categoría");
+        btnNuevaCat.getStyleClass().add("btn-dialog-action");
+        btnNuevaCat.setMaxWidth(Double.MAX_VALUE);
+        btnNuevaCat.setOnAction(ev -> {
+            TextInputDialog dlg = new TextInputDialog();
+            com.tpsstudio.util.AlertHelper.applyStyle(dlg);
+            dlg.initOwner(anchor.getScene().getWindow());
+            dlg.setTitle("Nueva Categoría");
+            dlg.setHeaderText(null);
+            dlg.setContentText("Nombre:");
+            dlg.showAndWait().ifPresent(nombre -> {
+                if (!nombre.isBlank() && etiquetasManager != null) {
+                    etiquetasManager.crear(nombre, null);
+                    filtroPopup.hide();
+                    // Reabrir para refrescar
+                    mostrarFiltroPopup(anchor, todosLosProyectos);
+                }
+            });
+        });
+        contenido.getChildren().add(btnNuevaCat);
+
+        filtroPopup.getContent().add(contenido);
+
+        javafx.geometry.Bounds b = anchor.localToScreen(anchor.getBoundsInLocal());
+        // Posicionar a la derecha del botón, fuera de la lista
+        filtroPopup.show(anchor, b.getMaxX() + 10, b.getMinY() - 5);
+    }
+
+    private void ejecutarEliminacionEtiqueta(Etiqueta cat, Button anchor, ObservableList<Proyecto> todosLosProyectos) {
+        if (etiquetasManager != null && etiquetasManager.eliminar(cat.getId())) {
+            filtroActivo.remove(cat.getId());
+            etiquetasManager.setFiltroActivo(filtroActivo);
+            actualizarListaFiltrada(todosLosProyectos);
+            if (filtroPopup != null) filtroPopup.hide();
+            mostrarFiltroPopup(anchor, todosLosProyectos);
+        }
+    }
+
+    /** Actualiza la lista filtrada en el ListView activo y la etiqueta de proyectos ocultos. */
+    private void actualizarListaFiltrada(ObservableList<Proyecto> todos) {
+        if (proyectosFiltrados == null) return;
+        proyectosFiltrados.clear();
+        
+        if (filtroActivo.isEmpty()) {
+            proyectosFiltrados.addAll(todos);
+            if (filtroInfoBox != null) {
+                filtroInfoBox.setVisible(false);
+                filtroInfoBox.setManaged(false);
+            }
+        } else {
+            for (Proyecto p : todos) {
+                for (String id : filtroActivo) {
+                    if (p.getEtiquetaIds().contains(id)) {
+                        proyectosFiltrados.add(p);
+                        break;
+                    }
+                }
+            }
+            
+            // Actualizar cabecera de filtro
+            if (filtroInfoBox != null && lblFiltroActual != null && etiquetasManager != null) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < filtroActivo.size(); i++) {
+                    String id = filtroActivo.get(i);
+                    com.tpsstudio.model.project.Etiqueta et = etiquetasManager.findById(id);
+                    if (et != null) {
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(et.getNombre());
+                    }
+                }
+                lblFiltroActual.setText(sb.toString().toUpperCase());
+                filtroInfoBox.setVisible(true);
+                filtroInfoBox.setManaged(true);
+            }
+        }
+        actualizarVisibilidadOcultos(todos);
+        actualizarIconoFiltro(btnFiltro);
+    }
+
+    private void actualizarVisibilidadOcultos(ObservableList<Proyecto> todos) {
+        if (panelOcultos == null || lblOcultosText == null) return;
+        
+        int ocultos = todos.size() - proyectosFiltrados.size();
+        if (ocultos > 0) {
+            lblOcultosText.setText(ocultos + (ocultos == 1 ? " proyecto oculto" : " proyectos ocultos"));
+            panelOcultos.setStyle("-fx-background-color: rgba(108, 99, 255, 0.08); -fx-background-radius: 4; -fx-padding: 6 0;");
+            panelOcultos.setVisible(true);
+            panelOcultos.setManaged(true);
+            
+            // Si estamos en Producción, recordar sutilmente cada cierto tiempo
+            if (currentMode == AppMode.PRODUCTION) {
+                iniciarRecordatorioSutil();
+            }
+        } else {
+            if (recordatorioTimer != null) recordatorioTimer.stop();
+            panelOcultos.setVisible(false);
+            panelOcultos.setManaged(false);
+        }
+    }
+
+    private javafx.animation.Timeline recordatorioTimer;
+    private void iniciarRecordatorioSutil() {
+        if (recordatorioTimer != null) recordatorioTimer.stop();
+        
+        // Cada 3 minutos, un pequeño parpadeo lila en la barra de estado
+        recordatorioTimer = new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.minutes(3), ev -> {
+            if (panelOcultos != null && panelOcultos.isVisible() && currentMode == AppMode.PRODUCTION) {
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(500), panelOcultos);
+                ft.setFromValue(1.0);
+                ft.setToValue(0.4);
+                ft.setCycleCount(4);
+                ft.setAutoReverse(true);
+                ft.play();
+            }
+        }));
+        recordatorioTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        recordatorioTimer.play();
     }
 
     /**
@@ -1153,7 +1519,7 @@ public class ModeManager {
         if (projectManager == null)
             return;
 
-        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, null);
+        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, null, etiquetasManager);
         Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {

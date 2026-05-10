@@ -215,6 +215,8 @@ public class ProyectoFileManager implements ProyectoDAO {
                 dto.setFondoDorso(convertirFondoADTO(proyecto.getFondoDorso()));
             }
 
+            dto.setEtiquetaIds(proyecto.getEtiquetaIds());
+
             String json = gson.toJson(dto);
             Path archivoTPS = Paths.get(metadata.getRutaTPS());
             Files.writeString(archivoTPS, json);
@@ -248,6 +250,10 @@ public class ProyectoFileManager implements ProyectoDAO {
             proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
+
+            if (dto.getEtiquetaIds() != null) {
+                proyecto.setEtiquetaIds(new ArrayList<>(dto.getEtiquetaIds()));
+            }
 
             Path carpetaProyecto = archivoTPS.toPath().getParent();
 
@@ -587,6 +593,7 @@ public class ProyectoFileManager implements ProyectoDAO {
         private List<ElementoDTO> elementosDorso;
         private FondoDTO fondoFrente;
         private FondoDTO fondoDorso;
+        private List<String> etiquetaIds;
 
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
@@ -614,6 +621,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public FondoDTO getFondoDorso() { return fondoDorso; }
         public void setFondoDorso(FondoDTO fondoDorso) { this.fondoDorso = fondoDorso; }
+
+        public List<String> getEtiquetaIds() { return etiquetaIds; }
+        public void setEtiquetaIds(List<String> etiquetaIds) { this.etiquetaIds = etiquetaIds; }
     }
 
     public static class ElementoDTO {

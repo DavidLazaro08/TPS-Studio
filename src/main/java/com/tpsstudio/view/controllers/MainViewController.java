@@ -3,6 +3,7 @@ package com.tpsstudio.view.controllers;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
+import com.tpsstudio.service.EtiquetasManager;
 import com.tpsstudio.service.ProjectManager;
 import com.tpsstudio.view.managers.EditorCanvasManager;
 import com.tpsstudio.view.managers.ModeManager;
@@ -120,6 +121,9 @@ public class MainViewController {
 
     // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo; eliminar)
     private ElementActionsController elementActionsController;
+
+    // Gestor de categorías/etiquetas (por usuario)
+    private EtiquetasManager etiquetasManager;
 
     // Estado para el chip de proyecto colapsable (Cerrado por defecto)
     private boolean isProjectChipCollapsed = true;
@@ -272,10 +276,13 @@ public class MainViewController {
         // -------------------------------------------------
         projectManager = new ProjectManager();
 
+        // Inicializar gestor de categorías con el usuario actual
+        String currentUser = com.tpsstudio.service.AuthService.getInstance().getCurrentUser();
+        etiquetasManager = new EtiquetasManager(currentUser);
+
         // Inicializar sub-controlador de acciones de proyecto
-        // onRedraw: lambda que simplemente llama a dibujarCanvas() de este mismo controlador
         projectActionsController = new ProjectActionsController(
-                viewModel, projectManager, canvas, this::dibujarCanvas);
+                viewModel, projectManager, canvas, this::dibujarCanvas, etiquetasManager);
 
         projectManager.setOnProjectChanged(() -> {
             viewModel.setProyectoActual(projectManager.getProyectoActual());
@@ -346,6 +353,7 @@ public class MainViewController {
         // ModeManager (montaje de paneles + acciones de UI)
         // -------------------------------------------------
         modeManager = new ModeManager(leftPanel, rightPanel, propertiesPanelController);
+        modeManager.setEtiquetasManager(etiquetasManager);
 
         modeManager.setOnAddText(this::onAñadirTexto);
         modeManager.setOnAddImage(this::onAñadirImagen);

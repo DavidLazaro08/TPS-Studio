@@ -7,6 +7,9 @@ import com.tpsstudio.model.enums.TipoTroquel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Entidad de dominio central de TPS Studio.
  *
@@ -50,6 +53,10 @@ public class Proyecto {
 
     // Tipo de troquel físico
     private TipoTroquel tipoTroquel;
+
+    // Categorías/Etiquetas asignadas al proyecto (IDs de Etiqueta)
+    // Null en proyectos antiguos → se inicializa a lista vacía en el getter
+    private List<String> etiquetaIds;
 
     // Metadatos del proyecto (ubicación, cliente, etc.)
     private ProyectoMetadata metadata;
@@ -175,6 +182,30 @@ public class Proyecto {
 
     public void setTipoTroquel(TipoTroquel tipoTroquel) {
         this.tipoTroquel = tipoTroquel;
+    }
+
+    /** Devuelve las etiquetas asignadas. Nunca null (retrocompatible). */
+    public List<String> getEtiquetaIds() {
+        if (etiquetaIds == null) {
+            etiquetaIds = new ArrayList<>();
+        }
+        return etiquetaIds;
+    }
+
+    public void setEtiquetaIds(List<String> etiquetaIds) {
+        this.etiquetaIds = etiquetaIds != null ? etiquetaIds : new ArrayList<>();
+    }
+
+    /** Añade una etiqueta si no estaba ya asignada */
+    public void addEtiqueta(String etiquetaId) {
+        if (etiquetaId != null && !getEtiquetaIds().contains(etiquetaId)) {
+            etiquetaIds.add(etiquetaId);
+        }
+    }
+
+    /** Quita una etiqueta */
+    public void removeEtiqueta(String etiquetaId) {
+        getEtiquetaIds().remove(etiquetaId);
     }
 
     @Override

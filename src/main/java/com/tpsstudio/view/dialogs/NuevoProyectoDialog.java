@@ -1,19 +1,23 @@
 package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.ClienteInfo;
+import com.tpsstudio.model.project.Etiqueta;
 import com.tpsstudio.model.project.ProyectoMetadata;
-import com.tpsstudio.model.enums.TipoTroquel;
+import com.tpsstudio.service.EtiquetasManager;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /* Diálogo para crear un nuevo proyecto TPS */
@@ -30,10 +34,12 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
     private Label lblClienteInfo;
 
     private ClienteInfo clienteInfo;
-
     private Label lblUbicacionInfo;
 
-    private ComboBox<TipoTroquel> cmbTroquel;
+    // Categorías seleccionadas en este diálogo
+    private final List<String> etiquetasSeleccionadas = new ArrayList<>();
+    private HBox flowCategorias;
+    private final EtiquetasManager etiquetasManager;
 
     // Ventana propietaria (para centrado y file choosers)
     private final Window ownerWindow;
@@ -41,9 +47,10 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
     private static final String CSS = NuevoProyectoDialog.class
             .getResource("/css/dialogs.css").toExternalForm();
 
-    public NuevoProyectoDialog(Window owner) {
+    public NuevoProyectoDialog(Window owner, EtiquetasManager etiquetasManager) {
         this.ownerWindow = owner;
-        initOwner(owner); // centra el diálogo sobre la ventana principal
+        this.etiquetasManager = etiquetasManager;
+        initOwner(owner);
 
         setTitle("Nuevo Proyecto TPS");
         setHeaderText("Crear nuevo proyecto de diseño de tarjetas");
@@ -99,13 +106,36 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         lblClienteInfo.getStyleClass().add("lbl-hint-empty");
         hboxCliente.getChildren().addAll(btnDatosCliente, lblClienteInfo);
 
-        // ===== TROQUELADO =====
-        Label lblTroquel = new Label("Troquelado (Agujero Lanyard):");
-        lblTroquel.getStyleClass().add("lbl-section");
-        cmbTroquel = new ComboBox<>();
-        cmbTroquel.getItems().addAll(TipoTroquel.values());
-        cmbTroquel.getSelectionModel().selectFirst();
-        cmbTroquel.setPrefWidth(300);
+        // ===== CATEGORÍAS =====
+        Label lblCats = new Label("Categorías:");
+        lblCats.getStyleClass().add("lbl-section");
+
+        flowCategorias = new HBox(6);
+        flowCategorias.setAlignment(Pos.TOP_LEFT);
+        flowCategorias.setPadding(new Insets(5, 0, 5, 0)); // Padding equilibrado
+
+        ScrollPane scrollCats = new ScrollPane(flowCategorias);
+        scrollCats.getStyleClass().add("scroll-invisible");
+        scrollCats.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollCats.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollCats.setFitToHeight(true);
+        scrollCats.setPrefHeight(42);
+        scrollCats.setMinHeight(42);
+
+        Button btnNuevaCat = new Button("+ Nueva");
+        btnNuevaCat.getStyleClass().add("btn-dialog-action");
+        btnNuevaCat.setMinWidth(Region.USE_PREF_SIZE);
+        btnNuevaCat.setOnAction(e -> crearNuevaCategoria());
+
+        HBox hboxCats = new HBox(8, btnNuevaCat, scrollCats);
+        hboxCats.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(scrollCats, Priority.ALWAYS);
+
+        Label lblCatsInfo = new Label("Organiza tus trabajos para filtrarlos rápidamente en la gestión principal.");
+        lblCatsInfo.getStyleClass().add("lbl-hint");
+
+        VBox vboxCats = new VBox(4, hboxCats, lblCatsInfo);
+        rellenarChipsCategorias();
 
         // ===== VINCULAR BASE DE DATOS =====
         chkVincularBD = new CheckBox("Vincular base de datos (opcional)");
@@ -165,9 +195,9 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         grid.add(new Separator(), 0, row, 2, 1);
 
         row++;
-        grid.add(lblTroquel, 0, row, 2, 1);
+        grid.add(lblCats, 0, row, 2, 1);
         row++;
-        grid.add(cmbTroquel, 0, row, 2, 1);
+        grid.add(vboxCats, 0, row, 2, 1);
 
         row++;
         grid.add(new Separator(), 0, row, 2, 1);
@@ -397,6 +427,64 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         return s == null ? "" : s.trim();
     }
 
+    /** Rellena el FlowPane con chips para cada categoría existente. */
+    private void rellenarChipsCategorias() {
+        flowCategorias.getChildren().clear();
+        if (etiquetasManager == null) return;
+        for (Etiqueta e : etiquetasManager.getAll()) {
+            flowCategorias.getChildren().add(crearChip(e));
+        }
+    }
+
+    /** Crea un chip de categoría toggle. */
+    private ToggleButton crearChip(Etiqueta etiqueta) {
+        Circle dot = new Circle(5);
+        try { dot.setFill(Color.web(etiqueta.getColor())); } catch (Exception ex) { dot.setFill(Color.GRAY); }
+
+        ToggleButton chip = new ToggleButton(etiqueta.getNombre());
+        chip.setGraphic(dot);
+        chip.setSelected(etiquetasSeleccionadas.contains(etiqueta.getId()));
+        chip.getStyleClass().add("chip-categoria");
+        chip.setOnAction(ev -> {
+            if (chip.isSelected()) {
+                etiquetasSeleccionadas.add(etiqueta.getId());
+            } else {
+                etiquetasSeleccionadas.remove(etiqueta.getId());
+            }
+        });
+        return chip;
+    }
+
+    /** Abre un pequeño diálogo para crear una categoría nueva al vuelo. */
+    private void crearNuevaCategoria() {
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.initOwner(ownerWindow);
+        dlg.setTitle("Nueva Categoría");
+        dlg.setHeaderText(null);
+        dlg.setContentText("Nombre de la categoría:");
+        dlg.getDialogPane().getStylesheets().add(CSS);
+
+        dlg.showAndWait().ifPresent(nombre -> {
+            if (!nombre.isBlank() && etiquetasManager != null) {
+                Etiqueta nueva = etiquetasManager.crear(nombre, null);
+                etiquetasSeleccionadas.add(nueva.getId());
+                rellenarChipsCategorias();
+                // Marcar el nuevo chip como seleccionado
+                flowCategorias.getChildren().stream()
+                    .filter(n -> n instanceof ToggleButton)
+                    .map(n -> (ToggleButton) n)
+                    .filter(tb -> tb.getText().equals(nueva.getNombre()))
+                    .findFirst()
+                    .ifPresent(tb -> tb.setSelected(true));
+            }
+        });
+    }
+
+    /** Devuelve los IDs de las categorías seleccionadas en este diálogo. */
+    public List<String> getEtiquetasSeleccionadas() {
+        return new ArrayList<>(etiquetasSeleccionadas);
+    }
+
     /* Crea el objeto ProyectoMetadata con los datos del formulario */
     private ProyectoMetadata crearMetadata() {
         ProyectoMetadata metadata = new ProyectoMetadata();
@@ -413,9 +501,5 @@ public class NuevoProyectoDialog extends Dialog<ProyectoMetadata> {
         }
 
         return metadata;
-    }
-
-    public TipoTroquel getTipoTroquelSeleccionado() {
-        return cmbTroquel.getValue() != null ? cmbTroquel.getValue() : TipoTroquel.NINGUNO;
     }
 }

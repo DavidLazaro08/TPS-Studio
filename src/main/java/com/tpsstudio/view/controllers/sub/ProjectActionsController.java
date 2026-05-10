@@ -7,6 +7,7 @@ import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
+import com.tpsstudio.service.EtiquetasManager;
 import com.tpsstudio.service.ImpresionService;
 import com.tpsstudio.service.ProjectManager;
 import com.tpsstudio.util.AlertHelper;
@@ -46,23 +47,27 @@ public class ProjectActionsController {
     private final ProjectManager projectManager;
     private final Canvas canvas;          // Solo para obtener getScene().getWindow()
     private final Runnable onRedraw;      // Callback para forzar redibujo del canvas
+    private final EtiquetasManager etiquetasManager;
 
     /**
      * Crea el sub-controlador con las dependencias mínimas necesarias.
      *
-     * @param viewModel      estado observable de la aplicación.
-     * @param projectManager lógica de negocio de proyectos.
-     * @param canvas         referencia al canvas central (solo para Window).
-     * @param onRedraw       callback que ejecuta {@code dibujarCanvas()} en MainViewController.
+     * @param viewModel        estado observable de la aplicación.
+     * @param projectManager   lógica de negocio de proyectos.
+     * @param canvas           referencia al canvas central (solo para Window).
+     * @param onRedraw         callback que ejecuta {@code dibujarCanvas()} en MainViewController.
+     * @param etiquetasManager gestor de categorías del usuario.
      */
     public ProjectActionsController(MainViewModel viewModel,
                                     ProjectManager projectManager,
                                     Canvas canvas,
-                                    Runnable onRedraw) {
+                                    Runnable onRedraw,
+                                    EtiquetasManager etiquetasManager) {
         this.viewModel = viewModel;
         this.projectManager = projectManager;
         this.canvas = canvas;
         this.onRedraw = onRedraw;
+        this.etiquetasManager = etiquetasManager;
     }
 
     // =========================================================
@@ -75,7 +80,7 @@ public class ProjectActionsController {
      */
     public void nuevoProyecto() {
         Window owner = canvas.getScene() != null ? canvas.getScene().getWindow() : null;
-        NuevoProyectoDialog dialog = new NuevoProyectoDialog(owner);
+        NuevoProyectoDialog dialog = new NuevoProyectoDialog(owner, etiquetasManager);
         Optional<ProyectoMetadata> result = dialog.showAndWait();
 
         if (result.isPresent()) {
@@ -83,8 +88,9 @@ public class ProjectActionsController {
             Proyecto nuevo = projectManager.crearProyectoDesdeMetadata(metadata);
 
             if (nuevo != null) {
-                // Configurar propiedades físicas adicionales no incluidas en metadata
-                nuevo.setTipoTroquel(dialog.getTipoTroquelSeleccionado());
+                // Aplicar categorías seleccionadas
+                nuevo.setEtiquetaIds(dialog.getEtiquetasSeleccionadas());
+                projectManager.guardarProyecto();
 
                 Platform.runLater(() -> {
                     Alert alert = AlertHelper.createAlert(Alert.AlertType.INFORMATION);
@@ -273,7 +279,7 @@ public class ProjectActionsController {
      */
     public void editarProyecto(Proyecto proyecto) {
         Window owner = canvas.getScene().getWindow();
-        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner);
+        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner, etiquetasManager);
         Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {
