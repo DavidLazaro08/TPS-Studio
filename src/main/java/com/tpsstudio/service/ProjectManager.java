@@ -226,6 +226,18 @@ public class ProjectManager {
         return fuenteDatosActual;
     }
 
+    /** Guarda los cambios de la fuente de datos actual en el archivo físico. */
+    public void guardarFuenteDatosActual() {
+        if (proyectoActual != null && fuenteDatosActual != null && proyectoActual.getMetadata().getRutaBBDD() != null) {
+            boolean exito = datosVariablesManager.guardar(fuenteDatosActual, proyectoActual.getMetadata().getRutaBBDD());
+            if (exito) {
+                if (onNotificacion != null) onNotificacion.accept("info", "Base de datos actualizada correctamente.");
+            } else {
+                if (onNotificacion != null) onNotificacion.accept("error", "Error al guardar los cambios en la base de datos.");
+            }
+        }
+    }
+
     /*
      * Carga los proyectos recientes desde el historial.
      * maxProyectos: 0 = ninguno, -1 = todos, N = N proyectos

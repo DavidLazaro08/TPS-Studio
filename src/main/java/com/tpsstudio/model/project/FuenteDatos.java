@@ -62,6 +62,19 @@ public class FuenteDatos {
         return val != null ? val : "";
     }
 
+    /** Actualiza el valor de un campo en el registro actual (solo en memoria). */
+    public void actualizarValorActual(String campo, String nuevoValor) {
+        if (indiceActual < 0 || indiceActual >= filas.size()) return;
+        
+        // Modificamos la fila interna directamente.
+        filas.get(indiceActual).put(campo, nuevoValor);
+    }
+
+    /** Devuelve todas las filas para persistencia. */
+    public List<Map<String, String>> getFilas() {
+        return Collections.unmodifiableList(filas);
+    }
+
     // ── Navegación ──────────────────────────────────────────────────────────────
 
     /** Avanza al registro siguiente. Devuelve true si hubo movimiento. */

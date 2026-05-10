@@ -686,8 +686,19 @@
     -fx-background-color: #1f1d1f;
     -fx-background-radius: 4;
     -fx-border-color: #2e2b2d;
-    -fx-border-width: 1;
     -fx-border-radius: 4;
+}
+
+/* Campo de edición inline para datos variables */
+.dato-edit-field {
+    -fx-background-color: #2c2a2c;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-padding: 1 4;
+    -fx-background-radius: 3;
+    -fx-border-color: #4a6b7c;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
 }
 
 /* Label del contador de registros */

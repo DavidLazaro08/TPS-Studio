@@ -924,8 +924,51 @@ public class ModeManager {
             lblValor.getStyleClass().add("dato-valor");
             lblValor.setMaxWidth(Double.MAX_VALUE);
             lblValor.setWrapText(true);
+            lblValor.setCursor(javafx.scene.Cursor.HAND);
+            lblValor.setTooltip(new Tooltip("Doble clic para editar"));
+            
+            // Contenedor para el valor (para poder cambiar entre Label y TextField)
+            StackPane valorStack = new StackPane(lblValor);
+            valorStack.setAlignment(Pos.CENTER_LEFT);
 
-            VBox campo = new VBox(2, lblColumna, lblValor);
+            // Doble click para editar
+            lblValor.setOnMouseClicked(e -> {
+                if (e.getClickCount() == 2) {
+                    TextField txtEdit = new TextField(valor);
+                    txtEdit.getStyleClass().add("dato-edit-field");
+                    txtEdit.setMaxWidth(Double.MAX_VALUE);
+                    
+                    valorStack.getChildren().setAll(txtEdit);
+                    txtEdit.requestFocus();
+                    txtEdit.selectAll();
+
+                    // Evitar múltiples commits
+                    final boolean[] committed = {false};
+                    
+                    Runnable commit = () -> {
+                        if (committed[0]) return;
+                        committed[0] = true;
+                        
+                        String nuevoValor = txtEdit.getText().trim();
+                        if (!nuevoValor.equals(valor)) {
+                            datos.actualizarValorActual(columna, nuevoValor);
+                            if (projectManager != null) {
+                                projectManager.guardarFuenteDatosActual();
+                            }
+                            if (onCanvasRedraw != null) onCanvasRedraw.run();
+                        }
+                        lblValor.setText(nuevoValor.isEmpty() ? "—" : nuevoValor);
+                        valorStack.getChildren().setAll(lblValor);
+                    };
+
+                    txtEdit.setOnAction(ev -> commit.run());
+                    txtEdit.focusedProperty().addListener((obs, old, focus) -> {
+                        if (!focus) commit.run();
+                    });
+                }
+            });
+
+            VBox campo = new VBox(2, lblColumna, valorStack);
             campo.setPadding(new Insets(6, 10, 6, 10));
             campo.getStyleClass().add("dato-campo");
             campo.setMaxWidth(Double.MAX_VALUE);

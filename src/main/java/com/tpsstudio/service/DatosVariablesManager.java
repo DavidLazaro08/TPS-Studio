@@ -50,6 +50,107 @@ public class DatosVariablesManager {
         }
     }
 
+    /**
+     * Guarda los datos de vuelta al archivo original (sobrescribe).
+     * Soporta Excel (.xlsx, .xls) y CSV.
+     */
+    public boolean guardar(FuenteDatos datos, String ruta) {
+        if (ruta == null || ruta.isBlank()) return false;
+        
+        File archivo = new File(ruta);
+        String nombre = archivo.getName().toLowerCase();
+        
+        try {
+            if (nombre.endsWith(".xlsx") || nombre.endsWith(".xls")) {
+                return guardarExcel(datos, archivo);
+            } else if (nombre.endsWith(".csv")) {
+                return guardarCsv(datos, archivo);
+            } else {
+                log.warning("Formato no soportado para guardado: " + nombre);
+                return false;
+            }
+        } catch (Exception e) {
+            log.severe("Error al guardar fuente de datos '" + ruta + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ── Escritura Excel ────────────────────────────────────────────────────────
+    
+    private boolean guardarExcel(FuenteDatos datos, File archivo) throws IOException {
+        // Para no perder formatos complejos, intentamos abrir el original y modificarlo
+        try (InputStream is = new FileInputStream(archivo);
+             Workbook wb = WorkbookFactory.create(is)) {
+            
+            Sheet hoja = wb.getSheetAt(0);
+            if (hoja == null) return false;
+            
+            // Mapeo de nombres de columna a índices
+            Map<String, Integer> colIndices = new HashMap<>();
+            Row cabecera = hoja.getRow(hoja.getFirstRowNum());
+            if (cabecera != null) {
+                for (Cell c : cabecera) {
+                    colIndices.put(c.getStringCellValue().trim(), c.getColumnIndex());
+                }
+            }
+            
+            // Actualizar filas (empezando después de la cabecera)
+            int filaIndex = hoja.getFirstRowNum() + 1;
+            List<Map<String, String>> filas = datos.getFilas();
+            
+            for (Map<String, String> reg : filas) {
+                Row row = hoja.getRow(filaIndex);
+                if (row == null) row = hoja.createRow(filaIndex);
+                
+                for (Map.Entry<String, String> entry : reg.entrySet()) {
+                    Integer colIdx = colIndices.get(entry.getKey());
+                    if (colIdx != null) {
+                        Cell cell = row.getCell(colIdx, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                        cell.setCellValue(entry.getValue());
+                    }
+                }
+                filaIndex++;
+            }
+            
+            // Escribir cambios
+            try (OutputStream os = new FileOutputStream(archivo)) {
+                wb.write(os);
+            }
+            return true;
+        }
+    }
+
+    // ── Escritura CSV ──────────────────────────────────────────────────────────
+
+    private boolean guardarCsv(FuenteDatos datos, File archivo) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(archivo), StandardCharsets.UTF_8))) {
+            
+            List<String> columnas = datos.getColumnas();
+            char sep = ';'; // Usamos punto y coma por defecto para Excel compatibility en España
+            
+            // Cabecera
+            writer.write(String.join(String.valueOf(sep), columnas));
+            writer.newLine();
+            
+            // Filas
+            for (Map<String, String> reg : datos.getFilas()) {
+                List<String> valores = new ArrayList<>();
+                for (String col : columnas) {
+                    String val = reg.getOrDefault(col, "");
+                    // Escapar comillas si fuera necesario (simplificado aquí)
+                    if (val.contains(String.valueOf(sep)) || val.contains("\"")) {
+                        val = "\"" + val.replace("\"", "\"\"") + "\"";
+                    }
+                    valores.add(val);
+                }
+                writer.write(String.join(String.valueOf(sep), valores));
+                writer.newLine();
+            }
+            return true;
+        }
+    }
+
     // ── Lectura Excel (.xlsx / .xls) ───────────────────────────────────────────
 
     private Optional<FuenteDatos> leerExcel(File archivo) throws IOException {
