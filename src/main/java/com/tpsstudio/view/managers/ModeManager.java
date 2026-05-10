@@ -2,6 +2,8 @@ package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
+import com.tpsstudio.model.elements.TextoElemento;
+import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.enums.AppMode;
 import com.tpsstudio.model.enums.FondoFitMode;
 import com.tpsstudio.model.project.Etiqueta;
@@ -115,12 +117,14 @@ public class ModeManager {
     // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el
     // panel izquierdo
     private VBox layersPanel;
+    private ListView<Elemento> layersListView;
 
     // Panel de datos variables (null si no hay fuente de datos activa)
     private VBox datosPanel;
 
     // Indicador de qué "pestaña" del panel derecho está activa
     private boolean isPropertiesActive = true;
+    private boolean isUpdatingSelection = false;
     private javafx.scene.Node propertiesNode;
     private javafx.scene.Node datosNode;
 
@@ -325,20 +329,16 @@ public class ModeManager {
         }
     }
 
-    /**
-     * Refresca solo el panel de capas. Útil cuando se añaden/eliminan elementos o
-     * cambia el lado (frente/dorso).
-     */
     public void refreshLayersPanel(Proyecto proyecto, Elemento selectedElement) {
-        if (layersPanel == null)
-            return;
-
-        VBox newLayers = buildLayersPanel(proyecto, selectedElement);
-
-        int index = leftPanel.getChildren().indexOf(layersPanel);
-        if (index != -1) {
-            leftPanel.getChildren().set(index, newLayers);
-            layersPanel = newLayers;
+        if (layersPanel != null && leftPanel != null) {
+            // Reconstruimos el panel de capas completo para asegurar consistencia total
+            // y evitar duplicados o estados inconsistentes del SelectionModel.
+            VBox newLayers = buildLayersPanel(proyecto, selectedElement);
+            int index = leftPanel.getChildren().indexOf(layersPanel);
+            if (index != -1) {
+                leftPanel.getChildren().set(index, newLayers);
+                this.layersPanel = newLayers;
+            }
         }
     }
 
@@ -501,11 +501,12 @@ public class ModeManager {
         Label lblCapas = new Label("Capas");
         lblCapas.getStyleClass().add("panel-title");
 
-        ListView<Elemento> listCapas = new ListView<>();
-        listCapas.getStyleClass().add("layers-list");
-        VBox.setVgrow(listCapas, Priority.ALWAYS);
+        this.layersListView = new ListView<>();
+        layersListView.getStyleClass().add("layers-list");
+        VBox.setVgrow(layersListView, Priority.ALWAYS);
 
-        if (proyecto != null) {
+        final Proyecto currentProj = proyecto;
+        if (currentProj != null) {
             ObservableList<Elemento> allElements = FXCollections.observableArrayList();
 
             // Fondo (si hay) + elementos del lado actual
@@ -513,15 +514,93 @@ public class ModeManager {
             if (fondo != null) allElements.add(fondo);
             allElements.addAll(proyecto.getElementosActuales());
 
-            listCapas.setItems(allElements);
+            layersListView.setItems(allElements);
 
             if (selectedElement != null) {
-                listCapas.getSelectionModel().select(selectedElement);
+                isUpdatingSelection = true;
+                try {
+                    layersListView.getSelectionModel().select(selectedElement);
+                    layersListView.scrollTo(selectedElement);
+                } finally {
+                    isUpdatingSelection = false;
+                }
             }
 
-            // --- FACTORÍA DE CELDAS AVANZADA (ANIMACIONES + D&D) ---
-            listCapas.setCellFactory(lv -> new ListCell<Elemento>() {
+            layersListView.setCellFactory(lv -> new ListCell<Elemento>() {
                 private javafx.animation.Timeline pulse;
+                
+                // Nodos persistentes para evitar recreación en cada updateItem
+                private final Region activeBar = new Region();
+                private final Label lblIcon = new Label();
+                private final Label lblNombre = new Label();
+                private final HBox actions = new HBox(4);
+                private final Region hoverOverlay = new Region();
+                private final Region selectedOverlay = new Region();
+                private final HBox row = new HBox();
+                private final StackPane card = new StackPane();
+                private final Region sep = new Region();
+                private final VBox cellLayout = new VBox();
+                
+                private javafx.animation.FadeTransition hIn;
+                private javafx.animation.FadeTransition hOut;
+                private final ContextMenu cm = new ContextMenu();
+
+                {
+                    // INICIALIZACIÓN ÚNICA DE LA ESTRUCTURA DE LA CELDA
+                    activeBar.setPrefWidth(3);
+                    activeBar.setMinWidth(3);
+                    activeBar.setMaxWidth(3);
+                    activeBar.setMaxHeight(Double.MAX_VALUE);
+                    activeBar.getStyleClass().add("layer-active-bar");
+                    
+                    lblIcon.getStyleClass().add("layer-item-icon");
+                    lblIcon.setMinWidth(28);
+                    lblIcon.setAlignment(Pos.CENTER);
+                    
+                    lblNombre.getStyleClass().add("layer-item-text");
+                    lblNombre.setMinWidth(0);
+                    lblNombre.setPrefWidth(1);
+                    lblNombre.setMaxWidth(Double.MAX_VALUE);
+                    lblNombre.setEllipsisString("…");
+                    HBox.setHgrow(lblNombre, Priority.ALWAYS);
+                    
+                    actions.setAlignment(Pos.CENTER_RIGHT);
+                    actions.setMinWidth(Region.USE_PREF_SIZE);
+                    
+                    HBox content = new HBox(8, lblIcon, lblNombre, actions);
+                    content.setAlignment(Pos.CENTER_LEFT);
+                    content.setPadding(new Insets(0, 10, 0, 10));
+                    HBox.setHgrow(content, Priority.ALWAYS);
+                    
+                    row.getChildren().addAll(activeBar, content);
+                    row.setAlignment(Pos.CENTER_LEFT);
+                    
+                    hoverOverlay.getStyleClass().add("layer-hover-overlay");
+                    hoverOverlay.setOpacity(0.0);
+                    hoverOverlay.setMouseTransparent(true);
+                    
+                    selectedOverlay.getStyleClass().add("layer-selected-overlay");
+                    selectedOverlay.setOpacity(0.0);
+                    selectedOverlay.setMouseTransparent(true);
+                    
+                    card.getChildren().addAll(hoverOverlay, selectedOverlay, row);
+                    card.getStyleClass().add("layer-item-card");
+                    card.setPrefHeight(42);
+                    card.setMinHeight(42);
+                    
+                    sep.getStyleClass().add("layer-item-separator");
+                    sep.setPrefHeight(1);
+                    
+                    cellLayout.getChildren().addAll(card, sep);
+                    
+                    hIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), hoverOverlay);
+                    hIn.setToValue(0.6);
+                    hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), hoverOverlay);
+                    hOut.setToValue(0.0);
+
+                    card.setOnMouseEntered(e -> { if (!isSelected()) hIn.playFromStart(); });
+                    card.setOnMouseExited(e -> { if (!isSelected()) hOut.playFromStart(); });
+                }
 
                 @Override
                 protected void updateItem(Elemento item, boolean empty) {
@@ -529,150 +608,34 @@ public class ModeManager {
                     if (empty || item == null) {
                         setGraphic(null);
                         setText(null);
-                        setPadding(Insets.EMPTY);
                         if (pulse != null) { pulse.stop(); pulse = null; }
                     } else {
-                        // 1. Barra de luz lateral
-                        Region activeBar = new Region();
-                        activeBar.setPrefWidth(3);
-                        activeBar.setMinWidth(3);
-                        activeBar.setMaxWidth(3);
-                        activeBar.setMaxHeight(Double.MAX_VALUE);
-                        activeBar.getStyleClass().add("layer-active-bar");
-                        activeBar.setOpacity(0.0);
-                        activeBar.setVisible(false);
-
-                        // 2. Contenido (Icono + Texto)
-                        String iconStr;
-                        if (item instanceof com.tpsstudio.model.elements.ImagenFondoElemento) iconStr = "⬚";
-                        else if (item instanceof com.tpsstudio.model.elements.TextoElemento)  iconStr = "T";
-                        else if (item instanceof com.tpsstudio.model.elements.ImagenElemento) iconStr = "▣";
-                        else if (item instanceof com.tpsstudio.model.elements.FormaElemento)  iconStr = "⬒";
-                        else iconStr = "·";
-
-                        String lockIcon = item.isLocked() ? " 🔒" : "";
-                        String nombre = item.toString() + lockIcon;
-
-                        Label lblIcon = new Label(iconStr);
-                        lblIcon.getStyleClass().add("layer-item-icon");
-                        lblIcon.setMinWidth(24);
-                        lblIcon.setAlignment(Pos.CENTER);
-
-                        Label lblNombre = new Label(nombre);
-                        lblNombre.getStyleClass().add("layer-item-text");
-                        lblNombre.setMinWidth(0);
-                        lblNombre.setPrefWidth(1); // Forzar a que solo tome el espacio disponible
-                        lblNombre.setMaxWidth(Double.MAX_VALUE);
-                        lblNombre.setEllipsisString("…");
-                        HBox.setHgrow(lblNombre, Priority.ALWAYS);
+                        // Actualizar contenido
+                        String iconStr = "·";
+                        if (item instanceof ImagenFondoElemento) iconStr = "⬚";
+                        else if (item instanceof TextoElemento)  iconStr = "T";
+                        else if (item instanceof ImagenElemento) iconStr = "▣";
+                        else iconStr = "⬒";
                         
-                        if (isSelected()) {
+                        lblIcon.setText(iconStr);
+                        lblNombre.setText(item.getNombre() != null ? item.getNombre() : (item instanceof ImagenFondoElemento ? "[Fondo]" : "Capa"));
+                        
+                        actions.getChildren().clear();
+                        if (item.isLocked()) {
+                            Label lock = new Label("🔒");
+                            lock.setStyle("-fx-font-size: 10px;");
+                            actions.getChildren().add(lock);
+                        }
+
+                        // Estado visual
+                        boolean selected = isSelected() || (getListView() != null && getListView().getSelectionModel().getSelectedItem() == item);
+
+                        if (selected) {
                             getStyleClass().add("layer-item-selected");
-                        } else {
-                            getStyleClass().remove("layer-item-selected");
-                        }
-
-                        HBox actions = new HBox(4);
-                        actions.setAlignment(Pos.CENTER_RIGHT);
-                        actions.setMinWidth(Region.USE_PREF_SIZE); // No permitir que se encojan los botones
-                        actions.setOpacity(0.0);
-                        actions.setVisible(false);
-                        actions.managedProperty().bind(actions.visibleProperty());
-
-                        if (!(item instanceof ImagenFondoElemento)) {
-                            Button btnUp = new Button("▲");
-                            btnUp.getStyleClass().add("layer-action-btn");
-                            btnUp.setOnAction(e -> {
-                                int idx = proyecto.getElementosActuales().indexOf(item);
-                                if (idx > 0) {
-                                    Collections.swap(proyecto.getElementosActuales(), idx, idx - 1);
-                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                    buildDesignModePanels(proyecto, item);
-                                }
-                            });
-
-                            Button btnDown = new Button("▼");
-                            btnDown.getStyleClass().add("layer-action-btn");
-                            btnDown.setOnAction(e -> {
-                                int idx = proyecto.getElementosActuales().indexOf(item);
-                                if (idx < proyecto.getElementosActuales().size() - 1) {
-                                    Collections.swap(proyecto.getElementosActuales(), idx, idx + 1);
-                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                    buildDesignModePanels(proyecto, item);
-                                }
-                            });
-
-                            Button btnDel = new Button("✕");
-                            btnDel.getStyleClass().add("layer-action-btn-del");
-                            btnDel.setOnAction(e -> {
-                                proyecto.getElementosActuales().remove(item);
-                                if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                buildDesignModePanels(proyecto, null);
-                            });
-
-                            actions.getChildren().addAll(btnUp, btnDown, btnDel);
-                        }
-
-                        HBox content = new HBox(8, lblIcon, lblNombre, actions);
-                        content.setAlignment(Pos.CENTER_LEFT);
-                        content.setPadding(new Insets(0, 10, 0, 10));
-                        HBox.setHgrow(content, Priority.ALWAYS);
-
-                        HBox row = new HBox(activeBar, content);
-                        row.setAlignment(Pos.CENTER_LEFT);
-
-                        // 3. Overlays de estado
-                        Region hoverOverlay = new Region();
-                        hoverOverlay.getStyleClass().add("layer-hover-overlay");
-                        hoverOverlay.setOpacity(0.0);
-                        hoverOverlay.setMouseTransparent(true);
-
-                        Region selectedOverlay = new Region();
-                        selectedOverlay.getStyleClass().add("layer-selected-overlay");
-                        selectedOverlay.setOpacity(0.0);
-                        selectedOverlay.setMouseTransparent(true);
-
-                        StackPane card = new StackPane(hoverOverlay, selectedOverlay, row);
-                        card.getStyleClass().add("layer-card");
-                        card.setPrefHeight(40);
-                        card.setMinHeight(40);
-
-                        // Separador
-                        Region sep = new Region();
-                        sep.getStyleClass().add("layer-separator");
-                        sep.setPrefHeight(1);
-
-
-                        VBox cellLayout = new VBox(card, sep);
-                        setGraphic(cellLayout);
-                        setText(null);
-                        setPadding(Insets.EMPTY);
-
-                        // 4. Animaciones
-                        javafx.animation.FadeTransition hIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(350), hoverOverlay);
-                        hIn.setToValue(0.6);
-                        javafx.animation.FadeTransition hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(300), hoverOverlay);
-                        hOut.setToValue(0.0);
-
-                        if (isSelected()) {
-                            javafx.animation.FadeTransition sIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(250), selectedOverlay);
-                            sIn.setToValue(1.0);
-                            sIn.play();
-
-                            // Fade suave de los botones de acción
-                            javafx.animation.FadeTransition actIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(500), actions);
-                            actIn.setFromValue(0.0);
-                            actIn.setToValue(1.0);
-                            actions.setVisible(true);
-                            actIn.play();
-
-                            // Fade suave de la barra lateral
-                            javafx.animation.FadeTransition barIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(400), activeBar);
-                            barIn.setFromValue(0.0);
-                            barIn.setToValue(0.7);
+                            selectedOverlay.setOpacity(1.0);
                             activeBar.setVisible(true);
-                            barIn.play();
-
+                            activeBar.setOpacity(1.0);
+                            
                             if (pulse == null) {
                                 pulse = new javafx.animation.Timeline(
                                     new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH)),
@@ -683,127 +646,56 @@ public class ModeManager {
                                 pulse.play();
                             }
                         } else {
+                            getStyleClass().remove("layer-item-selected");
+                            selectedOverlay.setOpacity(0.0);
                             activeBar.setVisible(false);
+                            activeBar.setOpacity(0.0);
                             if (pulse != null) { pulse.stop(); pulse = null; }
                         }
 
-                        card.setOnMouseEntered(e -> { 
-                            if (!isSelected()) {
-                                hIn.playFromStart();
-                                javafx.animation.FadeTransition aHIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(300), actions);
-                                aHIn.setToValue(0.7);
-                                actions.setVisible(true);
-                                aHIn.play();
-                            }
-                        });
-                        card.setOnMouseExited(e -> { 
-                            if (!isSelected()) {
-                                hOut.playFromStart();
-                                javafx.animation.FadeTransition aHOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), actions);
-                                aHOut.setToValue(0.0);
-                                aHOut.setOnFinished(ev -> actions.setVisible(false));
-                                aHOut.play();
-                            }
-                        });
-
-                        card.setOnMousePressed(e -> {
-                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), card);
-                            st.setToX(0.97);
-                            st.setToY(0.97);
-                            st.play();
-                        });
-                        card.setOnMouseReleased(e -> {
-                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), card);
-                            st.setToX(1.0);
-                            st.setToY(1.0);
-                            st.play();
-                        });
-
-                        // 5. Drag & Drop (Reordenar)
-                        card.setOnDragDetected(event -> {
-                            if (item instanceof ImagenFondoElemento) return; // Fondo no se mueve
-                            Dragboard db = card.startDragAndDrop(TransferMode.MOVE);
-                            ClipboardContent cc = new ClipboardContent();
-                            cc.putString(String.valueOf(allElements.indexOf(item)));
-                            db.setContent(cc);
-                            event.consume();
-                        });
-
-                        card.setOnDragOver(event -> {
-                            if (event.getGestureSource() != card && event.getDragboard().hasString()) {
-                                event.acceptTransferModes(TransferMode.MOVE);
-                            }
-                            event.consume();
-                        });
-
-                        card.setOnDragDropped(event -> {
-                            Dragboard db = event.getDragboard();
-                            if (db.hasString()) {
-                                int sourceIdx = Integer.parseInt(db.getString());
-                                int targetIdx = allElements.indexOf(item);
-
-                                // No permitir mover nada debajo del fondo (que está en 0 si existe)
-                                ImagenFondoElemento f = proyecto.getFondoActual();
-                                int minIdx = (f != null) ? 1 : 0;
-
-                                if (sourceIdx >= minIdx && targetIdx >= minIdx && sourceIdx != targetIdx) {
-                                    Elemento sourceItem = allElements.get(sourceIdx);
-                                    
-                                    // Sincronizar con la lista real del proyecto
-                                    ObservableList<Elemento> listaReal = proyecto.getElementosActuales();
-                                    int realSourceIdx = sourceIdx - minIdx;
-                                    int realTargetIdx = targetIdx - minIdx;
-                                    
-                                    if (realSourceIdx >= 0 && realTargetIdx >= 0) {
-                                        java.util.Collections.swap(listaReal, realSourceIdx, realTargetIdx);
-                                        if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                        // Refrescar panel para ver cambios
-                                        buildDesignModePanels(proyecto, sourceItem);
-                                    }
-                                }
-                                event.setDropCompleted(true);
-                            }
-                            event.consume();
-                        });
-
-                        // Menú contextual
-                        ContextMenu cm = new ContextMenu();
+                        cm.getItems().clear();
                         if (item instanceof ImagenFondoElemento) {
                             MenuItem mEdit = new MenuItem("Editar fondo...");
                             mEdit.setOnAction(e -> { if (onEditExternal != null) onEditExternal.accept((ImagenFondoElemento)item); });
                             cm.getItems().add(mEdit);
                         } else {
-                            MenuItem mDel = new MenuItem("Eliminar");
+                            MenuItem mLock = new MenuItem(item.isLocked() ? "Desbloquear" : "Bloquear");
+                            mLock.setOnAction(e -> { if (onToggleLock != null) onToggleLock.accept(item); });
+                            MenuItem mDel = new MenuItem("Eliminar capa");
+                            mDel.setStyle("-fx-text-fill: #ff5555;");
                             mDel.setOnAction(e -> {
-                                proyecto.getElementosActuales().remove(item);
+                                currentProj.getElementosActuales().remove(item);
                                 if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                buildDesignModePanels(proyecto, null);
+                                refreshLayersPanel(currentProj, null);
                             });
-                            cm.getItems().add(mDel);
+                            cm.getItems().addAll(mLock, new SeparatorMenuItem(), mDel);
                         }
                         setContextMenu(cm);
+                        setGraphic(cellLayout);
                     }
                 }
             });
 
             // Borrado rápido con teclado
-            listCapas.setOnKeyPressed(event -> {
+            layersListView.setOnKeyPressed(event -> {
                 if (event.getCode() == KeyCode.DELETE || event.getCode() == KeyCode.BACK_SPACE) {
-                    Elemento sel = listCapas.getSelectionModel().getSelectedItem();
+                    Elemento sel = layersListView.getSelectionModel().getSelectedItem();
                     if (sel != null && !(sel instanceof ImagenFondoElemento)) {
-                        proyecto.getElementosActuales().remove(sel);
+                        currentProj.getElementosActuales().remove(sel);
                         if (onCanvasRedraw != null) onCanvasRedraw.run();
-                        buildDesignModePanels(proyecto, null);
+                        refreshLayersPanel(currentProj, null);
                     }
                 }
             });
 
-            listCapas.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-                if (onElementSelected != null) onElementSelected.accept(newVal);
+            layersListView.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+                if (!isUpdatingSelection && onElementSelected != null) {
+                    onElementSelected.accept(newVal);
+                }
             });
         }
 
-        panel.getChildren().addAll(lblCapas, listCapas);
+        panel.getChildren().addAll(lblCapas, layersListView);
         return panel;
     }
 
