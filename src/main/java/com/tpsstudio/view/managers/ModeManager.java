@@ -22,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.input.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import java.util.Collections;
@@ -76,6 +77,7 @@ public class ModeManager {
     private boolean omitirConfirmacionBorradoEtiqueta = false;
     private HBox filtroInfoBox;
     private Label lblFiltroActual;
+    private String filtroTexto = "";
 
     // Contenedores físicos de UI (se rellenan dinámicamente)
     private final VBox leftPanel;
@@ -991,13 +993,24 @@ public class ModeManager {
         HBox.setHgrow(titulos, Priority.ALWAYS);
 
         // Botón de filtro de categorías
-        Button btnFiltro = crearBotonFiltro(projects);
+        btnFiltro = crearBotonFiltro(projects);
 
         HBox header = new HBox(titulos, btnFiltro);
         header.setAlignment(Pos.CENTER_LEFT);
 
+        // --- BARRA DE BÚSQUEDA ---
+        TextField txtBusqueda = new TextField();
+        txtBusqueda.setPromptText("Buscar por nombre, cliente...");
+        txtBusqueda.getStyleClass().add("search-field");
+        txtBusqueda.setStyle("-fx-background-color: rgba(255,255,255,0.06); -fx-text-fill: white; -fx-prompt-text-fill: #5a6090; -fx-background-radius: 12; -fx-padding: 8 12; -fx-font-size: 11.5px;");
+        txtBusqueda.textProperty().addListener((obs, old, val) -> {
+            filtroTexto = val;
+            actualizarListaFiltrada(projects);
+        });
+        txtBusqueda.setText(filtroTexto); // Restaurar si venimos de otro modo
+
         // Lista de proyectos — filtrada o completa
-        proyectosFiltrados = construirListaFiltrada(projects);
+        proyectosFiltrados = FXCollections.observableArrayList();
         ListView<Proyecto> listProyectos = new ListView<>(proyectosFiltrados);
         listProyectos.getStyleClass().add("project-list");
         VBox.setVgrow(listProyectos, Priority.ALWAYS);
@@ -1030,7 +1043,7 @@ public class ModeManager {
                     textContainer.setAlignment(Pos.CENTER_LEFT);
                     Label lblName = new Label(item.getNombre());
                     lblName.getStyleClass().add("project-cell-name");
-                    lblName.setMaxWidth(Double.MAX_VALUE);
+                    lblName.setMaxWidth(180); // Límite para no empujar iconos
                     lblName.setEllipsisString("…");
                     HBox.setHgrow(lblName, Priority.SOMETIMES);
                     Label lblEmpresa = new Label("");
@@ -1057,7 +1070,25 @@ public class ModeManager {
                     textAndBadge.setAlignment(Pos.CENTER_LEFT);
                     textAndBadge.setPadding(new Insets(0, 12, 0, 12));
                     HBox.setHgrow(textAndBadge, Priority.ALWAYS);
-                    textAndBadge.getChildren().addAll(textContainer, spacer, lblBadge);
+                    
+                    // Botón de OPCIONES (⋯) - Solo visible en hover
+                    Label btnOptions = new Label("⋯");
+                    btnOptions.setStyle("-fx-text-fill: #a0a5cc; -fx-cursor: hand; -fx-font-size: 26px; -fx-font-weight: bold; -fx-padding: 0;");
+                    btnOptions.setVisible(false); 
+                    
+                    btnOptions.setPickOnBounds(true); // Hacer que todo el área del icono sea clicable
+                    btnOptions.setOnMousePressed(e -> {
+                        mostrarProjectOptionsMenu(item, btnOptions, projects);
+                        e.consume(); // Evitar que el click seleccione la fila
+                    });
+
+                    // Agrupar botón ⋯ y etiqueta CR80 en vertical ( ⋯ centrado encima de CR80 )
+                    VBox rightActionBox = new VBox(-6); // Espaciado ajustado para subir los puntos
+                    rightActionBox.setAlignment(Pos.CENTER); // Centrado relativo
+                    rightActionBox.getChildren().addAll(btnOptions, lblBadge);
+                    VBox.setMargin(btnOptions, new Insets(0, 0, 4, 0)); // Margen extra para separar de la etiqueta abajo
+
+                    textAndBadge.getChildren().addAll(textContainer, spacer, rightActionBox);
                     contentRow.getChildren().addAll(activeBar, textAndBadge);
 
                     // ── Hover overlay (muy sutil) ──────────────────────────────────
@@ -1141,8 +1172,14 @@ public class ModeManager {
                         if (pulse != null) { pulse.stop(); pulse = null; }
                     }
 
-                    card.setOnMouseEntered(e -> { if (!isSelected()) hoverIn.playFromStart(); });
-                    card.setOnMouseExited(e  -> { if (!isSelected()) hoverOut.playFromStart(); });
+                    card.setOnMouseEntered(e -> { 
+                        if (!isSelected()) hoverIn.playFromStart(); 
+                        btnOptions.setVisible(true);
+                    });
+                    card.setOnMouseExited(e  -> { 
+                        if (!isSelected()) hoverOut.playFromStart(); 
+                        btnOptions.setVisible(false);
+                    });
                 }
             }
 
@@ -1220,7 +1257,11 @@ public class ModeManager {
         // Refrescar estado inicial
         actualizarVisibilidadOcultos(projects);
 
-        projectPanel.getChildren().addAll(header, filtroInfoBox, listProyectos, panelOcultos, btnNuevoCR80);
+        projectPanel.getChildren().addAll(header, txtBusqueda, filtroInfoBox, listProyectos, panelOcultos, btnNuevoCR80);
+        
+        // Sincronizar estado inicial (especialmente útil al volver del modo diseño)
+        actualizarListaFiltrada(projects);
+        
         return projectPanel;
     }
 
@@ -1258,7 +1299,10 @@ public class ModeManager {
             if (filtroPopup != null && filtroPopup.isShowing()) {
                 if (!filtroPopup.getContent().isEmpty() && filtroPopup.getContent().get(0) instanceof VBox) {
                     VBox content = (VBox) filtroPopup.getContent().get(0);
-                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), content);
+                    content.setMouseTransparent(true);
+                    content.setCache(true);
+                    content.setCacheHint(javafx.scene.CacheHint.SPEED);
+                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(100), content);
                     ft.setToValue(0);
                     ft.setOnFinished(ev -> filtroPopup.hide());
                     ft.play();
@@ -1297,8 +1341,9 @@ public class ModeManager {
         contenido.setPadding(new Insets(12));
         contenido.setStyle("-fx-background-color: #1a1b2e; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4);");
         contenido.setPrefWidth(210);
-        
         contenido.setOpacity(0);
+        contenido.setCache(true);
+        contenido.setCacheHint(javafx.scene.CacheHint.SPEED);
         javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
         ft.setToValue(1);
         ft.play();
@@ -1314,6 +1359,7 @@ public class ModeManager {
             actualizarListaFiltrada(todosLosProyectos);
             
             // Animación de salida antes de esconder
+            contenido.setMouseTransparent(true);
             javafx.animation.FadeTransition hideFt = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
             hideFt.setToValue(0);
             hideFt.setOnFinished(e -> filtroPopup.hide());
@@ -1435,24 +1481,45 @@ public class ModeManager {
         if (proyectosFiltrados == null) return;
         proyectosFiltrados.clear();
         
-        if (filtroActivo.isEmpty()) {
-            proyectosFiltrados.addAll(todos);
-            if (filtroInfoBox != null) {
-                filtroInfoBox.setVisible(false);
-                filtroInfoBox.setManaged(false);
-            }
-        } else {
-            for (Proyecto p : todos) {
+        String term = filtroTexto.toLowerCase().trim();
+
+        for (Proyecto p : todos) {
+            // 1. Filtrado por categorías
+            boolean coincideCategoria = filtroActivo.isEmpty();
+            if (!coincideCategoria) {
                 for (String id : filtroActivo) {
                     if (p.getEtiquetaIds().contains(id)) {
-                        proyectosFiltrados.add(p);
+                        coincideCategoria = true;
                         break;
                     }
                 }
             }
-            
-            // Actualizar cabecera de filtro
-            if (filtroInfoBox != null && lblFiltroActual != null && etiquetasManager != null) {
+
+            // 2. Filtrado por texto (si coincide categoría)
+            if (coincideCategoria) {
+                if (term.isEmpty()) {
+                    proyectosFiltrados.add(p);
+                } else {
+                    String nombre = p.getNombre().toLowerCase();
+                    String cliente = "";
+                    if (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null) {
+                        String emp = p.getMetadata().getClienteInfo().getNombreEmpresa();
+                        if (emp != null) cliente = emp.toLowerCase();
+                    }
+                    
+                    if (nombre.contains(term) || cliente.contains(term)) {
+                        proyectosFiltrados.add(p);
+                    }
+                }
+            }
+        }
+        
+        // Actualizar cabecera de filtro
+        if (filtroInfoBox != null && lblFiltroActual != null && etiquetasManager != null) {
+            if (filtroActivo.isEmpty()) {
+                filtroInfoBox.setVisible(false);
+                filtroInfoBox.setManaged(false);
+            } else {
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < filtroActivo.size(); i++) {
                     String id = filtroActivo.get(i);
@@ -1469,6 +1536,112 @@ public class ModeManager {
         }
         actualizarVisibilidadOcultos(todos);
         actualizarIconoFiltro(btnFiltro);
+    }
+
+    private void duplicarProyectoUI(Proyecto item, ObservableList<Proyecto> projects) {
+        if (projectManager == null) return;
+        
+        // Confirmación rápida
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Duplicar Proyecto");
+        alert.setHeaderText("¿Quieres crear una copia de este proyecto?");
+        alert.setContentText("Se creará una nueva carpeta con todos los archivos de '" + item.getNombre() + "'.");
+        
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            Proyecto copia = projectManager.duplicarProyecto(item);
+            if (copia != null) {
+                actualizarListaFiltrada(projects);
+            }
+        }
+    }
+
+    private void eliminarProyectoUI(Proyecto item, ObservableList<Proyecto> projects) {
+        if (projectManager == null) return;
+        
+        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Eliminar del Historial");
+        alert.setHeaderText("¿Quitar '" + item.getNombre() + "' de la lista?");
+        alert.setContentText("Esta acción no borrará los archivos de tu ordenador, solo ocultará el proyecto del historial del programa.");
+        
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            projectManager.eliminarProyecto(item);
+            javafx.application.Platform.runLater(() -> actualizarListaFiltrada(projects));
+        }
+    }
+
+    private void mostrarProjectOptionsMenu(Proyecto item, Node anchor, ObservableList<Proyecto> projects) {
+        javafx.stage.Popup popup = new javafx.stage.Popup();
+        popup.setAutoHide(true);
+
+        VBox content = new VBox(0);
+        content.setStyle("-fx-background-color: #1a1b2e; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 15, 0, 0, 6); -fx-border-color: rgba(255,255,255,0.08); -fx-border-radius: 10; -fx-padding: 5;");
+        content.setMinWidth(140);
+        
+        String[] labels = {"Editar", "Duplicar", "Eliminar"};
+        String[] icons = {"✎", "❐", "✖"}; // Símbolos más compatibles que emojis
+        String[] colors = {"#c8cde8", "#c8cde8", "#ff6b6b"};
+        
+        for (int i = 0; i < labels.length; i++) {
+            final String labelText = labels[i];
+            final String iconText = icons[i];
+            final String color = colors[i];
+            
+            HBox row = new HBox(12);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new Insets(8, 15, 8, 15));
+            row.setStyle("-fx-cursor: hand; -fx-background-radius: 6;");
+            
+            Label lblIcon = new Label(iconText);
+            lblIcon.setPrefWidth(22); // Ancho fijo para alinear textos
+            lblIcon.setAlignment(Pos.CENTER);
+            lblIcon.setStyle("-fx-text-fill: " + color + "; -fx-opacity: 0.9; -fx-font-size: 16px; -fx-font-weight: bold;");
+            
+            Label lblText = new Label(labelText);
+            lblText.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 13px; -fx-font-weight: 500;");
+            
+            row.getChildren().addAll(lblIcon, lblText);
+            
+            row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: rgba(108, 99, 255, 0.15); -fx-cursor: hand; -fx-background-radius: 6;"));
+            row.setOnMouseExited(e -> row.setStyle("-fx-background-color: transparent; -fx-background-radius: 6;"));
+            
+            row.setOnMouseClicked(e -> {
+                popup.hide();
+                if (labelText.equals("Editar")) {
+                     if (onEditProject != null) onEditProject.accept(item);
+                } else if (labelText.equals("Duplicar")) {
+                     duplicarProyectoUI(item, projects);
+                } else if (labelText.equals("Eliminar")) {
+                     eliminarProyectoUI(item, projects);
+                }
+            });
+            
+            content.getChildren().add(row);
+            if (i == 1) { // Separador antes de eliminar
+                javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
+                sep.setPadding(new Insets(4, 0, 4, 0));
+                sep.setOpacity(0.1);
+                content.getChildren().add(sep);
+            }
+        }
+
+        popup.getContent().add(content);
+        
+        // Transición de entrada suave
+        content.setOpacity(0);
+        content.setCache(true);
+        content.setCacheHint(javafx.scene.CacheHint.SPEED);
+        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), content);
+        ft.setToValue(1);
+        ft.play();
+
+        // Posicionamiento alineado con el borde del menú lateral (referencia absoluta del panel)
+        // Offset 0 para que pegue exactamente al borde
+        javafx.geometry.Point2D sidebarEdge = leftPanel.localToScreen(leftPanel.getWidth(), 0);
+        javafx.geometry.Point2D anchorPos = anchor.localToScreen(0, -40);
+        
+        if (sidebarEdge != null && anchorPos != null) {
+            popup.show(anchor.getScene().getWindow(), sidebarEdge.getX(), anchorPos.getY());
+        }
     }
 
     private void actualizarVisibilidadOcultos(ObservableList<Proyecto> todos) {

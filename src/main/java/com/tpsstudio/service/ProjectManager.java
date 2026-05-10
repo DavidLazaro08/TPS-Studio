@@ -17,8 +17,10 @@ import javafx.stage.Window;
 import javafx.application.Platform;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -310,19 +312,107 @@ public class ProjectManager {
      */
 
     public void eliminarProyecto(Proyecto proyecto) {
-
-        if (proyecto == null)
-            return;
-
+        if (proyecto == null) return;
         eliminarDeRecientes(proyecto);
         proyectos.remove(proyecto);
-
         if (proyectoActual == proyecto) {
             proyectoActual = null;
         }
-
         avisarProyectoCambiado();
         mostrarInfo("Proyecto cerrado.");
+    }
+
+    /**
+     * Duplica un proyecto existente creando una nueva carpeta física y copiando todos sus archivos.
+     */
+    public Proyecto duplicarProyecto(Proyecto original) {
+        if (original == null || original.getMetadata() == null) return null;
+
+        ProyectoMetadata metaOriginal = original.getMetadata();
+        File folderOriginal = new File(metaOriginal.getCarpetaProyecto());
+        if (!folderOriginal.exists()) {
+            mostrarError("La carpeta del proyecto original no existe.");
+            return null;
+        }
+
+        try {
+            // 1. Preparar nueva metadata
+            ProyectoMetadata nuevaMeta = new ProyectoMetadata();
+            nuevaMeta.setNombre(original.getNombre() + " (Copia)");
+            nuevaMeta.setClienteInfo(metaOriginal.getClienteInfo());
+            nuevaMeta.setUbicacion(metaOriginal.getUbicacion());
+            
+            // Generar nueva ruta base (evitar colisiones de nombres de carpeta)
+            String parent = folderOriginal.getParent();
+            String nombreLimpio = original.getNombre().replaceAll("[^a-zA-Z0-9_\\-\\s]", "_");
+            String nuevoNombreCarpeta = "TPS_" + nombreLimpio + "_Copia";
+            File folderCopia = new File(parent, nuevoNombreCarpeta);
+            int i = 1;
+            while (folderCopia.exists()) {
+                folderCopia = new File(parent, nuevoNombreCarpeta + "_" + i++);
+            }
+
+            // No establecemos carpetaProyecto directamente porque se calcula en base a la ubicación y nombre
+            nuevaMeta.setUbicacion(parent);
+            
+            // Crear la estructura de carpetas básica
+            if (!fileManager.crearEstructuraCarpetas(nuevaMeta)) {
+                mostrarError("No se pudo crear la estructura para el duplicado.");
+                return null;
+            }
+
+            // 2. Copiar archivos relevantes (Fotos y Fondos)
+            copyDirectory(Paths.get(metaOriginal.getRutaFotos()), Paths.get(nuevaMeta.getRutaFotos()));
+            copyDirectory(Paths.get(metaOriginal.getRutaFondos()), Paths.get(nuevaMeta.getRutaFondos()));
+            
+            // Si hay base de datos y es interna al proyecto, copiarla también
+            if (metaOriginal.getRutaBBDD() != null && metaOriginal.getRutaBBDD().contains(metaOriginal.getCarpetaProyecto())) {
+                File bdOrig = new File(metaOriginal.getRutaBBDD());
+                if (bdOrig.exists()) {
+                    String bdCopiada = fileManager.copiarBDAlProyecto(bdOrig, nuevaMeta);
+                    nuevaMeta.setRutaBBDD(bdCopiada);
+                }
+            } else {
+                nuevaMeta.setRutaBBDD(metaOriginal.getRutaBBDD());
+            }
+
+            // 3. Crear el nuevo objeto Proyecto (clonado profundo mediante recarga)
+            Proyecto copia = fileManager.cargarProyecto(new File(metaOriginal.getRutaTPS()));
+            if (copia != null) {
+                copia.setNombre(nuevaMeta.getNombre());
+                copia.setMetadata(nuevaMeta);
+                
+                // Guardar el nuevo archivo .tps
+                fileManager.guardarProyecto(copia, nuevaMeta);
+                
+                proyectos.add(copia);
+                recentManager.añadirReciente(nuevaMeta.getRutaTPS());
+                ordenarProyectos();
+                mostrarInfo("Proyecto duplicado correctamente.");
+                return copia;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            mostrarError("Error al duplicar: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private void copyDirectory(Path source, Path target) throws java.io.IOException {
+        if (!Files.exists(source)) return;
+        Files.walk(source).forEach(s -> {
+            try {
+                Path d = target.resolve(source.relativize(s));
+                if (Files.isDirectory(s)) {
+                    if (!Files.exists(d)) Files.createDirectory(d);
+                } else {
+                    Files.copy(s, d, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (Exception e) {
+                // Error de copia individual
+            }
+        });
     }
 
     /* Guarda el proyecto actual en su ruta .tps. */
