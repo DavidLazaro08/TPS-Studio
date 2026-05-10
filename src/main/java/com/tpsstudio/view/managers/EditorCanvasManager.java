@@ -433,8 +433,8 @@ public class EditorCanvasManager {
                 dibujarForma(gc, forma, ex, ey, ew, eh);
             }
 
-            // Selección + handles
-            if (elementoSeleccionado != null && elem == elementoSeleccionado) {
+            // Selección + handles (Solo visibles en modo diseño)
+            if (currentMode == AppMode.DESIGN && elementoSeleccionado != null && elem == elementoSeleccionado) {
                 gc.setStroke(Color.web("#4a9b7c"));
                 gc.setLineWidth(2);
                 gc.setLineDashes(3, 3);
