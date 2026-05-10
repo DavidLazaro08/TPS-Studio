@@ -10,38 +10,46 @@ import javafx.util.Duration;
 
 public class AnimationHelper {
 
-    public static final double DURATION_OPEN  = 550;
-    public static final double DURATION_CLOSE = 400;
+    // Duraciones unificadas para una experiencia coherente y premium
+    public static final double DURATION_SLOW   = 550; // Paneles principales y desplazamientos de canvas
+    public static final double DURATION_MEDIUM = 350; // Acordeones y cambios de pestañas
+    public static final double DURATION_FAST   = 200; // Micro-transiciones
+
+    // Aliases para compatibilidad y semántica
+    public static final double DURATION_OPEN  = DURATION_SLOW;
+    public static final double DURATION_CLOSE = DURATION_SLOW;
 
     private AnimationHelper() {}
 
     /* Anima la apertura o cierre de un panel lateral (fade + slide horizontal). */
     public static void togglePanel(Region panel, boolean show) {
+        double duration = show ? DURATION_OPEN : DURATION_CLOSE;
+        
         if (show) {
             panel.setVisible(true);
             panel.setManaged(true);
 
-            FadeTransition fade = new FadeTransition(Duration.millis(DURATION_OPEN), panel);
+            FadeTransition fade = new FadeTransition(Duration.millis(duration), panel);
             fade.setFromValue(0.0);
             fade.setToValue(1.0);
             fade.setInterpolator(Interpolator.EASE_BOTH);
 
-            TranslateTransition slide = new TranslateTransition(Duration.millis(DURATION_OPEN), panel);
+            TranslateTransition slide = new TranslateTransition(Duration.millis(duration), panel);
             slide.setFromX(panel.getPrefWidth());
             slide.setToX(0);
             slide.setInterpolator(Interpolator.EASE_BOTH);
 
             new ParallelTransition(fade, slide).play();
         } else {
-            FadeTransition fade = new FadeTransition(Duration.millis(DURATION_CLOSE), panel);
+            FadeTransition fade = new FadeTransition(Duration.millis(duration), panel);
             fade.setFromValue(1.0);
             fade.setToValue(0.0);
-            fade.setInterpolator(Interpolator.EASE_IN);
+            fade.setInterpolator(Interpolator.EASE_BOTH); // Cambiado a BOTH para frenado suave
 
-            TranslateTransition slide = new TranslateTransition(Duration.millis(DURATION_CLOSE), panel);
+            TranslateTransition slide = new TranslateTransition(Duration.millis(duration), panel);
             slide.setFromX(0);
             slide.setToX(panel.getPrefWidth());
-            slide.setInterpolator(Interpolator.EASE_IN);
+            slide.setInterpolator(Interpolator.EASE_BOTH); // Cambiado a BOTH para frenado suave
 
             ParallelTransition anim = new ParallelTransition(fade, slide);
             anim.setOnFinished(e -> {
@@ -55,11 +63,11 @@ public class AnimationHelper {
 
     /* Desplaza suavemente un nodo (el canvas) para compensar la apertura del panel. */
     public static void shiftCanvas(Node target, double targetX) {
-        shiftCanvas(target, targetX, DURATION_OPEN);
+        shiftCanvas(target, targetX, DURATION_SLOW);
     }
 
     public static void shiftCanvas(Node target, double targetX, double durationMs) {
-        // Detener animación previa si existe en este nodo
+        // Detener animación previa si existe en este nodo para evitar saltos
         Object active = target.getProperties().get("activeShift");
         if (active instanceof Transition t) {
             t.stop();
@@ -77,30 +85,27 @@ public class AnimationHelper {
 
     /**
      * Muestra u oculta un submenú tipo acordeón.
-     * Usa toggle directo de managed/visible para garantizar que el VBox padre
-     * recalcule el layout correctamente y empuje los elementos hacia abajo.
-     * Se añade un fade suave para mejorar la experiencia visual.
      */
     public static void animateAccordion(Node node, boolean show) {
         if (!(node instanceof Region region)) return;
 
+        double duration = show ? DURATION_MEDIUM : DURATION_MEDIUM * 0.8;
+
         if (show) {
-            // Primero hacemos el nodo gestionado y visible para que el layout lo incluya
             region.setManaged(true);
             region.setVisible(true);
             region.setOpacity(0.0);
 
-            // Fade de entrada lento y suave
-            FadeTransition fade = new FadeTransition(Duration.millis(420), region);
+            FadeTransition fade = new FadeTransition(Duration.millis(duration), region);
             fade.setFromValue(0.0);
             fade.setToValue(1.0);
             fade.setInterpolator(Interpolator.EASE_BOTH);
             fade.play();
         } else {
-            FadeTransition fade = new FadeTransition(Duration.millis(280), region);
+            FadeTransition fade = new FadeTransition(Duration.millis(duration), region);
             fade.setFromValue(1.0);
             fade.setToValue(0.0);
-            fade.setInterpolator(Interpolator.EASE_IN);
+            fade.setInterpolator(Interpolator.EASE_BOTH);
             fade.setOnFinished(e -> {
                 region.setVisible(false);
                 region.setManaged(false);

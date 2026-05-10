@@ -106,15 +106,15 @@ public class TPSToast {
             toast.show();
 
             // Entrada: fade + slide hacia arriba
-            FadeTransition fadeIn = new FadeTransition(Duration.millis(280), root);
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
             fadeIn.setFromValue(0);
             fadeIn.setToValue(1);
-            fadeIn.setInterpolator(Interpolator.EASE_OUT);
+            fadeIn.setInterpolator(Interpolator.EASE_BOTH);
 
-            TranslateTransition slideIn = new TranslateTransition(Duration.millis(280), root);
+            TranslateTransition slideIn = new TranslateTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
             slideIn.setFromY(8);
             slideIn.setToY(0);
-            slideIn.setInterpolator(Interpolator.EASE_OUT);
+            slideIn.setInterpolator(Interpolator.EASE_BOTH);
 
             new ParallelTransition(fadeIn, slideIn).play();
 
@@ -127,14 +127,14 @@ public class TPSToast {
 
     /** Cierre suave */
     private static void cerrarToast(Stage toast, HBox root) {
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(300), root);
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
         fadeOut.setFromValue(root.getOpacity());
         fadeOut.setToValue(0);
-        fadeOut.setInterpolator(Interpolator.EASE_IN);
+        fadeOut.setInterpolator(Interpolator.EASE_BOTH);
 
-        TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), root);
+        TranslateTransition slideOut = new TranslateTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
         slideOut.setToY(6);
-        slideOut.setInterpolator(Interpolator.EASE_IN);
+        slideOut.setInterpolator(Interpolator.EASE_BOTH);
 
         ParallelTransition salida = new ParallelTransition(fadeOut, slideOut);
         salida.setOnFinished(e -> toast.close());

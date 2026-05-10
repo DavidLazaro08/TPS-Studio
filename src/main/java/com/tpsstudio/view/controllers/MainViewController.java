@@ -621,7 +621,7 @@ public class MainViewController {
         // En Producción, los paneles de diseño no aplican: los ocultamos
         if (newMode == AppMode.PRODUCTION) {
             if (bloqueContextual != null && bloqueContextual.isVisible()) {
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> {
                     bloqueContextual.setVisible(false);
@@ -633,7 +633,7 @@ public class MainViewController {
             
             // Forzar un segundo ajuste tras un breve delay para asegurar que el layout se ha asentado
             javafx.application.Platform.runLater(() -> {
-                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(50));
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(100)); // Aumentado para mayor estabilidad
                 delay.setOnFinished(ev -> adjustCanvasCentering());
                 delay.play();
             });
@@ -661,7 +661,7 @@ public class MainViewController {
                 bloqueContextual.setOpacity(0.0);
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(1.0);
                 ft.play();
             }
@@ -743,12 +743,12 @@ public class MainViewController {
             if (shouldShow && !selectorCaraBox.isVisible()) {
                 selectorCaraBox.setOpacity(0.0);
                 selectorCaraBox.setVisible(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setToValue(1.0);
                 ft.play();
             } else if (!shouldShow && selectorCaraBox.isVisible() && selectorCaraBox.getOpacity() > 0) {
                 selectorCaraBox.setOpacity(0.0); // Prevenimos multiples animaciones superpuestas
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setFromValue(1.0);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> selectorCaraBox.setVisible(false));
@@ -1304,7 +1304,7 @@ public class MainViewController {
                     }
                     
                     javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), 28, javafx.animation.Interpolator.EASE_BOTH);
-                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(250), kv);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
                     timeline.getKeyFrames().add(kf);
                     
                     timeline.setOnFinished(e -> {
@@ -1329,7 +1329,7 @@ public class MainViewController {
                     lblProyectoActivo.setPrefWidth(28);
                     
                     javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), targetWidth, javafx.animation.Interpolator.EASE_BOTH);
-                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(250), kv);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
                     timeline.getKeyFrames().add(kf);
                     
                     timeline.setOnFinished(e -> lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE));

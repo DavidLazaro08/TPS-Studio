@@ -10,6 +10,7 @@ import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.util.TextUtils;
 import javafx.geometry.VPos;
@@ -188,7 +189,7 @@ public class EditorCanvasManager {
             hudFadeTimeline = new javafx.animation.Timeline(
                 new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, 
                     new javafx.animation.KeyValue(hudOpacityProperty(), hudOpacity, javafx.animation.Interpolator.EASE_BOTH)),
-                new javafx.animation.KeyFrame(javafx.util.Duration.millis(550), 
+                new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_SLOW), 
                     new javafx.animation.KeyValue(hudOpacityProperty(), targetOpacity, javafx.animation.Interpolator.EASE_BOTH))
             );
             

@@ -9,6 +9,7 @@ import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
 import com.tpsstudio.service.EtiquetasManager;
+import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -262,9 +263,10 @@ public class ModeManager {
             
             if (targetNode != null) {
                 // Animación suave de cambio de pestaña (Cross-fade)
-                javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(350), rightPanel);
+                javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_SLOW), rightPanel);
                 fade.setFromValue(0.4);
                 fade.setToValue(1.0);
+                fade.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
                 
                 VBox.setVgrow(targetNode, Priority.ALWAYS); 
                 rightPanel.getChildren().setAll(targetNode);
@@ -697,7 +699,7 @@ public class ModeManager {
                         card.setOnMouseExited(e -> { 
                             if (!isSelected()) {
                                 hOut.playFromStart();
-                                javafx.animation.FadeTransition aHOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(250), actions);
+                                javafx.animation.FadeTransition aHOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), actions);
                                 aHOut.setToValue(0.0);
                                 aHOut.setOnFinished(ev -> actions.setVisible(false));
                                 aHOut.play();
@@ -705,13 +707,13 @@ public class ModeManager {
                         });
 
                         card.setOnMousePressed(e -> {
-                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(100), card);
+                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), card);
                             st.setToX(0.97);
                             st.setToY(0.97);
                             st.play();
                         });
                         card.setOnMouseReleased(e -> {
-                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(150), card);
+                            javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), card);
                             st.setToX(1.0);
                             st.setToY(1.0);
                             st.play();
@@ -1173,7 +1175,7 @@ public class ModeManager {
 
                     // ── Animaciones ───────────────────────────────────────────────
                     // Hover: muy sutil (opacidad 0 → 0.6 del overlay)
-                    javafx.animation.FadeTransition hoverIn  = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
+                    javafx.animation.FadeTransition hoverIn  = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), hoverOverlay);
                     hoverIn.setToValue(0.6);
                     javafx.animation.FadeTransition hoverOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), hoverOverlay);
                     hoverOut.setToValue(0.0);
@@ -1181,7 +1183,7 @@ public class ModeManager {
                     // ── Estado seleccionado ───────────────────────────────────────
                     if (isSelected()) {
                         // Ya seleccionado: aparecer con fade-in suave del selectedOverlay
-                        javafx.animation.FadeTransition selectIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(550), selectedOverlay);
+                        javafx.animation.FadeTransition selectIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_SLOW), selectedOverlay);
                         selectIn.setFromValue(0.0);
                         selectIn.setToValue(1.0);
                         selectIn.play();
@@ -1335,7 +1337,7 @@ public class ModeManager {
                     content.setMouseTransparent(true);
                     content.setCache(true);
                     content.setCacheHint(javafx.scene.CacheHint.SPEED);
-                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(100), content);
+                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), content);
                     ft.setToValue(0);
                     ft.setOnFinished(ev -> filtroPopup.hide());
                     ft.play();
@@ -1377,7 +1379,7 @@ public class ModeManager {
         contenido.setOpacity(0);
         contenido.setCache(true);
         contenido.setCacheHint(javafx.scene.CacheHint.SPEED);
-        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
+        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), contenido);
         ft.setToValue(1);
         ft.play();
 
@@ -1393,7 +1395,7 @@ public class ModeManager {
             
             // Animación de salida antes de esconder
             contenido.setMouseTransparent(true);
-            javafx.animation.FadeTransition hideFt = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), contenido);
+            javafx.animation.FadeTransition hideFt = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), contenido);
             hideFt.setToValue(0);
             hideFt.setOnFinished(e -> filtroPopup.hide());
             hideFt.play();
@@ -1663,7 +1665,7 @@ public class ModeManager {
         content.setOpacity(0);
         content.setCache(true);
         content.setCacheHint(javafx.scene.CacheHint.SPEED);
-        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), content);
+        javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), content);
         ft.setToValue(1);
         ft.play();
 
@@ -1705,7 +1707,7 @@ public class ModeManager {
         // Cada 3 minutos, un pequeño parpadeo lila en la barra de estado
         recordatorioTimer = new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.minutes(3), ev -> {
             if (panelOcultos != null && panelOcultos.isVisible() && currentMode == AppMode.PRODUCTION) {
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(500), panelOcultos);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), panelOcultos);
                 ft.setFromValue(1.0);
                 ft.setToValue(0.4);
                 ft.setCycleCount(4);
