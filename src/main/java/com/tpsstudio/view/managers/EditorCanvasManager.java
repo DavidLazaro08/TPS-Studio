@@ -577,7 +577,7 @@ public class EditorCanvasManager {
             this.btnClienteHitbox = null;
         }
 
-        gc.setFill(Color.web("#9a9598"));
+        gc.setFill(Color.web("#a0a5cc"));
         gc.setFont(Font.font("Arial", 11));
 
         String infoDimensiones = String.format(

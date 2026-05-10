@@ -488,6 +488,16 @@ public class MainViewController {
 
         // Importante: configurar mouse handlers para drag & resize
         canvasManager.setupMouseHandlers();
+        
+        // Habilitar zoom con la rueda del ratón
+        canvas.setOnScroll(event -> {
+            if (event.getDeltaY() > 0) {
+                onZoomIn();
+            } else if (event.getDeltaY() < 0) {
+                onZoomOut();
+            }
+            event.consume();
+        });
 
         canvas.setFocusTraversable(true);
         canvas.setOnKeyPressed(event -> {
