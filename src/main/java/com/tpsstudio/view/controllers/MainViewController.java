@@ -630,6 +630,13 @@ public class MainViewController {
                 ft.play();
             }
             cerrarPanelDerecho();
+            
+            // Forzar un segundo ajuste tras un breve delay para asegurar que el layout se ha asentado
+            javafx.application.Platform.runLater(() -> {
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(50));
+                delay.setOnFinished(ev -> adjustCanvasCentering());
+                delay.play();
+            });
 
             // Iniciar parpadeo (respiración suave) en el botón Diseño invitando a pulsarlo
             if (btnModeEdit != null) {
@@ -1232,8 +1239,9 @@ public class MainViewController {
      * apertura del panel se vean sincronizados.
      */
     private void adjustCanvasCentering() {
-        boolean panelVisible = (togglePropiedades != null && togglePropiedades.isSelected()) ||
-                (toggleDatosVariables != null && toggleDatosVariables.isSelected());
+        boolean panelVisible = viewModel.getCurrentMode() == AppMode.DESIGN &&
+                ((togglePropiedades != null && togglePropiedades.isSelected()) ||
+                (toggleDatosVariables != null && toggleDatosVariables.isSelected()));
 
         if (canvasContainer.getWidth() <= 0) {
             Platform.runLater(this::adjustCanvasCentering);
@@ -1241,9 +1249,11 @@ public class MainViewController {
         }
 
         double targetX = panelVisible ? -(rightPanel.getPrefWidth() / 2.0) : 0;
-        AnimationHelper.shiftCanvas(canvas, targetX);
+        double duration = panelVisible ? AnimationHelper.DURATION_OPEN : AnimationHelper.DURATION_CLOSE;
+        
+        AnimationHelper.shiftCanvas(canvas, targetX, duration);
         if (canvasOverlay != null) {
-            AnimationHelper.shiftCanvas(canvasOverlay, targetX);
+            AnimationHelper.shiftCanvas(canvasOverlay, targetX, duration);
         }
     }
 

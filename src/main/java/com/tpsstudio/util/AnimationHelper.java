@@ -10,8 +10,8 @@ import javafx.util.Duration;
 
 public class AnimationHelper {
 
-    private static final double DURATION_OPEN  = 550;
-    private static final double DURATION_CLOSE = 400;
+    public static final double DURATION_OPEN  = 550;
+    public static final double DURATION_CLOSE = 400;
 
     private AnimationHelper() {}
 
@@ -55,9 +55,23 @@ public class AnimationHelper {
 
     /* Desplaza suavemente un nodo (el canvas) para compensar la apertura del panel. */
     public static void shiftCanvas(Node target, double targetX) {
-        TranslateTransition transition = new TranslateTransition(Duration.millis(DURATION_OPEN), target);
+        shiftCanvas(target, targetX, DURATION_OPEN);
+    }
+
+    public static void shiftCanvas(Node target, double targetX, double durationMs) {
+        // Detener animación previa si existe en este nodo
+        Object active = target.getProperties().get("activeShift");
+        if (active instanceof Transition t) {
+            t.stop();
+        }
+
+        TranslateTransition transition = new TranslateTransition(Duration.millis(durationMs), target);
         transition.setToX(targetX);
         transition.setInterpolator(Interpolator.EASE_BOTH);
+        
+        target.getProperties().put("activeShift", transition);
+        transition.setOnFinished(e -> target.getProperties().remove("activeShift"));
+        
         transition.play();
     }
 

@@ -223,7 +223,9 @@ public class ModeManager {
 
         // Limpieza completa de paneles
         leftPanel.getChildren().clear();
-        rightPanel.getChildren().clear();
+        if (newMode == AppMode.DESIGN) {
+            rightPanel.getChildren().clear();
+        }
 
         // Reconstrucción según modo
         if (newMode == AppMode.DESIGN) {
@@ -751,7 +753,7 @@ public class ModeManager {
                                     int realTargetIdx = targetIdx - minIdx;
                                     
                                     if (realSourceIdx >= 0 && realTargetIdx >= 0) {
-                                        Collections.swap(listaReal, realSourceIdx, realTargetIdx);
+                                        java.util.Collections.swap(listaReal, realSourceIdx, realTargetIdx);
                                         if (onCanvasRedraw != null) onCanvasRedraw.run();
                                         // Refrescar panel para ver cambios
                                         buildDesignModePanels(proyecto, sourceItem);
@@ -1008,18 +1010,6 @@ public class ModeManager {
     private void buildProductionModePanels(ObservableList<Proyecto> projects, Proyecto currentProject) {
         VBox projectPanel = buildProjectListPanel(projects, currentProject);
         leftPanel.getChildren().add(projectPanel);
-
-        VBox exportPanel = buildExportPanel();
-        exportPanel.getStyleClass().add("panel-dark-bg");
-
-        ScrollPane scrollPane = new ScrollPane(exportPanel);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.getStyleClass().add("panel-scroll-view");
-        scrollPane.setPadding(Insets.EMPTY);
-
-        rightPanel.getChildren().add(scrollPane);
     }
 
     private VBox buildProjectListPanel(ObservableList<Proyecto> projects, Proyecto currentProject) {
@@ -1746,58 +1736,5 @@ public class ModeManager {
         if (resultado.isPresent()) {
             projectManager.editarProyecto(proyecto, resultado.get());
         }
-    }
-
-    /**
-     * Panel de exportación. De momento son placeholders, pero deja el hueco
-     * preparado.
-     */
-    private VBox buildExportPanel() {
-        VBox exportPanel = new VBox(15);
-        exportPanel.setPadding(new Insets(30));
-        exportPanel.setFillWidth(true);
-
-        Label lblExport = new Label("Exportación");
-        lblExport.getStyleClass().add("panel-title");
-
-        Label lblInfoExp = new Label("Formato: PNG/PDF (pendiente)");
-        lblInfoExp.getStyleClass().add("panel-placeholder");
-
-        Label lblDpi = new Label("DPI: 300 (pendiente)");
-        lblDpi.getStyleClass().add("panel-placeholder");
-
-        Label lblGuias = new Label("Incluir guías: No (pendiente)");
-        lblGuias.getStyleClass().add("panel-placeholder");
-
-        Label lblSide = new Label("Exportar: Frente (pendiente)");
-        lblSide.getStyleClass().add("panel-placeholder");
-
-        Button btnDoExport = new Button("Exportar");
-        btnDoExport.getStyleClass().add("success-btn");
-        btnDoExport.setMaxWidth(200.0);
-        btnDoExport.setOnAction(e -> {
-            if (onExport != null)
-                onExport.run();
-        });
-
-        Button btnImprimir = new Button("\uD83D\uDDA8 Imprimir\u2026");
-        btnImprimir.getStyleClass().add("toolbox-btn");
-        btnImprimir.setMaxWidth(200.0);
-        btnImprimir.setOnAction(e -> {
-            if (onPrint != null)
-                onPrint.run();
-        });
-
-        exportPanel.getChildren().addAll(
-                lblExport,
-                lblInfoExp,
-                lblDpi,
-                lblGuias,
-                lblSide,
-                new Separator(),
-                btnDoExport,
-                btnImprimir);
-
-        return exportPanel;
     }
 }
