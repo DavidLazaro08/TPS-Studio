@@ -180,6 +180,13 @@ public class LoginViewController {
                 if (is != null) stage.getIcons().add(new javafx.scene.image.Image(is));
             } catch (Exception ignored) {}
 
+            root.setOpacity(0.0);
+            stage.setOnShown(e -> {
+                FadeTransition ft = new FadeTransition(Duration.millis(300), root);
+                ft.setToValue(1.0);
+                ft.play();
+            });
+
             stage.showAndWait();
             
         } catch (Exception e) {

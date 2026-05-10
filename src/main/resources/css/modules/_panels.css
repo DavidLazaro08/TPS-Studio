@@ -184,9 +184,9 @@
 
 .layers-list .scroll-bar:horizontal {
     -fx-opacity: 0;
+    -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
-    -fx-padding: -10;
 }
 
 /* Scrollbar vertical idéntico al de propiedades */
@@ -270,6 +270,11 @@
     -fx-background-color: #2a2628;
 }
 
+/* Separador sutil entre elementos de capa */
+.layer-item-separator {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+}
+
 /* Botones de acción en capas (Reordenar/Eliminar) */
 .layer-action-btn {
     -fx-background-color: transparent;
@@ -322,8 +327,9 @@
 
 /* Icono de tipo de capa */
 .layer-item-icon {
-    -fx-text-fill: #7a7678;
+    -fx-text-fill: #a0a5cc; /* Mismo azul-acento que el texto de capa */
     -fx-font-size: 15px; /* Unificado con herramientas */
+    -fx-min-width: 20px;
     -fx-font-family: "Segoe UI Symbol", "Arial", sans-serif;
     -fx-alignment: center;
 }
@@ -391,9 +397,9 @@
 
 .panel-scroll-view .scroll-bar:horizontal {
     -fx-opacity: 0;
+    -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
-    -fx-padding: -10;
 }
 
 /* Contenedor con fondo oscuro liso (sin cortes) */

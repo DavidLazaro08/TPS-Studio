@@ -99,7 +99,7 @@ public abstract class Elemento {
     @Override
     public String toString() {
         if (etiqueta != null && !etiqueta.isEmpty()) {
-            return nombre + " | " + etiqueta;
+            return etiqueta;
         }
         return nombre;
     }

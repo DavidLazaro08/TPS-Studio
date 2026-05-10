@@ -124,9 +124,9 @@
 /* Ocultar scroll horizontal */
 .project-list .scroll-bar:horizontal {
     -fx-opacity: 0;
+    -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
-    -fx-padding: -10;
 }
 
 /* Scrollbar vertical personalizado — integrado con la estética oscura */

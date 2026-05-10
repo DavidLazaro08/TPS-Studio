@@ -298,8 +298,8 @@ public class MainViewController {
         });
 
         projectManager.setOnElementAdded(() -> {
-            // Fuerza la reconstrucción de paneles cuando cambia la estructura del diseño
-            buildEditPanels();
+            // Fuerza la reconstrucción de la lista de capas cuando se añade un elemento
+            modeManager.rebuildLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             dibujarCanvas();
         });
 
@@ -334,12 +334,17 @@ public class MainViewController {
         // -------------------------------------------------
         propertiesPanelController = new PropertiesPanelController(canvas);
 
-        propertiesPanelController.setOnPropertyChanged(() -> modeManager.switchMode(
-                viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                viewModel.getElementoSeleccionado(), projectManager.getProyectos()));
+        propertiesPanelController.setOnPropertyChanged(() -> {
+            // Solo refrescar el panel de propiedades, NO reconstruir todo el modo.
+            // Esto preserva el foco en campos como "Etiqueta" y evita el parpadeo.
+            modeManager.refreshPropertiesPanel(
+                    viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
+        });
 
         propertiesPanelController.setOnCanvasRedrawNeeded(() -> {
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                // Refresco ligero: actualiza el texto de la celda (nombre + etiqueta)
+                // sin reconstruir el panel ni perder el foco del campo de texto
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
             dibujarCanvas();
@@ -424,7 +429,8 @@ public class MainViewController {
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                // Reconstruir para que el icono de candado se actualice en la celda
+                modeManager.rebuildLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
             dibujarCanvas();
         });
@@ -447,6 +453,13 @@ public class MainViewController {
         canvasManager.setOnElementSelected(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
             ensurePropertiesPanelVisible();
+            // Sincronizar selección en la lista de capas sin reconstruir (solo resalta la capa)
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                if (togglePropiedades.isSelected()) {
+                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
+                }
+            }
         });
 
         canvasManager.setOnElementTransformed(() -> {
@@ -458,7 +471,14 @@ public class MainViewController {
 
         canvasManager.setOnCanvasChanged(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
-            buildEditPanels();
+            // Actualizar posición sin reconstruir paneles (evita parpadeo y pérdida de foco)
+            if (propertiesPanelController != null && viewModel.getElementoSeleccionado() != null) {
+                propertiesPanelController.updatePositionFields(viewModel.getElementoSeleccionado());
+            }
+            // Propagar deselección al panel de capas (cuando se hace click en el vacío del canvas)
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+            }
             canvasManager.dibujarCanvas();
         });
 
@@ -1259,11 +1279,13 @@ public class MainViewController {
 
     /* Abre el diálogo para editar o eliminar un proyecto existente. */
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
-        projectActionsController.editarProyecto(proyecto);
-        actualizarLabelProyecto(false);
-        // Si la BD vinculada pudo haber cambiado, reconstruir paneles
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            buildEditPanels();
+        boolean changed = projectActionsController.editarProyecto(proyecto);
+        if (changed) {
+            actualizarLabelProyecto(false);
+            // Si la BD vinculada pudo haber cambiado, reconstruir paneles
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                buildEditPanels();
+            }
         }
     }
 

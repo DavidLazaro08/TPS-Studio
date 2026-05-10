@@ -204,7 +204,7 @@
 }
 
 /* --- Error de validación (rojo pequeño) --- */
-.lbl-error {
+.dialog-pane .lbl-error, .lbl-error {
     -fx-text-fill: #c0392b;
     -fx-font-size: 10px;
 }

@@ -277,14 +277,14 @@ public class ProjectActionsController {
      *
      * @param proyecto proyecto a editar.
      */
-    public void editarProyecto(Proyecto proyecto) {
+    public boolean editarProyecto(Proyecto proyecto) {
         Window owner = canvas.getScene().getWindow();
         EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner, etiquetasManager);
         Optional<ProyectoMetadata> resultado = dialog.showAndWait();
 
         if (dialog.isEliminarProyecto()) {
             projectManager.eliminarProyecto(proyecto);
-            return;
+            return true;
         }
 
         if (resultado.isPresent()) {
@@ -293,7 +293,10 @@ public class ProjectActionsController {
 
             // Si la BD vinculada cambió, recargar la fuente de datos
             projectManager.cargarFuenteDatos(nuevaMetadata.getRutaBBDD());
+            return true;
         }
+        
+        return false;
     }
 
     // =========================================================

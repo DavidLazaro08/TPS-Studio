@@ -329,10 +329,34 @@ public class ModeManager {
         }
     }
 
+    /**
+     * Actualiza SOLO la selección en el ListView existente.
+     * NO reconstruye el panel — preserva el foco y evita animaciones innecesarias.
+     * Usar para: cambios de selección (clic en canvas, clic en lista).
+     */
     public void refreshLayersPanel(Proyecto proyecto, Elemento selectedElement) {
+        if (layersListView != null) {
+            isUpdatingSelection = true;
+            try {
+                layersListView.getSelectionModel().clearSelection();
+                if (selectedElement != null) {
+                    layersListView.getSelectionModel().select(selectedElement);
+                    layersListView.scrollTo(selectedElement);
+                }
+                // Forzar refresco visual de las celdas afectadas
+                layersListView.refresh();
+            } finally {
+                isUpdatingSelection = false;
+            }
+        }
+    }
+
+    /**
+     * Reconstruye el panel de capas por completo.
+     * Usar SOLO para cambios estructurales: añadir/eliminar capa, cambiar cara.
+     */
+    public void rebuildLayersPanel(Proyecto proyecto, Elemento selectedElement) {
         if (layersPanel != null && leftPanel != null) {
-            // Reconstruimos el panel de capas completo para asegurar consistencia total
-            // y evitar duplicados o estados inconsistentes del SelectionModel.
             VBox newLayers = buildLayersPanel(proyecto, selectedElement);
             int index = leftPanel.getChildren().indexOf(layersPanel);
             if (index != -1) {
@@ -566,6 +590,9 @@ public class ModeManager {
                     
                     actions.setAlignment(Pos.CENTER_RIGHT);
                     actions.setMinWidth(Region.USE_PREF_SIZE);
+                    // Ocultos por defecto: sólo aparecen en hover o cuando la capa está activa
+                    actions.setVisible(false);
+                    actions.managedProperty().bind(actions.visibleProperty());
                     
                     HBox content = new HBox(8, lblIcon, lblNombre, actions);
                     content.setAlignment(Pos.CENTER_LEFT);
@@ -590,6 +617,8 @@ public class ModeManager {
                     
                     sep.getStyleClass().add("layer-item-separator");
                     sep.setPrefHeight(1);
+                    // Margen izquierdo = activeBar(4) + padding izquierdo(12) = 16px, para alinear con el texto
+                    VBox.setMargin(sep, new Insets(0, 12, 0, 44));
                     
                     cellLayout.getChildren().addAll(card, sep);
                     
@@ -598,8 +627,16 @@ public class ModeManager {
                     hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), hoverOverlay);
                     hOut.setToValue(0.0);
 
-                    card.setOnMouseEntered(e -> { if (!isSelected()) hIn.playFromStart(); });
-                    card.setOnMouseExited(e -> { if (!isSelected()) hOut.playFromStart(); });
+                    card.setOnMouseEntered(e -> {
+                        hIn.playFromStart();
+                        if (!isSelected()) actions.setVisible(true);
+                    });
+                    card.setOnMouseExited(e -> {
+                        if (!isSelected()) {
+                            hOut.playFromStart();
+                            actions.setVisible(false);
+                        }
+                    });
                 }
 
                 @Override
@@ -610,6 +647,11 @@ public class ModeManager {
                         setText(null);
                         if (pulse != null) { pulse.stop(); pulse = null; }
                     } else {
+                        // Siempre resetear el estado visual al inicio — las celdas son recicladas por JavaFX
+                        // y pueden traer opacity/visibility residual de otro item anterior.
+                        hoverOverlay.setOpacity(0.0);
+                        actions.setVisible(false);
+                        
                         // Actualizar contenido
                         String iconStr = "·";
                         if (item instanceof ImagenFondoElemento) iconStr = "⬚";
@@ -618,16 +660,49 @@ public class ModeManager {
                         else iconStr = "⬒";
                         
                         lblIcon.setText(iconStr);
-                        lblNombre.setText(item.getNombre() != null ? item.getNombre() : (item instanceof ImagenFondoElemento ? "[Fondo]" : "Capa"));
+                        // toString() devuelve "Nombre | Etiqueta" si hay etiqueta
+                        lblNombre.setText(item.toString());
                         
+                        // Botones de acción (reordenar + eliminar) — solo para no-fondo
                         actions.getChildren().clear();
                         if (item.isLocked()) {
                             Label lock = new Label("🔒");
                             lock.setStyle("-fx-font-size: 10px;");
                             actions.getChildren().add(lock);
                         }
+                        if (!(item instanceof ImagenFondoElemento) && !item.isLocked()) {
+                            Button btnUp = new Button("▲");
+                            btnUp.getStyleClass().add("layer-action-btn");
+                            btnUp.setOnAction(e -> {
+                                int idx = currentProj.getElementosActuales().indexOf(item);
+                                if (idx > 0) {
+                                    java.util.Collections.swap(currentProj.getElementosActuales(), idx, idx - 1);
+                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                    rebuildLayersPanel(currentProj, item);
+                                }
+                            });
+                            Button btnDown = new Button("▼");
+                            btnDown.getStyleClass().add("layer-action-btn");
+                            btnDown.setOnAction(e -> {
+                                int idx = currentProj.getElementosActuales().indexOf(item);
+                                if (idx < currentProj.getElementosActuales().size() - 1) {
+                                    java.util.Collections.swap(currentProj.getElementosActuales(), idx, idx + 1);
+                                    if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                    rebuildLayersPanel(currentProj, item);
+                                }
+                            });
+                            Button btnDel = new Button("✕");
+                            btnDel.getStyleClass().add("layer-action-btn-del");
+                            btnDel.setOnAction(e -> {
+                                currentProj.getElementosActuales().remove(item);
+                                if (onCanvasRedraw != null) onCanvasRedraw.run();
+                                rebuildLayersPanel(currentProj, null);
+                            });
+                            actions.getChildren().addAll(btnUp, btnDown, btnDel);
+                        }
 
-                        // Estado visual
+                        // Estado visual — aplicamos estilos directamente para evitar
+                        // contaminación de CSS entre celdas recicladas por JavaFX
                         boolean selected = isSelected() || (getListView() != null && getListView().getSelectionModel().getSelectedItem() == item);
 
                         if (selected) {
@@ -635,6 +710,10 @@ public class ModeManager {
                             selectedOverlay.setOpacity(1.0);
                             activeBar.setVisible(true);
                             activeBar.setOpacity(1.0);
+                            actions.setVisible(true);
+                            // Estilo directo: evita que celdas recicladas hereden el bold
+                            lblNombre.setStyle("-fx-font-weight: bold; -fx-text-fill: white;");
+                            lblIcon.setStyle("-fx-text-fill: white;");
                             
                             if (pulse == null) {
                                 pulse = new javafx.animation.Timeline(
@@ -650,6 +729,10 @@ public class ModeManager {
                             selectedOverlay.setOpacity(0.0);
                             activeBar.setVisible(false);
                             activeBar.setOpacity(0.0);
+                            actions.setVisible(false);
+                            // Reset explícito de estilos en línea (para evitar celdas fantasma al reciclar)
+                            lblNombre.setStyle("-fx-font-weight: normal; -fx-text-fill: #a0a5cc;");
+                            lblIcon.setStyle("-fx-text-fill: #a0a5cc;");
                             if (pulse != null) { pulse.stop(); pulse = null; }
                         }
 
@@ -666,7 +749,7 @@ public class ModeManager {
                             mDel.setOnAction(e -> {
                                 currentProj.getElementosActuales().remove(item);
                                 if (onCanvasRedraw != null) onCanvasRedraw.run();
-                                refreshLayersPanel(currentProj, null);
+                                rebuildLayersPanel(currentProj, null);
                             });
                             cm.getItems().addAll(mLock, new SeparatorMenuItem(), mDel);
                         }
@@ -683,7 +766,7 @@ public class ModeManager {
                     if (sel != null && !(sel instanceof ImagenFondoElemento)) {
                         currentProj.getElementosActuales().remove(sel);
                         if (onCanvasRedraw != null) onCanvasRedraw.run();
-                        refreshLayersPanel(currentProj, null);
+                        rebuildLayersPanel(currentProj, null);
                     }
                 }
             });
@@ -941,6 +1024,9 @@ public class ModeManager {
         ListView<Proyecto> listProyectos = new ListView<>(proyectosFiltrados);
         listProyectos.getStyleClass().add("project-list");
         VBox.setVgrow(listProyectos, Priority.ALWAYS);
+        // Vinculamos el maxHeight al panel padre para que el ListView no crezca infinito
+        // y active su scrollbar cuando el contenido supera el espacio disponible
+        listProyectos.maxHeightProperty().bind(leftPanel.heightProperty().subtract(200));
 
         // --- FACTORÍA DE CELDAS COMPACTA CON EFECTO DE PULSO ---
         listProyectos.setCellFactory(lv -> new ListCell<Proyecto>() {

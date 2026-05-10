@@ -314,6 +314,7 @@ public class ProyectoFileManager implements ProyectoDAO {
         for (Elemento elem : elementos) {
             ElementoDTO dto = new ElementoDTO();
             dto.setNombre(elem.getNombre());
+            dto.setEtiqueta(elem.getEtiqueta());
             dto.setX(elem.getX());
             dto.setY(elem.getY());
             dto.setLocked(elem.isLocked());
@@ -413,6 +414,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             if (elem != null) {
                 elem.setLocked(dto.isLocked());
+                if (dto.getEtiqueta() != null && !dto.getEtiqueta().isEmpty()) {
+                    elem.setEtiqueta(dto.getEtiqueta());
+                }
                 elementos.add(elem);
             }
         }
@@ -629,6 +633,7 @@ public class ProyectoFileManager implements ProyectoDAO {
     public static class ElementoDTO {
         private String tipo; // "texto" o "imagen"
         private String nombre;
+        private String etiqueta; // Etiqueta opcional del elemento (e.g. "Foto", "Nombre")
         private double x;
         private double y;
         private boolean locked;
@@ -649,6 +654,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
+
+        public String getEtiqueta() { return etiqueta; }
+        public void setEtiqueta(String etiqueta) { this.etiqueta = etiqueta; }
 
         public double getX() { return x; }
         public void setX(double x) { this.x = x; }
