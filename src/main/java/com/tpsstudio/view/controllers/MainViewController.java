@@ -595,11 +595,19 @@ public class MainViewController {
 
     @FXML
     private void onModeEdit() {
+        // Aseguramos que siempre haya un modo activo (no permitimos deselección)
+        if (!btnModeEdit.isSelected()) {
+            btnModeEdit.setSelected(true);
+        }
         switchMode(AppMode.DESIGN);
     }
 
     @FXML
     private void onModeExport() {
+        // Aseguramos que siempre haya un modo activo (no permitimos deselección)
+        if (!btnModeExport.isSelected()) {
+            btnModeExport.setSelected(true);
+        }
         switchMode(AppMode.PRODUCTION);
     }
 
