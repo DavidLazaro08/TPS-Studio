@@ -8,15 +8,19 @@
 /* =====================================================
    SELECTOR DE VISTA DISCRETO (SOBRE EL LIENZO)
    ===================================================== */
-.view-selector-btn-left, .view-selector-btn-right {
-    -fx-background-color: tps-accent-deep;
+.view-selector-btn-left, .view-selector-btn-right, .design-project-chip {
+    -fx-background-color: #272a45; /* Pizca de azul oscuro para inactivos */
     -fx-border-color: tps-accent-border;
     -fx-border-width: 1;
-    -fx-text-fill: tps-text-3;
+    -fx-text-fill: #8a92b8; /* Lavanda azulado apagado */
     -fx-font-size: 11px;
     -fx-font-weight: normal;
-    -fx-cursor: hand;
     -fx-padding: 1 15;
+    -fx-pref-height: 24px;
+}
+
+.view-selector-btn-left, .view-selector-btn-right {
+    -fx-cursor: hand;
     -fx-text-overrun: clip;
 }
 
@@ -31,9 +35,9 @@
     -fx-border-insets: 0 0 0 -1;
 }
 
-.view-selector-btn-left:hover, .view-selector-btn-right:hover {
+.view-selector-btn-left:hover, .view-selector-btn-right:hover, .design-project-chip:hover {
     -fx-background-color: tps-accent-subtle;
-    -fx-text-fill: tps-text-2;
+    -fx-text-fill: #9ba3cc; /* Lavanda un poquito más claro, sin ser blanco puro */
     -fx-border-color: tps-accent;
 }
 
@@ -44,3 +48,34 @@
     -fx-font-weight: bold;
 }
 
+/* =====================================================
+   CHIP DEL PROYECTO (MODO DISEÑO)
+   ===================================================== */
+.design-project-chip {
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+    -fx-text-overrun: clip;
+}
+
+/* =====================================================
+   BOTÓN GIRAR (ORIENTACIÓN)
+   ===================================================== */
+.view-selector-btn-flip {
+    -fx-background-color: #272a45;
+    -fx-border-color: tps-accent-border;
+    -fx-border-width: 1;
+    -fx-text-fill: #8a92b8;
+    -fx-font-size: 13px;
+    -fx-padding: 1 12;
+    -fx-pref-height: 24px;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+}
+
+.view-selector-btn-flip:hover {
+    -fx-background-color: tps-accent-subtle;
+    -fx-text-fill: #9ba3cc;
+    -fx-border-color: tps-accent;
+}

@@ -1,6 +1,8 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ElementoCodigo;
+import com.tpsstudio.model.enums.TipoCodigo;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
@@ -12,6 +14,7 @@ import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.ImageUtils;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -39,6 +42,10 @@ public class PropertiesPanelController {
     private static final double MAX_CONTROL_WIDTH = Double.MAX_VALUE;
 
     private final Canvas canvas;
+    private final EditorCanvasManager canvasManager;
+    
+    // Propiedad para rastrear si el cuentagotas está activo (para estilos)
+    private final javafx.beans.property.BooleanProperty eyedropperActive = new javafx.beans.property.SimpleBooleanProperty(false);
 
     private Runnable onPropertyChanged;
     private Runnable onCanvasRedrawNeeded;
@@ -52,8 +59,9 @@ public class PropertiesPanelController {
     // Fuente de datos activa (puede ser null si no hay Excel vinculado)
     private FuenteDatos fuenteDatos;
 
-    public PropertiesPanelController(Canvas canvas) {
+    public PropertiesPanelController(Canvas canvas, EditorCanvasManager canvasManager) {
         this.canvas = canvas;
+        this.canvasManager = canvasManager;
     }
 
     public void setOnPropertyChanged(Runnable callback) {
@@ -108,6 +116,8 @@ public class PropertiesPanelController {
             buildImagePanel(props, lblProps, imagen);
         } else if (elemento instanceof FormaElemento forma) {
             buildFormaPanel(props, lblProps, forma);
+        } else if (elemento instanceof ElementoCodigo codigo) {
+            buildCodigoPanel(props, lblProps, codigo);
         }
 
         return props;
@@ -415,10 +425,45 @@ public class PropertiesPanelController {
         props.getChildren().add(new Separator());
 
         CheckBox chkSaltoLinea = new CheckBox("Pasar a la línea inferior si no cabe");
+        CheckBox chkAutoFit = new CheckBox("Auto-ajustar al ancho");
+
         chkSaltoLinea.setSelected(texto.isSaltoLinea());
         chkSaltoLinea.getStyleClass().add("prop-checkbox");
         chkSaltoLinea.selectedProperty().addListener((obs, old, newVal) -> {
-            texto.setSaltoLinea(newVal);
+            if (newVal) {
+                texto.setSaltoLinea(true);
+                // Si activamos salto de linea, desactivamos auto-ajuste
+                if (texto.isAutoAjustar()) {
+                    texto.setAutoAjustar(false);
+                    chkAutoFit.setSelected(false);
+                }
+            } else {
+                texto.setSaltoLinea(false);
+            }
+            notifyCanvasRedraw();
+        });
+
+        chkAutoFit.setSelected(texto.isAutoAjustar());
+        chkAutoFit.getStyleClass().add("prop-checkbox");
+        chkAutoFit.setTooltip(new Tooltip("Reduce el tamaño de la letra automáticamente para que el texto quepa en el cuadro sin desbordar."));
+        chkAutoFit.selectedProperty().addListener((obs, old, newVal) -> {
+            if (newVal) {
+                texto.setAutoAjustar(true);
+                // Si activamos auto-ajuste, desactivamos salto de linea
+                if (texto.isSaltoLinea()) {
+                    texto.setSaltoLinea(false);
+                    chkSaltoLinea.setSelected(false);
+                }
+                
+                com.tpsstudio.util.TPSToast.mostrar(
+                    canvas.getScene().getWindow(),
+                    "Auto-ajuste activado",
+                    "El texto se encogerá visualmente para no desbordar el cuadro.",
+                    com.tpsstudio.util.TPSToast.Tipo.EXITO
+                );
+            } else {
+                texto.setAutoAjustar(false);
+            }
             notifyCanvasRedraw();
         });
 
@@ -514,27 +559,16 @@ public class PropertiesPanelController {
         HBox filaHerramientas = new HBox(8, colTamaño, colEstilo, colAlineacion);
         filaHerramientas.setAlignment(javafx.geometry.Pos.BOTTOM_LEFT);
 
-        // ---- Color ----
-        Label lblColor = new Label("Color:");
-        lblColor.getStyleClass().add("prop-label-small");
+        props.getChildren().addAll(
+                lblTexto, txtContenido, chkSaltoLinea, chkAutoFit,
+                lblFuente, cmbFuente,
+                filaHerramientas
+        );
 
-        ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
-        cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpColor.valueProperty().addListener((obs, old, newVal) -> {
-            texto.setColor(String.format("#%02X%02X%02X",
-                    (int) (newVal.getRed() * 255),
-                    (int) (newVal.getGreen() * 255),
-                    (int) (newVal.getBlue() * 255)
-            ));
+        addColorControlWithEyedropper(props, "Color:", texto.getColor(), newColor -> {
+            texto.setColor(newColor);
             notifyCanvasRedraw();
         });
-
-        props.getChildren().addAll(
-                lblTexto, txtContenido, chkSaltoLinea,
-                lblFuente, cmbFuente,
-                filaHerramientas,
-                lblColor, cpColor
-        );
     }
 
     // ===================== PANEL IMAGEN =====================
@@ -634,17 +668,13 @@ public class PropertiesPanelController {
         Label lblEstilo = new Label("Estilo de Forma");
         lblEstilo.getStyleClass().add("prop-label");
 
-        // Color de Borde
-        Label lblBorde = new Label("Color del Borde:");
-        lblBorde.getStyleClass().add("prop-label-small");
-        ColorPicker cpBorde = new ColorPicker(Color.web(forma.getColorBorde()));
-        cpBorde.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpBorde.valueProperty().addListener((obs, old, newVal) -> {
-            forma.setColorBorde(String.format("#%02X%02X%02X",
-                    (int) (newVal.getRed() * 255),
-                    (int) (newVal.getGreen() * 255),
-                    (int) (newVal.getBlue() * 255)
-            ));
+        // --- Borde ---
+        CheckBox chkBorde = new CheckBox("Borde activo");
+        chkBorde.setSelected(forma.isConBorde());
+        chkBorde.getStyleClass().add("prop-checkbox");
+
+        addColorControlWithEyedropper(props, "Color del Borde:", forma.getColorBorde(), chkBorde.selectedProperty(), newColor -> {
+            forma.setColorBorde(newColor);
             notifyCanvasRedraw();
         });
 
@@ -653,7 +683,14 @@ public class PropertiesPanelController {
         lblGrosor.getStyleClass().add("prop-label-small");
         Spinner<Double> spnGrosor = new Spinner<>(0.5, 20.0, forma.getGrosorBorde(), 0.5);
         spnGrosor.setEditable(true);
-        spnGrosor.setMaxWidth(MAX_CONTROL_WIDTH);
+        spnGrosor.setMaxWidth(100); // Más compacto
+        spnGrosor.disableProperty().bind(chkBorde.selectedProperty().not());
+        
+        chkBorde.selectedProperty().addListener((obs, old, newVal) -> {
+            forma.setConBorde(newVal);
+            notifyCanvasRedraw();
+        });
+
         spnGrosor.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 forma.setGrosorBorde(newVal);
@@ -661,7 +698,29 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(lblEstilo, lblBorde, cpBorde, lblGrosor, spnGrosor);
+        props.getChildren().addAll(lblEstilo, chkBorde, lblGrosor, spnGrosor);
+
+        // --- Opacidad ---
+        Label lblOpacidad = new Label("Opacidad:");
+        lblOpacidad.getStyleClass().add("prop-label-small");
+        Slider sldOpacidad = new Slider(0, 1, forma.getOpacidad());
+        sldOpacidad.valueProperty().addListener((obs, old, newVal) -> {
+            forma.setOpacidad(newVal.doubleValue());
+            notifyCanvasRedraw();
+        });
+        props.getChildren().addAll(lblOpacidad, sldOpacidad);
+
+        // --- Redondeado (Solo Rectángulos) ---
+        if (forma.getTipoForma() == FormaElemento.TipoForma.RECTANGULO) {
+            Label lblRadio = new Label("Redondeado de Esquinas:");
+            lblRadio.getStyleClass().add("prop-label-small");
+            Slider sldRadio = new Slider(0, 100, forma.getRadioCurvatura());
+            sldRadio.valueProperty().addListener((obs, old, newVal) -> {
+                forma.setRadioCurvatura(newVal.doubleValue());
+                notifyCanvasRedraw();
+            });
+            props.getChildren().addAll(lblRadio, sldRadio);
+        }
 
         // Relleno (solo para Rectángulo y Elipse)
         if (forma.getTipoForma() != FormaElemento.TipoForma.LINEA) {
@@ -671,29 +730,289 @@ public class PropertiesPanelController {
             chkRelleno.setSelected(forma.isConRelleno());
             chkRelleno.getStyleClass().add("prop-checkbox");
 
-            Label lblRelleno = new Label("Color de Relleno:");
-            lblRelleno.getStyleClass().add("prop-label-small");
-            ColorPicker cpRelleno = new ColorPicker(Color.web(forma.getColorRelleno()));
-            cpRelleno.setMaxWidth(MAX_CONTROL_WIDTH);
-            cpRelleno.setDisable(!forma.isConRelleno());
-
             chkRelleno.selectedProperty().addListener((obs, old, newVal) -> {
                 forma.setConRelleno(newVal);
-                cpRelleno.setDisable(!newVal);
                 notifyCanvasRedraw();
             });
 
-            cpRelleno.valueProperty().addListener((obs, old, newVal) -> {
-                forma.setColorRelleno(String.format("#%02X%02X%02X",
-                        (int) (newVal.getRed() * 255),
-                        (int) (newVal.getGreen() * 255),
-                        (int) (newVal.getBlue() * 255)
-                ));
+            props.getChildren().add(chkRelleno);
+
+            addColorControlWithEyedropper(props, "Color de Relleno:", forma.getColorRelleno(), chkRelleno.selectedProperty(), newColor -> {
+                forma.setColorRelleno(newColor);
                 notifyCanvasRedraw();
             });
-
-            props.getChildren().addAll(chkRelleno, lblRelleno, cpRelleno);
         }
+    }
+
+    // ===================== PANEL QR =====================
+
+    // ===================== PANEL CÓDIGOS (QR / BARRAS) =====================
+
+    private void buildCodigoPanel(VBox props, Label lblProps, ElementoCodigo codigo) {
+        props.getChildren().add(lblProps);
+
+        // Selector de Tipo de Código
+        Label lblTipo = new Label("Tipo de Código:");
+        lblTipo.getStyleClass().add("prop-label-small");
+        ComboBox<TipoCodigo> cmbTipo = new ComboBox<>(FXCollections.observableArrayList(TipoCodigo.values()));
+        cmbTipo.setMaxWidth(MAX_CONTROL_WIDTH);
+        cmbTipo.setValue(codigo.getTipo());
+        cmbTipo.valueProperty().addListener((obs, old, newVal) -> {
+            if (newVal != null && newVal != old) {
+                codigo.setTipo(newVal);
+                notifyCanvasRedraw();
+                // Forzar reconstrucción completa del panel porque cambian los campos
+                if (onPropertyChanged != null) onPropertyChanged.run();
+            }
+        });
+
+        // Etiqueta del elemento
+        addEtiquetaControl(props, codigo.getEtiqueta(), codigo::setEtiqueta, "Ej: QR WEB, CODIGO SOCIO...");
+
+        Label lblContenido = new Label("Contenido:");
+        lblContenido.getStyleClass().add("prop-label-small");
+
+        TextField txtContenido = new TextField(codigo.getContenido());
+        txtContenido.setPromptText("Introduzca los datos...");
+        txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtContenido.textProperty().addListener((obs, old, newVal) -> {
+            codigo.setContenido(newVal);
+            notifyCanvasRedraw();
+        });
+
+        // Aplicar estado inicial según vinculación
+        boolean vinculadoInicial = codigo.getColumnaVinculada() != null;
+        txtContenido.setDisable(vinculadoInicial);
+        if (vinculadoInicial) {
+            lblContenido.setText("Contenido (vinculado a base de datos):");
+        }
+
+        // Sección Datos Variables
+        VBox varBox = new VBox(4);
+        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
+            addSeccionDatosVariablesCodigo(varBox, codigo, lblContenido, txtContenido);
+            varBox.getChildren().add(new Separator());
+        }
+
+        // Posición y Tamaño
+        VBox posSizeBox = new VBox();
+        addPositionSizeControls(posSizeBox, codigo);
+
+        // Margen
+        Label lblMargen = new Label("Margen (Quiet Zone):");
+        lblMargen.getStyleClass().add("prop-label-small");
+        Spinner<Integer> spMargen = new Spinner<>(0, 50, codigo.getMargen());
+        spMargen.setMaxWidth(MAX_CONTROL_WIDTH);
+        spMargen.valueProperty().addListener((obs, old, newVal) -> {
+            codigo.setMargen(newVal);
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblTipo, cmbTipo, new Separator(), lblContenido, txtContenido, varBox, posSizeBox, new Separator());
+        
+        // Colores con cuentagotas (se añaden ellos mismos a props)
+        addColorControlWithEyedropper(props, "Color del Código:", codigo.getColorCodigo(), newColor -> {
+            codigo.setColorCodigo(newColor);
+            notifyCanvasRedraw();
+        });
+
+        addColorControlWithEyedropper(props, "Color de Fondo:", codigo.getColorFondo(), newColor -> {
+            codigo.setColorFondo(newColor);
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblMargen, spMargen);
+
+        // Controles específicos de QR
+        if (codigo.getTipo() == TipoCodigo.QR) {
+            Label lblError = new Label("Nivel de corrección:");
+            lblError.getStyleClass().add("prop-label-small");
+            ComboBox<String> cmbError = new ComboBox<>(FXCollections.observableArrayList("L (7%)", "M (15%)", "Q (25%)", "H (30%)"));
+            cmbError.setMaxWidth(MAX_CONTROL_WIDTH);
+            
+            String nivelActual = codigo.getNivelCorreccion();
+            for (String item : cmbError.getItems()) {
+                if (item.startsWith(nivelActual)) { cmbError.setValue(item); break; }
+            }
+
+            cmbError.valueProperty().addListener((obs, old, newVal) -> {
+                if (newVal != null) {
+                    codigo.setNivelCorreccion(newVal.substring(0, 1));
+                    notifyCanvasRedraw();
+                }
+            });
+            props.getChildren().addAll(lblError, cmbError);
+        } else {
+            // Controles específicos de códigos de barras (1D)
+            HBox textConfigRow = new HBox(8);
+            textConfigRow.setAlignment(Pos.CENTER_LEFT);
+
+            // 1. Checkbox compacto
+            CheckBox chkTexto = new CheckBox("Texto");
+            chkTexto.getStyleClass().add("prop-checkbox");
+            chkTexto.setSelected(codigo.isMostrarTexto());
+            chkTexto.setMinWidth(70);
+            chkTexto.selectedProperty().addListener((obs, old, newVal) -> {
+                codigo.setMostrarTexto(newVal);
+                notifyCanvasRedraw();
+                if (onPropertyChanged != null) onPropertyChanged.run();
+            });
+
+            textConfigRow.getChildren().add(chkTexto);
+
+            // 2. Controles de estilo (solo si está activo)
+            if (codigo.isMostrarTexto()) {
+                // Tamaño (Spinner idéntico al de textos)
+                Spinner<Integer> spSize = new Spinner<>(6, 24, codigo.getFontSize());
+                spSize.setPrefWidth(60);
+                spSize.setMinWidth(60);
+                spSize.setMaxWidth(60);
+                spSize.valueProperty().addListener((obs, old, newVal) -> {
+                    codigo.setFontSize(newVal);
+                    notifyCanvasRedraw();
+                });
+
+                // Botones B e I (Segmented Group como en textos)
+                ToggleButton btnBold = new ToggleButton("B");
+                btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+                btnBold.setSelected(codigo.isNegrita());
+                btnBold.setPrefWidth(30);
+                btnBold.setStyle("-fx-font-weight: bold;");
+                btnBold.setOnAction(e -> { codigo.setNegrita(btnBold.isSelected()); notifyCanvasRedraw(); });
+
+                ToggleButton btnItalic = new ToggleButton("I");
+                btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
+                btnItalic.setSelected(codigo.isCursiva());
+                btnItalic.setPrefWidth(30);
+                btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
+                btnItalic.setOnAction(e -> { codigo.setCursiva(btnItalic.isSelected()); notifyCanvasRedraw(); });
+
+                HBox styleButtons = new HBox(0, btnBold, btnItalic);
+                styleButtons.getStyleClass().add("prop-segmented-group");
+
+                textConfigRow.getChildren().addAll(spSize, styleButtons);
+            }
+            
+            props.getChildren().add(textConfigRow);
+        }
+    }
+
+    private void addSeccionDatosVariablesCodigo(VBox box, ElementoCodigo codigo, Label lblContenido, TextField txtContenido) {
+        Label lblSeccion = new Label("Vincular Columna");
+        lblSeccion.getStyleClass().add("prop-label-small");
+
+        ComboBox<String> cmbColumna = new ComboBox<>();
+        cmbColumna.setMaxWidth(MAX_CONTROL_WIDTH);
+        List<String> opciones = new ArrayList<>();
+        opciones.add("(sin vincular)");
+        opciones.addAll(fuenteDatos.getColumnas());
+        cmbColumna.setItems(FXCollections.observableArrayList(opciones));
+
+        String actual = codigo.getColumnaVinculada();
+        cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
+
+        cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
+            boolean isVinculado = !"(sin vincular)".equals(newVal);
+            codigo.setColumnaVinculada(isVinculado ? newVal : null);
+            txtContenido.setDisable(isVinculado);
+            lblContenido.setText(isVinculado ? "Contenido (vinculado):" : "Contenido:");
+            codigo.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        box.getChildren().addAll(lblSeccion, cmbColumna);
+    }
+
+    private void addColorControlWithEyedropper(VBox box, String labelText, String hexInitial, Consumer<String> onColorChange) {
+        addColorControlWithEyedropper(box, labelText, hexInitial, null, onColorChange);
+    }
+
+    private void addColorControlWithEyedropper(VBox box, String labelText, String hexInitial, javafx.beans.property.BooleanProperty disableProperty, Consumer<String> onColorChange) {
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("prop-label-small");
+
+        ColorPicker cp = new ColorPicker(Color.web(hexInitial));
+        cp.setPrefWidth(140); // Ancho fijo para que no estire todo
+        if (disableProperty != null) cp.disableProperty().bind(disableProperty.not());
+
+        // Botón de Cuentagotas compacto e independiente
+        Button btnEyedropper = new Button("⌖");
+        btnEyedropper.getStyleClass().add("prop-toggle-btn"); 
+        btnEyedropper.setMinWidth(30);
+        btnEyedropper.setPrefWidth(30);
+        btnEyedropper.setPrefHeight(25);
+        btnEyedropper.setTooltip(new Tooltip("Cuentagotas: Capturar color desde el diseño"));
+        if (disableProperty != null) btnEyedropper.disableProperty().bind(disableProperty.not());
+
+        // Estilo base: Fondo oscuro translúcido y borde sutil para que parezca un botón real
+        btnEyedropper.setStyle("-fx-background-color: rgba(255,255,255,0.05); -fx-border-color: rgba(255,255,255,0.1); -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        // Animación de Pulso (Escala)
+        javafx.animation.ScaleTransition pulse = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(600), btnEyedropper);
+        pulse.setFromX(1.0); pulse.setFromY(1.0);
+        pulse.setToX(1.15); pulse.setToY(1.15);
+        pulse.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        pulse.setAutoReverse(true);
+
+        // Efecto visual de "pulsado" con los colores oficiales de TPS Studio (como Validar Diseño)
+        btnEyedropper.styleProperty().bind(
+            javafx.beans.binding.Bindings.when(eyedropperActive)
+                .then("-fx-background-color: #221e3a; -fx-text-fill: #c4bcec; -fx-border-color: #3b3570; -fx-effect: dropshadow(gaussian, rgba(59, 53, 112, 0.8), 15, 0.4, 0, 0);")
+                .otherwise("-fx-background-color: rgba(255,255,255,0.05); -fx-border-color: rgba(255,255,255,0.1);")
+        );
+
+        // Controlar la animación según el estado
+        eyedropperActive.addListener((obs, old, active) -> {
+            if (active) pulse.play();
+            else {
+                pulse.stop();
+                btnEyedropper.setScaleX(1.0);
+                btnEyedropper.setScaleY(1.0);
+            }
+        });
+
+        btnEyedropper.setOnAction(e -> {
+            if (eyedropperActive.get()) {
+                canvasManager.deactivateEyedropper();
+                eyedropperActive.set(false);
+            } else {
+                eyedropperActive.set(true);
+                canvasManager.activateEyedropper(color -> {
+                    cp.setValue(color);
+                    onColorChange.accept(colorToHex(color));
+                    eyedropperActive.set(false);
+                });
+            }
+        });
+
+        cp.setFocusTraversable(false); // Evitar que el foco robe eventos de clic sutiles
+
+        // Transición suave al abrir el popup
+        cp.showingProperty().addListener((obs, old, isShowing) -> {
+            if (isShowing) {
+                javafx.scene.Node popup = cp.lookup(".color-picker-grid");
+                if (popup != null) {
+                    popup.setOpacity(0);
+                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), popup);
+                    ft.setFromValue(0);
+                    ft.setToValue(1);
+                    ft.play();
+                }
+            }
+        });
+
+        HBox row = new HBox(8, cp, btnEyedropper); // Separados por un hueco elegante
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        cp.valueProperty().addListener((obs, old, newVal) -> {
+            onColorChange.accept(colorToHex(newVal));
+        });
+
+        box.getChildren().addAll(lbl, row);
+    }
+
+    private String colorToHex(Color c) {
+        return String.format("#%02X%02X%02X", (int)(c.getRed()*255), (int)(c.getGreen()*255), (int)(c.getBlue()*255));
     }
 
     // ===================== SECCIÓN DATOS VARIABLES =====================

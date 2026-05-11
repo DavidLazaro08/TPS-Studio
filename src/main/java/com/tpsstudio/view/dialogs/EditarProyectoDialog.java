@@ -1,17 +1,22 @@
 package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.ClienteInfo;
+import com.tpsstudio.model.project.Etiqueta;
 import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.model.project.ProyectoMetadata;
-import com.tpsstudio.model.enums.TipoTroquel;
+import com.tpsstudio.service.EtiquetasManager;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,23 +32,27 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
     private ClienteInfo clienteInfoActual;
     private CheckBox chkVincularBD;
     private TextField txtRutaBD;
-    private String rutaAlmacenadaBD = null; // Guardar la ruta real independientemente de lo que se muestre
+    private String rutaAlmacenadaBD = null;
     private Label lblAvisoBD;
     private Button btnExaminarBD;
 
-    private ComboBox<TipoTroquel> cmbTroquel;
+    // Categorías
+    private final List<String> etiquetasSeleccionadas = new ArrayList<>();
+    private HBox flowCategorias;
+    private final EtiquetasManager etiquetasManager;
 
     private boolean eliminarProyecto = false;
-
-    // Ventana propietaria para centrado
     private final Window ownerWindow;
 
     private static final String CSS = EditarProyectoDialog.class
             .getResource("/css/dialogs.css").toExternalForm();
 
-    public EditarProyectoDialog(Proyecto proyecto, Window owner) {
+    public EditarProyectoDialog(Proyecto proyecto, Window owner, EtiquetasManager etiquetasManager) {
         this.proyecto = proyecto;
         this.ownerWindow = owner;
+        this.etiquetasManager = etiquetasManager;
+        // Pre-cargar las etiquetas ya asignadas al proyecto
+        this.etiquetasSeleccionadas.addAll(proyecto.getEtiquetaIds());
         initOwner(owner);
 
         // Asegurar metadata no-null (por si acaso)
@@ -92,13 +101,36 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
         clienteBox.getChildren().addAll(lblClienteInfo, btnEditarCliente);
 
-        // Troquelado
-        Label lblTroquel = new Label("Troquelado (Hole Punch):");
-        lblTroquel.getStyleClass().add("lbl-section");
-        cmbTroquel = new ComboBox<>();
-        cmbTroquel.getItems().addAll(TipoTroquel.values());
-        cmbTroquel.setValue(proyecto.getTipoTroquel());
-        cmbTroquel.setPrefWidth(300);
+        // Categorías
+        Label lblCats = new Label("Categorías:");
+        lblCats.getStyleClass().add("lbl-section");
+
+        flowCategorias = new HBox(6);
+        flowCategorias.setAlignment(Pos.TOP_LEFT);
+        flowCategorias.setPadding(new Insets(5, 0, 5, 0)); // Padding equilibrado
+
+        ScrollPane scrollCats = new ScrollPane(flowCategorias);
+        scrollCats.getStyleClass().add("scroll-invisible");
+        scrollCats.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollCats.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollCats.setFitToHeight(true);
+        scrollCats.setPrefHeight(42);
+        scrollCats.setMinHeight(42);
+
+        Button btnNuevaCat = new Button("+ Nueva");
+        btnNuevaCat.getStyleClass().add("btn-dialog-action");
+        btnNuevaCat.setMinWidth(Region.USE_PREF_SIZE);
+        btnNuevaCat.setOnAction(e -> crearNuevaCategoria());
+
+        HBox hboxCats = new HBox(8, btnNuevaCat, scrollCats);
+        hboxCats.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(scrollCats, Priority.ALWAYS);
+
+        Label lblCatsInfo = new Label("Organiza tus trabajos para filtrarlos rápidamente en la gestión principal.");
+        lblCatsInfo.getStyleClass().add("lbl-hint");
+
+        VBox vboxCats = new VBox(4, hboxCats, lblCatsInfo);
+        rellenarChipsCategorias();
 
         // Base de datos
         Label lblBD = new Label("Base de datos:");
@@ -156,7 +188,7 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
                 new Separator(),
                 lblCliente, clienteBox,
                 new Separator(),
-                lblTroquel, cmbTroquel,
+                lblCats, vboxCats,
                 new Separator(),
                 lblBD, chkVincularBD, bdBox, lblAvisoBD,
                 new Separator(),
@@ -197,8 +229,9 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
 
         setResultConverter(dialogButton -> {
             if (dialogButton == btnGuardar) {
-                proyecto.setTipoTroquel(cmbTroquel.getValue());
-                
+                // Guardar etiquetas seleccionadas en el proyecto
+                proyecto.setEtiquetaIds(new ArrayList<>(etiquetasSeleccionadas));
+
                 metadata.setNombre(txtNombre.getText().trim());
                 metadata.setClienteInfo(clienteInfoActual != null ? clienteInfoActual : new ClienteInfo());
 
@@ -213,6 +246,63 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
             return null;
         });
     }
+
+    // =========================================================
+    // Chips de categorías
+    // =========================================================
+
+    private void rellenarChipsCategorias() {
+        flowCategorias.getChildren().clear();
+        if (etiquetasManager == null) return;
+        for (Etiqueta e : etiquetasManager.getAll()) {
+            flowCategorias.getChildren().add(crearChip(e));
+        }
+    }
+
+    private ToggleButton crearChip(Etiqueta etiqueta) {
+        Circle dot = new Circle(5);
+        try { dot.setFill(Color.web(etiqueta.getColor())); } catch (Exception ex) { dot.setFill(Color.GRAY); }
+
+        ToggleButton chip = new ToggleButton(etiqueta.getNombre());
+        chip.setGraphic(dot);
+        chip.setSelected(etiquetasSeleccionadas.contains(etiqueta.getId()));
+        chip.getStyleClass().add("chip-categoria");
+        chip.setOnAction(ev -> {
+            if (chip.isSelected()) {
+                etiquetasSeleccionadas.add(etiqueta.getId());
+            } else {
+                etiquetasSeleccionadas.remove(etiqueta.getId());
+            }
+        });
+        return chip;
+    }
+
+    private void crearNuevaCategoria() {
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.initOwner(ownerWindow);
+        dlg.setTitle("Nueva Categoría");
+        dlg.setHeaderText(null);
+        dlg.setContentText("Nombre de la categoría:");
+        dlg.getDialogPane().getStylesheets().add(CSS);
+
+        dlg.showAndWait().ifPresent(nombre -> {
+            if (!nombre.isBlank() && etiquetasManager != null) {
+                Etiqueta nueva = etiquetasManager.crear(nombre, null);
+                etiquetasSeleccionadas.add(nueva.getId());
+                rellenarChipsCategorias();
+                flowCategorias.getChildren().stream()
+                    .filter(n -> n instanceof ToggleButton)
+                    .map(n -> (ToggleButton) n)
+                    .filter(tb -> tb.getText().equals(nueva.getNombre()))
+                    .findFirst()
+                    .ifPresent(tb -> tb.setSelected(true));
+            }
+        });
+    }
+
+    // =========================================================
+    // Helpers
+    // =========================================================
 
     private void abrirDialogoCliente() {
         if (clienteInfoActual == null)

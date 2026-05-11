@@ -204,7 +204,7 @@
 }
 
 /* --- Error de validación (rojo pequeño) --- */
-.lbl-error {
+.dialog-pane .lbl-error, .lbl-error {
     -fx-text-fill: #c0392b;
     -fx-font-size: 10px;
 }
@@ -228,5 +228,68 @@
     -fx-text-fill: #2e7d32;
     -fx-font-style: italic;
     -fx-font-size: 11px;
+}
+
+/* ======================================================= */
+/* CHIPS DE CATEGORÍAS (Para Nuevo/Editar Proyecto Dialog) */
+/* ======================================================= */
+
+.chip-categoria {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a0a5cc;
+    -fx-border-color: #3b3f63;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 4px 10px;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-alignment: center-left;
+    -fx-border-width: 1px;
+}
+
+.chip-categoria:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-text-fill: #c8cde8;
+}
+
+.chip-categoria:selected {
+    -fx-background-color: #2b2e4a;
+    -fx-border-color: #6c63ff;
+    -fx-text-fill: #ffffff;
+}
+
+/* ScrollPane invisible para las categorías */
+.scroll-invisible {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.scroll-invisible .viewport {
+    -fx-background-color: transparent;
+}
+.scroll-invisible .corner {
+    -fx-background-color: transparent;
+}
+
+/* Estilo para la barra de scroll horizontal fina */
+.scroll-invisible .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-pref-height: 6px;
+    -fx-cursor: hand;
+}
+.scroll-invisible .scroll-bar:horizontal .thumb {
+    -fx-background-color: #3b3f63;
+    -fx-background-radius: 10;
+}
+.scroll-invisible .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #6c63ff;
+}
+.scroll-invisible .scroll-bar:horizontal .track,
+.scroll-invisible .scroll-bar:horizontal .increment-button,
+.scroll-invisible .scroll-bar:horizontal .decrement-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
 }
 

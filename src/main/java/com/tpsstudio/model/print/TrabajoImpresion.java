@@ -1,4 +1,4 @@
-package com.tpsstudio.service;
+package com.tpsstudio.model.print;
 
 /**
  * DTO inmutable que describe un trabajo de impresión.

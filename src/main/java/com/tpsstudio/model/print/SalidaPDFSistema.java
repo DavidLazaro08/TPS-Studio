@@ -1,4 +1,4 @@
-package com.tpsstudio.service;
+package com.tpsstudio.model.print;
 
 import java.awt.Desktop;
 import java.io.File;

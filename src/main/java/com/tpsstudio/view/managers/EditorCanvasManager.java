@@ -1,15 +1,21 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ElementoCodigo;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.enums.AppMode;
-import com.tpsstudio.model.enums.TipoTroquel;
+import com.tpsstudio.model.elements.*;
+import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
+import com.tpsstudio.util.TextUtils;
+import com.tpsstudio.util.TPSToast;
+import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -17,6 +23,8 @@ import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -94,7 +102,22 @@ public class EditorCanvasManager {
     // Guías
     public static final double SAFETY_MARGIN = 3.0 * SCALE; // 3mm
     public static final double BLEED_MARGIN = 2.0 * SCALE;  // 2mm
+
     public static final double HANDLE_SIZE = 8.0;
+
+    private double getCardWidth() {
+        if (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return CARD_HEIGHT;
+        }
+        return CARD_WIDTH;
+    }
+
+    private double getCardHeight() {
+        if (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return CARD_WIDTH;
+        }
+        return CARD_HEIGHT;
+    }
 
     // Estado externo (lo controla el controlador principal)
     private Proyecto proyectoActual;
@@ -125,6 +148,10 @@ public class EditorCanvasManager {
     private String currentTooltipTarget = null;
     private double lastScreenX, lastScreenY;
 
+    // --- Estado del Cuentagotas ---
+    private boolean eyedropperActive = false;
+    private java.util.function.Consumer<Color> onColorPickedCallback;
+
     public void setOnClientDataRequested(Runnable callback) {
         this.onClientDataRequested = callback;
     }
@@ -151,6 +178,26 @@ public class EditorCanvasManager {
 
     public void setProyectoActual(Proyecto proyecto) {
         this.proyectoActual = proyecto;
+        refrescarFondosTrasCarga();
+    }
+
+    /**
+     * Fuerza a los fondos (frente y dorso) a recalcular sus dimensiones
+     * basándose en la orientación actual del proyecto. 
+     * Útil al cargar un proyecto o cambiar de orientación.
+     */
+    public void refrescarFondosTrasCarga() {
+        if (proyectoActual == null) return;
+        
+        double w = getCardWidth();
+        double h = getCardHeight();
+        
+        if (proyectoActual.getFondoFrente() != null) {
+            proyectoActual.getFondoFrente().ajustarATamaño(w, h, BLEED_MARGIN);
+        }
+        if (proyectoActual.getFondoDorso() != null) {
+            proyectoActual.getFondoDorso().ajustarATamaño(w, h, BLEED_MARGIN);
+        }
     }
 
     public void setElementoSeleccionado(Elemento elemento) {
@@ -185,7 +232,7 @@ public class EditorCanvasManager {
             hudFadeTimeline = new javafx.animation.Timeline(
                 new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, 
                     new javafx.animation.KeyValue(hudOpacityProperty(), hudOpacity, javafx.animation.Interpolator.EASE_BOTH)),
-                new javafx.animation.KeyFrame(javafx.util.Duration.millis(550), 
+                new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_SLOW), 
                     new javafx.animation.KeyValue(hudOpacityProperty(), targetOpacity, javafx.animation.Interpolator.EASE_BOTH))
             );
             
@@ -257,8 +304,8 @@ public class EditorCanvasManager {
         }
 
         // Centrar la tarjeta en el canvas
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -332,68 +379,30 @@ public class EditorCanvasManager {
                     if (valorVariable != null) contenidoFinal = valorVariable;
                 }
 
-                // Procesamiento multi-linea y auto-wrap
-                java.util.List<String> rawLines = java.util.Arrays.asList(contenidoFinal.split("\n"));
-                java.util.List<String> finalLines = new java.util.ArrayList<>();
+                // =======================================================
+                // Lógica de Renderizado y Auto-ajuste
+                // =======================================================
+                double effectiveFontSize = texto.getFontSize();
+                String renderText = contenidoFinal != null ? contenidoFinal : "";
 
-                if (texto.isSaltoLinea()) {
-                    javafx.scene.text.Text helper = new javafx.scene.text.Text();
-                    helper.setFont(gc.getFont());
-                    for (String raw : rawLines) {
-                        if (raw.isEmpty()) {
-                            finalLines.add("");
-                            continue;
-                        }
-                        String[] words = raw.split(" ", -1);
-                        StringBuilder currentLine = new StringBuilder();
-                        
-                        for (String word : words) {
-                            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
-                            helper.setText(testLine);
-                            
-                            if (helper.getLayoutBounds().getWidth() > ew) {
-                                // Si ya había algo en la línea, lo guardamos y bajamos
-                                if (currentLine.length() > 0) {
-                                    finalLines.add(currentLine.toString());
-                                    currentLine = new StringBuilder();
-                                }
-                                
-                                // Evaluamos si la palabra por sí sola supera el ancho
-                                helper.setText(word);
-                                if (helper.getLayoutBounds().getWidth() > ew) {
-                                    // Palabra mega-larga (ej: textooooooooooooo)
-                                    // La partimos letra a letra forzosamente
-                                    StringBuilder partialWord = new StringBuilder();
-                                    for (int i = 0; i < word.length(); i++) {
-                                        char c = word.charAt(i);
-                                        helper.setText(partialWord.toString() + c);
-                                        if (helper.getLayoutBounds().getWidth() > ew && partialWord.length() > 0) {
-                                            finalLines.add(partialWord.toString());
-                                            partialWord = new StringBuilder().append(c);
-                                        } else {
-                                            partialWord.append(c);
-                                        }
-                                    }
-                                    currentLine = partialWord;
-                                } else {
-                                    currentLine = new StringBuilder(word);
-                                }
-                            } else {
-                                currentLine = new StringBuilder(testLine);
-                            }
-                        }
-                        if (currentLine.length() > 0) {
-                            finalLines.add(currentLine.toString());
-                        }
+                // Si el auto-ajuste está activo y NO hay salto de línea, calculamos el escalado visual
+                if (texto.isAutoAjustar() && !texto.isSaltoLinea()) {
+                    javafx.scene.text.Text helper = new javafx.scene.text.Text(renderText);
+                    helper.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * zoomLevel));
+                    double measuredWidth = helper.getLayoutBounds().getWidth();
+                    
+                    if (measuredWidth > ew && ew > 0) {
+                        double ratio = ew / measuredWidth;
+                        effectiveFontSize = Math.max(4.0, texto.getFontSize() * ratio);
+                        // Actualizamos la fuente del contexto solo para este dibujado
+                        gc.setFont(Font.font(texto.getFontFamily(), weight, posture, effectiveFontSize * zoomLevel));
                     }
-                } else {
-                    finalLines.addAll(rawLines);
                 }
 
-                // =======================================================
-                // Auto-ajuste Inteligente de Dimensiones de Caja
-                // =======================================================
-                double lineHeight = texto.getFontSize() * zoomLevel * 1.2;
+                // Cálculo de líneas (usa el font actual del gc, que puede estar escalado)
+                java.util.List<String> finalLines = TextUtils.computeLines(renderText, texto.isSaltoLinea(), gc.getFont(), ew);
+
+                double lineHeight = effectiveFontSize * zoomLevel * 1.2;
                 double maxLineWidth = 0;
 
                 for (String line : finalLines) {
@@ -403,34 +412,38 @@ public class EditorCanvasManager {
                     if (lw > maxLineWidth) maxLineWidth = lw;
                 }
 
-                // Cómputo de la dimensión exacta en espacio "puro/real" sin zoom
-                double requiredWidth = (maxLineWidth / zoomLevel) + 2.0; // Ligero margen
-                double requiredHeight = (finalLines.size() * (texto.getFontSize() * 1.2)) + (texto.getFontSize() * 0.3);
+                // Cómputo de la dimensión exacta en espacio "puro/real" sin zoom (solo si no hay auto-ajuste)
+                double requiredWidth = (maxLineWidth / zoomLevel) + 2.0;
+                double requiredHeight = (finalLines.size() * (effectiveFontSize * 1.2)) + (effectiveFontSize * 0.3);
 
                 boolean dimensionsChanged = false;
 
-                // Si NO hay auto-wrap, la caja se debe estirar al Ancho de la palabra infinita
-                if (!texto.isSaltoLinea()) {
-                    if (Math.abs(texto.getWidth() - requiredWidth) > 1.0) {
-                        texto.setWidth(requiredWidth);
-                        ew = requiredWidth * zoomLevel; // Actualiza variable local de render
+                // Solo ajustamos dimensiones de caja si el auto-ajuste está DESACTIVADO
+                if (!texto.isAutoAjustar()) {
+                    // Ancho (solo si no hay salto de línea)
+                    if (!texto.isSaltoLinea()) {
+                        if (Math.abs(texto.getWidth() - requiredWidth) > 1.0) {
+                            texto.setWidth(requiredWidth);
+                            ew = requiredWidth * zoomLevel;
+                            dimensionsChanged = true;
+                        }
+                    }
+
+                    // Alto (siempre ajusta si no hay auto-ajuste)
+                    if (Math.abs(texto.getHeight() - requiredHeight) > 1.0) {
+                        texto.setHeight(requiredHeight);
                         dimensionsChanged = true;
                     }
                 }
 
-                // El Alto SIEMPRE se ajusta dinámicamente para que quepan todos los saltos de línea
-                if (Math.abs(texto.getHeight() - requiredHeight) > 1.0) {
-                    texto.setHeight(requiredHeight);
-                    dimensionsChanged = true;
-                }
-
                 if (dimensionsChanged && elementoSeleccionado == texto && onElementTransformed != null) {
-                    onElementTransformed.run(); // Refresca las cifras laterales en tiempo real
+                    onElementTransformed.run();
                 }
 
-                // Renderizado de las líneas calculadas
+                // Renderizado final de las líneas
+                // Usamos el fontSize original para el Y inicial para mantener la línea de base alineada
+                // con otros elementos aunque este se haya encogido.
                 double currentY = ey + (texto.getFontSize() * zoomLevel);
-                
                 for (String line : finalLines) {
                     double textX = ex;
                     javafx.scene.text.Text tempText = new javafx.scene.text.Text(line);
@@ -483,10 +496,55 @@ public class EditorCanvasManager {
                 }
             } else if (elem instanceof FormaElemento forma) {
                 dibujarForma(gc, forma, ex, ey, ew, eh);
+
+            } else if (elem instanceof ElementoCodigo codigo) {
+                // Dibujar el código (QR o Barras)
+                String texto = codigo.getContenido();
+                if (codigo.esDinamico() && fuenteDatos != null) {
+                    String valor = fuenteDatos.getValor(codigo.getColumnaVinculada());
+                    if (valor != null) texto = valor;
+                }
+                
+                Image img = codigo.getImagen(texto);
+                if (img != null) {
+                    gc.drawImage(img, ex, ey, ew, eh);
+                    
+                    // Dibujar texto human-readable si es 1D y está activo
+                    if (!codigo.getTipo().isEs2D() && codigo.isMostrarTexto()) {
+                        double fontSize = codigo.getFontSize();
+                        FontWeight weight = codigo.isNegrita() ? FontWeight.BOLD : FontWeight.NORMAL;
+                        Font font = Font.font("Arial", weight, codigo.isCursiva() ? javafx.scene.text.FontPosture.ITALIC : javafx.scene.text.FontPosture.REGULAR, fontSize);
+                        
+                        // 1. Dibujar fondo para el texto (para que parezca parte de la etiqueta)
+                        gc.setFill(Color.web(codigo.getColorFondo()));
+                        gc.fillRect(ex, ey + eh, ew, fontSize + 5);
+                        
+                        // 2. Dibujar texto centrado
+                        gc.setFill(Color.web(codigo.getColorCodigo()));
+                        gc.setFont(font);
+                        gc.setTextAlign(TextAlignment.CENTER);
+                        gc.fillText(codigo.getTextoProcesado(texto), ex + ew / 2, ey + eh + fontSize + 2);
+                        
+                        // IMPORTANTE: Resetear alineación para no romper el resto del canvas
+                        gc.setTextAlign(TextAlignment.LEFT);
+                    }
+                } else {
+                    // Placeholder visual si falla la generación
+                    gc.setFill(Color.web("#2c2a2b"));
+                    gc.fillRect(ex, ey, ew, eh);
+                    gc.setStroke(Color.web("#5a5758"));
+                    gc.setLineWidth(1);
+                    gc.setLineDashes(4, 4);
+                    gc.strokeRect(ex, ey, ew, eh);
+                    gc.setLineDashes();
+                    gc.setFill(Color.web("#7a7578"));
+                    gc.setFont(Font.font("Arial", Math.max(9, ew * 0.15)));
+                    gc.fillText(codigo.getTipo().toString(), ex + ew * 0.2, ey + eh * 0.6);
+                }
             }
 
-            // Selección + handles
-            if (elementoSeleccionado != null && elem == elementoSeleccionado) {
+            // Selección + handles (Solo visibles en modo diseño)
+            if (currentMode == AppMode.DESIGN && elementoSeleccionado != null && elem == elementoSeleccionado) {
                 gc.setStroke(Color.web("#4a9b7c"));
                 gc.setLineWidth(2);
                 gc.setLineDashes(3, 3);
@@ -567,7 +625,8 @@ public class EditorCanvasManager {
 
         // --- 6.2: PROYECTO y CLIENTE CENTRADOS DE FORMA ESTÁTICA ARRIBA ---
         // (Se animan suavemente por código leyendo hudOpacity, entre modo diseño y producción)
-        if (hudOpacity > 0.0) {
+        boolean isVertical = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL);
+        if (hudOpacity > 0.0 && !isVertical) {
             gc.save();
             gc.setGlobalAlpha(hudOpacity);
             
@@ -628,16 +687,24 @@ public class EditorCanvasManager {
             this.btnClienteHitbox = null;
         }
 
-        gc.setFill(Color.web("#9a9598"));
+        gc.setFill(Color.web("#a0a5cc"));
         gc.setFont(Font.font("Arial", 11));
 
+        double mmW = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? CR80_HEIGHT_MM : CR80_WIDTH_MM;
+        double mmH = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? CR80_WIDTH_MM : CR80_HEIGHT_MM;
         String infoDimensiones = String.format(
                 "CR80: %.2f × %.2f mm | Con sangre: %.2f × %.2f mm",
-                CR80_WIDTH_MM, CR80_HEIGHT_MM, CR80_WIDTH_MM + 4.0, CR80_HEIGHT_MM + 4.0
+                mmW, mmH, mmW + 4.0, mmH + 4.0
         );
 
         double bleedScaled = BLEED_MARGIN * zoomLevel;
-        gc.fillText(infoDimensiones, cardX + scaledWidth - 380, cardY + scaledHeight + bleedScaled + 20);
+        
+        javafx.scene.text.Text tmpText = new javafx.scene.text.Text(infoDimensiones);
+        tmpText.setFont(gc.getFont());
+        double textWidth = tmpText.getLayoutBounds().getWidth();
+        double centerTextX = cardX + (scaledWidth / 2) - (textWidth / 2);
+        
+        gc.fillText(infoDimensiones, centerTextX, cardY + scaledHeight + bleedScaled + 25);
 
         gc.setGlobalAlpha(1.0);
         gc.restore();
@@ -646,6 +713,11 @@ public class EditorCanvasManager {
     // ===================== EVENTOS DE RATÓN =====================
 
     private void onCanvasMousePressed(MouseEvent e) {
+        if (eyedropperActive) {
+            pickColorAt(e.getX(), e.getY());
+            return;
+        }
+        
         wasDragged = false;
         
         // Interpretar click en el botón figurado de Cliente
@@ -656,8 +728,8 @@ public class EditorCanvasManager {
 
         if (proyectoActual == null || currentMode != AppMode.DESIGN) return;
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -850,8 +922,8 @@ public class EditorCanvasManager {
             return;
         }
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -928,8 +1000,8 @@ public class EditorCanvasManager {
             return;
         }
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
         double mx = e.getX();
@@ -980,6 +1052,46 @@ public class EditorCanvasManager {
         return elementoSeleccionado;
     }
 
+    // ===================== CUENTAGOTAS =====================
+
+    public void activateEyedropper(java.util.function.Consumer<Color> callback) {
+        this.eyedropperActive = true;
+        this.onColorPickedCallback = callback;
+        canvas.setCursor(Cursor.CROSSHAIR);
+        
+        // Usar el sistema de Toast oficial con estilo EXITO (verde) como pidió el usuario
+        if (canvas.getScene() != null && canvas.getScene().getWindow() != null) {
+            TPSToast.mostrar(canvas.getScene().getWindow(), 
+                "Modo Cuentagotas Activado", 
+                "Haz clic en cualquier color del diseño para capturarlo", 
+                TPSToast.Tipo.EXITO);
+        }
+    }
+
+    public void deactivateEyedropper() {
+        this.eyedropperActive = false;
+        canvas.setCursor(Cursor.DEFAULT);
+    }
+
+    private void pickColorAt(double x, double y) {
+        // 1. Tomar snapshot del canvas actual
+        Image snapshot = canvas.snapshot(null, null);
+        javafx.scene.image.PixelReader pr = snapshot.getPixelReader();
+        
+        // 2. Obtener color (asegurando límites)
+        int ix = (int) Math.max(0, Math.min(snapshot.getWidth() - 1, x));
+        int iy = (int) Math.max(0, Math.min(snapshot.getHeight() - 1, y));
+        Color picked = pr.getColor(ix, iy);
+        
+        // 3. Notificar y desactivar
+        if (onColorPickedCallback != null) {
+            onColorPickedCallback.accept(picked);
+        }
+        
+        eyedropperActive = false;
+        canvas.setCursor(Cursor.DEFAULT);
+    }
+
     /* Intenta cargar la imagen cuyo nombre de archivo viene del Excel.
      * Busca en la carpeta Fotos/ del proyecto.
      * Devuelve null si el archivo no existe o si no hay metadata de proyecto. */
@@ -1011,28 +1123,41 @@ public class EditorCanvasManager {
         gc.setLineWidth(grosor);
         gc.setLineDashes();
 
+        // Aplicar opacidad
+        double oldAlpha = gc.getGlobalAlpha();
+        gc.setGlobalAlpha(forma.getOpacidad());
+
         switch (forma.getTipoForma()) {
             case RECTANGULO -> {
+                double arc = forma.getRadioCurvatura() * zoomLevel;
                 if (forma.isConRelleno()) {
                     gc.setFill(Color.web(forma.getColorRelleno()));
-                    gc.fillRect(ex, ey, ew, eh);
+                    gc.fillRoundRect(ex, ey, ew, eh, arc, arc);
                 }
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                gc.strokeRect(ex, ey, ew, eh);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeRoundRect(ex, ey, ew, eh, arc, arc);
+                }
             }
             case ELIPSE -> {
                 if (forma.isConRelleno()) {
                     gc.setFill(Color.web(forma.getColorRelleno()));
                     gc.fillOval(ex, ey, ew, eh);
                 }
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                gc.strokeOval(ex, ey, ew, eh);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeOval(ex, ey, ew, eh);
+                }
             }
             case LINEA -> {
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                // La línea va de la esquina superior-izquierda a la inferior-derecha
-                gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+                }
             }
         }
+        
+        // Resetear opacidad
+        gc.setGlobalAlpha(oldAlpha);
     }
 }

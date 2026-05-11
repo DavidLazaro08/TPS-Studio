@@ -59,14 +59,34 @@ public class ActivationViewController {
 
     @FXML
     private void handleHelp() {
-        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
+        // No usamos AlertHelper porque fuerza el tema claro de dialogs.css
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Ayuda de Activación");
         alert.setHeaderText("Clave de Licencia");
-        alert.setContentText("Puedes encontrar tu clave en el correo de confirmación de compra configurado por el administrador.\n\n" +
-                "Formato esperado: TPS-XXXX-XXXX-XXXX");
         
-        alert.getDialogPane().getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
-        alert.getDialogPane().getStyleClass().add("alert-dialog");
+        // Label personalizado: control total sobre el wrap y el ancho para evitar "..."
+        Label contentLabel = new Label("Puedes encontrar tu clave en el correo de confirmación de compra configurado por el administrador.\n\n" +
+                "Formato esperado: TPS-XXXX-XXXX-XXXX");
+        contentLabel.setWrapText(true);
+        contentLabel.setPrefWidth(400); 
+        contentLabel.setStyle("-fx-text-fill: #c4c0c2; -fx-font-size: 13px;");
+        
+        DialogPane pane = alert.getDialogPane();
+        pane.setContent(contentLabel);
+        
+        // Cargamos app.css (tema oscuro) y aplicamos la clase alert-dialog
+        pane.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+        pane.getStyleClass().add("alert-dialog");
+        
+        // Fix quirúrgico: Forzar fondo oscuro en el pane y en la barra de botones (la falda)
+        // para asegurar que nada de dialogs.css o del sistema manche de blanco
+        pane.setStyle("-fx-background-color: #1e1a1c;");
+        
+        // Intentar aplicar estilo a la barra de botones si ya está disponible
+        Platform.runLater(() -> {
+            javafx.scene.Node buttonBar = pane.lookup(".button-bar");
+            if (buttonBar != null) buttonBar.setStyle("-fx-background-color: #1e1a1c;");
+        });
         
         alert.showAndWait();
     }

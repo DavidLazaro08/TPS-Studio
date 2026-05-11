@@ -2,7 +2,7 @@ package com.tpsstudio.view.dialogs;
 
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
-import com.tpsstudio.service.TrabajoImpresion;
+import com.tpsstudio.model.print.TrabajoImpresion;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;

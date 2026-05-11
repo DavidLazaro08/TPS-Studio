@@ -7,3 +7,41 @@
     -fx-mark-color: tps-accent-light; /* Color del tick y del punto */
     -fx-color: tps-bg-3; /* Fondo base del cajet√≠n */
 }
+/* ======================================================= */
+/* BOT”N DE FILTRO Y OPCIONES DE FILTRO                    */
+/* ======================================================= */
+
+.filter-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a0a5cc;
+    -fx-font-size: 13px;
+    -fx-padding: 4px 8px;
+    -fx-cursor: hand;
+    -fx-background-radius: 4px;
+    -fx-border-color: transparent;
+}
+
+.filter-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: #ffffff;
+}
+
+.filter-option-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a0a5cc;
+    -fx-alignment: center-left;
+    -fx-padding: 6px 10px;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-background-radius: 4px;
+}
+
+.filter-option-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-text-fill: #ffffff;
+}
+
+.filter-option-btn:selected {
+    -fx-background-color: rgba(108, 99, 255, 0.15);
+    -fx-text-fill: #6c63ff;
+}

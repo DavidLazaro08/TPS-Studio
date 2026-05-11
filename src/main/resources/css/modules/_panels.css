@@ -62,7 +62,7 @@
 }
 
 .tool-button:hover .tool-icon {
-    -fx-text-fill: #c4c0c2;
+    -fx-text-fill: #a0a5cc; /* Azulito de las capas */
 }
 
 /* Texto del botón principal */
@@ -72,7 +72,7 @@
 }
 
 .tool-button:hover .tool-label {
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #a0a5cc; /* Azulito de las capas */
 }
 
 /* ---- SUBHERRAMIENTAS (34px altura, indentadas) ---- */
@@ -184,9 +184,9 @@
 
 .layers-list .scroll-bar:horizontal {
     -fx-opacity: 0;
+    -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
-    -fx-padding: -10;
 }
 
 /* Scrollbar vertical idéntico al de propiedades */
@@ -270,6 +270,11 @@
     -fx-background-color: #2a2628;
 }
 
+/* Separador sutil entre elementos de capa */
+.layer-item-separator {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+}
+
 /* Botones de acción en capas (Reordenar/Eliminar) */
 .layer-action-btn {
     -fx-background-color: transparent;
@@ -322,8 +327,9 @@
 
 /* Icono de tipo de capa */
 .layer-item-icon {
-    -fx-text-fill: #7a7678;
+    -fx-text-fill: #a0a5cc; /* Mismo azul-acento que el texto de capa */
     -fx-font-size: 15px; /* Unificado con herramientas */
+    -fx-min-width: 20px;
     -fx-font-family: "Segoe UI Symbol", "Arial", sans-serif;
     -fx-alignment: center;
 }
@@ -391,9 +397,9 @@
 
 .panel-scroll-view .scroll-bar:horizontal {
     -fx-opacity: 0;
+    -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
-    -fx-padding: -10;
 }
 
 /* Contenedor con fondo oscuro liso (sin cortes) */
@@ -686,8 +692,19 @@
     -fx-background-color: #1f1d1f;
     -fx-background-radius: 4;
     -fx-border-color: #2e2b2d;
-    -fx-border-width: 1;
     -fx-border-radius: 4;
+}
+
+/* Campo de edición inline para datos variables */
+.dato-edit-field {
+    -fx-background-color: #2c2a2c;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-padding: 1 4;
+    -fx-background-radius: 3;
+    -fx-border-color: #4a6b7c;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
 }
 
 /* Label del contador de registros */
@@ -907,3 +924,15 @@
     -fx-text-fill: #e8e6e7;
 }
 
+
+/* ---- ANIMACIÓN DE PULSO PARA VALIDAR DISEÑO ---- */
+
+.validate-button.has-warnings {
+    -fx-border-color: #d48a8a;
+    -fx-border-width: 1.5;
+}
+
+.validate-button.has-warnings .tool-icon,
+.validate-button.has-warnings .tool-label {
+    -fx-text-fill: #ff8a8a;
+}

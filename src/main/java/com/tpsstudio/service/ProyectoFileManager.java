@@ -204,6 +204,7 @@ public class ProyectoFileManager implements ProyectoDAO {
             dto.setMostrandoFrente(proyecto.isMostrandoFrente());
             dto.setFondoFitModePreferido(proyecto.getFondoFitModePreferido());
             dto.setNoVolverAPreguntarFondo(proyecto.isNoVolverAPreguntarFondo());
+            dto.setOrientacion(proyecto.getOrientacion());
 
             dto.setElementosFrente(convertirElementosADTO(proyecto.getElementosFrente()));
             dto.setElementosDorso(convertirElementosADTO(proyecto.getElementosDorso()));
@@ -214,6 +215,8 @@ public class ProyectoFileManager implements ProyectoDAO {
             if (proyecto.getFondoDorso() != null) {
                 dto.setFondoDorso(convertirFondoADTO(proyecto.getFondoDorso()));
             }
+
+            dto.setEtiquetaIds(proyecto.getEtiquetaIds());
 
             String json = gson.toJson(dto);
             Path archivoTPS = Paths.get(metadata.getRutaTPS());
@@ -248,6 +251,17 @@ public class ProyectoFileManager implements ProyectoDAO {
             proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
+            
+            if (dto.getOrientacion() != null) {
+                proyecto.setOrientacion(dto.getOrientacion());
+            } else if (proyecto.getMetadata() != null) {
+                // Fallback a metadata por si se guardó ahí en versiones previas
+                proyecto.setOrientacion(proyecto.getMetadata().getOrientacion());
+            }
+
+            if (dto.getEtiquetaIds() != null) {
+                proyecto.setEtiquetaIds(new ArrayList<>(dto.getEtiquetaIds()));
+            }
 
             Path carpetaProyecto = archivoTPS.toPath().getParent();
 
@@ -308,6 +322,7 @@ public class ProyectoFileManager implements ProyectoDAO {
         for (Elemento elem : elementos) {
             ElementoDTO dto = new ElementoDTO();
             dto.setNombre(elem.getNombre());
+            dto.setEtiqueta(elem.getEtiqueta());
             dto.setX(elem.getX());
             dto.setY(elem.getY());
             dto.setLocked(elem.isLocked());
@@ -407,6 +422,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             if (elem != null) {
                 elem.setLocked(dto.isLocked());
+                if (dto.getEtiqueta() != null && !dto.getEtiqueta().isEmpty()) {
+                    elem.setEtiqueta(dto.getEtiqueta());
+                }
                 elementos.add(elem);
             }
         }
@@ -587,6 +605,8 @@ public class ProyectoFileManager implements ProyectoDAO {
         private List<ElementoDTO> elementosDorso;
         private FondoDTO fondoFrente;
         private FondoDTO fondoDorso;
+        private List<String> etiquetaIds;
+        private com.tpsstudio.model.enums.Orientacion orientacion;
 
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
@@ -614,11 +634,18 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public FondoDTO getFondoDorso() { return fondoDorso; }
         public void setFondoDorso(FondoDTO fondoDorso) { this.fondoDorso = fondoDorso; }
+
+        public List<String> getEtiquetaIds() { return etiquetaIds; }
+        public void setEtiquetaIds(List<String> etiquetaIds) { this.etiquetaIds = etiquetaIds; }
+
+        public com.tpsstudio.model.enums.Orientacion getOrientacion() { return orientacion; }
+        public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) { this.orientacion = orientacion; }
     }
 
     public static class ElementoDTO {
         private String tipo; // "texto" o "imagen"
         private String nombre;
+        private String etiqueta; // Etiqueta opcional del elemento (e.g. "Foto", "Nombre")
         private double x;
         private double y;
         private boolean locked;
@@ -639,6 +666,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
+
+        public String getEtiqueta() { return etiqueta; }
+        public void setEtiqueta(String etiqueta) { this.etiqueta = etiqueta; }
 
         public double getX() { return x; }
         public void setX(double x) { this.x = x; }

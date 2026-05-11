@@ -5,6 +5,7 @@ import org.apache.poi.ss.usermodel.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.*;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -40,6 +41,10 @@ public class DatosVariablesManager {
                 return leerExcel(archivo);
             } else if (nombre.endsWith(".csv")) {
                 return leerCsv(archivo);
+            } else if (nombre.endsWith(".mdb") || nombre.endsWith(".accdb")) {
+                return leerDatabase(archivo, "jdbc:ucanaccess://");
+            } else if (nombre.endsWith(".db") || nombre.endsWith(".sqlite")) {
+                return leerDatabase(archivo, "jdbc:sqlite:");
             } else {
                 log.warning("Formato no soportado en esta fase: " + nombre);
                 return Optional.empty();
@@ -47,6 +52,111 @@ public class DatosVariablesManager {
         } catch (Exception e) {
             log.severe("Error al cargar fuente de datos '" + ruta + "': " + e.getMessage());
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Guarda los datos de vuelta al archivo original (sobrescribe).
+     * Soporta Excel (.xlsx, .xls) y CSV.
+     */
+    public boolean guardar(FuenteDatos datos, String ruta) {
+        if (ruta == null || ruta.isBlank()) return false;
+        
+        File archivo = new File(ruta);
+        String nombre = archivo.getName().toLowerCase();
+        
+        try {
+            if (nombre.endsWith(".xlsx") || nombre.endsWith(".xls")) {
+                return guardarExcel(datos, archivo);
+            } else if (nombre.endsWith(".csv")) {
+                return guardarCsv(datos, archivo);
+            } else if (nombre.endsWith(".mdb") || nombre.endsWith(".accdb")) {
+                return guardarDatabase(datos, archivo, "jdbc:ucanaccess://");
+            } else if (nombre.endsWith(".db") || nombre.endsWith(".sqlite")) {
+                return guardarDatabase(datos, archivo, "jdbc:sqlite:");
+            } else {
+                log.warning("Formato no soportado para guardado: " + nombre);
+                return false;
+            }
+        } catch (Exception e) {
+            log.severe("Error al guardar fuente de datos '" + ruta + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ── Escritura Excel ────────────────────────────────────────────────────────
+    
+    private boolean guardarExcel(FuenteDatos datos, File archivo) throws IOException {
+        // Para no perder formatos complejos, intentamos abrir el original y modificarlo
+        try (InputStream is = new FileInputStream(archivo);
+             Workbook wb = WorkbookFactory.create(is)) {
+            
+            Sheet hoja = wb.getSheetAt(0);
+            if (hoja == null) return false;
+            
+            // Mapeo de nombres de columna a índices
+            Map<String, Integer> colIndices = new HashMap<>();
+            Row cabecera = hoja.getRow(hoja.getFirstRowNum());
+            if (cabecera != null) {
+                for (Cell c : cabecera) {
+                    colIndices.put(c.getStringCellValue().trim(), c.getColumnIndex());
+                }
+            }
+            
+            // Actualizar filas (empezando después de la cabecera)
+            int filaIndex = hoja.getFirstRowNum() + 1;
+            List<Map<String, String>> filas = datos.getFilas();
+            
+            for (Map<String, String> reg : filas) {
+                Row row = hoja.getRow(filaIndex);
+                if (row == null) row = hoja.createRow(filaIndex);
+                
+                for (Map.Entry<String, String> entry : reg.entrySet()) {
+                    Integer colIdx = colIndices.get(entry.getKey());
+                    if (colIdx != null) {
+                        Cell cell = row.getCell(colIdx, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                        cell.setCellValue(entry.getValue());
+                    }
+                }
+                filaIndex++;
+            }
+            
+            // Escribir cambios
+            try (OutputStream os = new FileOutputStream(archivo)) {
+                wb.write(os);
+            }
+            return true;
+        }
+    }
+
+    // ── Escritura CSV ──────────────────────────────────────────────────────────
+
+    private boolean guardarCsv(FuenteDatos datos, File archivo) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(archivo), StandardCharsets.UTF_8))) {
+            
+            List<String> columnas = datos.getColumnas();
+            char sep = ';'; // Usamos punto y coma por defecto para Excel compatibility en España
+            
+            // Cabecera
+            writer.write(String.join(String.valueOf(sep), columnas));
+            writer.newLine();
+            
+            // Filas
+            for (Map<String, String> reg : datos.getFilas()) {
+                List<String> valores = new ArrayList<>();
+                for (String col : columnas) {
+                    String val = reg.getOrDefault(col, "");
+                    // Escapar comillas si fuera necesario (simplificado aquí)
+                    if (val.contains(String.valueOf(sep)) || val.contains("\"")) {
+                        val = "\"" + val.replace("\"", "\"\"") + "\"";
+                    }
+                    valores.add(val);
+                }
+                writer.write(String.join(String.valueOf(sep), valores));
+                writer.newLine();
+            }
+            return true;
         }
     }
 
@@ -182,5 +292,108 @@ public class DatosVariablesManager {
         }
         tokens.add(sb.toString().trim());
         return tokens;
+    }
+
+    // ── Lectura Bases de Datos (JDBC: Access / SQLite) ──────────────────────────
+
+    private Optional<FuenteDatos> leerDatabase(File archivo, String urlPrefix) {
+        String url = urlPrefix + archivo.getAbsolutePath();
+        
+        try (Connection conn = DriverManager.getConnection(url)) {
+            // Intentamos obtener la primera tabla de la base de datos
+            DatabaseMetaData dbmd = conn.getMetaData();
+            try (ResultSet tables = dbmd.getTables(null, null, "%", new String[]{"TABLE"})) {
+                if (tables.next()) {
+                    String nombreTabla = tables.getString("TABLE_NAME");
+                    return leerTabla(conn, nombreTabla, archivo.getName());
+                }
+            }
+            log.warning("No se encontraron tablas en la base de datos: " + archivo.getName());
+            return Optional.empty();
+        } catch (Exception e) {
+            log.severe("Error al conectar con la base de datos '" + archivo.getName() + "': " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private Optional<FuenteDatos> leerTabla(Connection conn, String nombreTabla, String nombreArchivo) throws SQLException {
+        String query = "SELECT * FROM [" + nombreTabla + "]";
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            
+            ResultSetMetaData rsmd = rs.getMetaData();
+            int numCols = rsmd.getColumnCount();
+            
+            List<String> columnas = new ArrayList<>();
+            for (int i = 1; i <= numCols; i++) {
+                columnas.add(rsmd.getColumnName(i));
+            }
+            
+            List<Map<String, String>> filas = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, String> registro = new LinkedHashMap<>();
+                for (int i = 1; i <= numCols; i++) {
+                    Object val = rs.getObject(i);
+                    registro.put(columnas.get(i - 1), val != null ? val.toString() : "");
+                }
+                filas.add(registro);
+            }
+            
+            log.info("Base de datos cargada (" + nombreTabla + "): " + nombreArchivo + " — " + filas.size() + " registros");
+            return Optional.of(new FuenteDatos(nombreArchivo, columnas, filas));
+        }
+    }
+
+    private boolean guardarDatabase(FuenteDatos datos, File archivo, String urlPrefix) {
+        String url = urlPrefix + archivo.getAbsolutePath();
+        try (Connection conn = DriverManager.getConnection(url)) {
+            conn.setAutoCommit(false);
+            
+            // 1. Identificar la primera tabla
+            String nombreTabla = null;
+            DatabaseMetaData dbmd = conn.getMetaData();
+            try (ResultSet tables = dbmd.getTables(null, null, "%", new String[]{"TABLE"})) {
+                if (tables.next()) {
+                    nombreTabla = tables.getString("TABLE_NAME");
+                }
+            }
+            if (nombreTabla == null) return false;
+
+            // 2. Limpiar tabla actual (re-sincronización total)
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("DELETE FROM [" + nombreTabla + "]");
+            }
+
+            // 3. Preparar INSERT dinámico
+            List<String> columnas = datos.getColumnas();
+            StringBuilder sql = new StringBuilder("INSERT INTO [").append(nombreTabla).append("] (");
+            for (int i = 0; i < columnas.size(); i++) {
+                sql.append("[").append(columnas.get(i)).append("]").append(i < columnas.size() - 1 ? "," : "");
+            }
+            sql.append(") VALUES (");
+            for (int i = 0; i < columnas.size(); i++) {
+                sql.append("?").append(i < columnas.size() - 1 ? "," : "");
+            }
+            sql.append(")");
+
+            // 4. Ejecutar inserción por lotes (Batch)
+            try (PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+                for (Map<String, String> reg : datos.getFilas()) {
+                    for (int i = 0; i < columnas.size(); i++) {
+                        String val = reg.getOrDefault(columnas.get(i), "");
+                        pstmt.setString(i + 1, val);
+                    }
+                    pstmt.addBatch();
+                }
+                pstmt.executeBatch();
+            }
+            
+            conn.commit();
+            log.info("Base de datos actualizada (" + nombreTabla + "): " + archivo.getName());
+            return true;
+        } catch (Exception e) {
+            log.severe("Error al guardar en base de datos '" + archivo.getName() + "': " + e.getMessage());
+            return false;
+        }
     }
 }

@@ -1,4 +1,4 @@
-package com.tpsstudio.service;
+package com.tpsstudio.model.print;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.printing.PDFPageable;

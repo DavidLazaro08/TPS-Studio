@@ -3,6 +3,7 @@ package com.tpsstudio.view.controllers;
 import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.enums.*;
 import com.tpsstudio.model.project.*;
+import com.tpsstudio.service.EtiquetasManager;
 import com.tpsstudio.service.ProjectManager;
 import com.tpsstudio.view.managers.EditorCanvasManager;
 import com.tpsstudio.view.managers.ModeManager;
@@ -14,11 +15,13 @@ import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.service.DesignValidatorService;
 import com.tpsstudio.service.ImpresionService;
-import com.tpsstudio.service.SalidaImpresion;
-import com.tpsstudio.service.SalidaImpresoraDirecta;
-import com.tpsstudio.service.SalidaPDFSistema;
-import com.tpsstudio.service.TrabajoImpresion;
+import com.tpsstudio.model.print.SalidaImpresion;
+import com.tpsstudio.model.print.SalidaImpresoraDirecta;
+import com.tpsstudio.model.print.SalidaPDFSistema;
+import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
+import com.tpsstudio.view.controllers.sub.ElementActionsController;
+import com.tpsstudio.view.controllers.sub.ProjectActionsController;
 import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
@@ -79,6 +82,8 @@ public class MainViewController {
     @FXML
     private ToggleButton btnCaraDorso;
     @FXML
+    private Label lblProyectoActivo;
+    @FXML
     private Pane canvasOverlay;
     @FXML
     private ComboBox<TipoTroquel> cmbTroquelToolbar;
@@ -111,6 +116,18 @@ public class MainViewController {
     // ViewModel: estado observable de la aplicación
     private final MainViewModel viewModel = new MainViewModel();
 
+    // Sub-controlador de acciones de proyecto (crear, abrir, guardar, exportar, imprimir)
+    private ProjectActionsController projectActionsController;
+
+    // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo; eliminar)
+    private ElementActionsController elementActionsController;
+
+    // Gestor de categorías/etiquetas (por usuario)
+    private EtiquetasManager etiquetasManager;
+
+    // Estado para el chip de proyecto colapsable (Cerrado por defecto)
+    private boolean isProjectChipCollapsed = true;
+
     // =====================================================
     // Inicialización
     // =====================================================
@@ -118,6 +135,11 @@ public class MainViewController {
     private void initialize() {
         setupCanvas();
         initUI();
+        
+        lblProyectoActivo.setOnMouseClicked(e -> {
+            isProjectChipCollapsed = !isProjectChipCollapsed;
+            actualizarLabelProyecto(true);
+        });
 
         projectManager.cargarProyectosRecientes(8);
 
@@ -254,6 +276,14 @@ public class MainViewController {
         // -------------------------------------------------
         projectManager = new ProjectManager();
 
+        // Inicializar gestor de categorías con el usuario actual
+        String currentUser = com.tpsstudio.service.AuthService.getInstance().getCurrentUser();
+        etiquetasManager = new EtiquetasManager(currentUser);
+
+        // Inicializar sub-controlador de acciones de proyecto
+        projectActionsController = new ProjectActionsController(
+                viewModel, projectManager, canvas, this::dibujarCanvas, etiquetasManager);
+
         projectManager.setOnProjectChanged(() -> {
             viewModel.setProyectoActual(projectManager.getProyectoActual());
             if (canvasManager != null) {
@@ -263,12 +293,13 @@ public class MainViewController {
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 buildEditPanels();
             }
+            actualizarLabelProyecto(false);
             dibujarCanvas();
         });
 
         projectManager.setOnElementAdded(() -> {
-            // Fuerza la reconstrucción de paneles cuando cambia la estructura del diseño
-            buildEditPanels();
+            // Fuerza la reconstrucción de la lista de capas cuando se añade un elemento
+            modeManager.rebuildLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             dibujarCanvas();
         });
 
@@ -291,17 +322,29 @@ public class MainViewController {
         canvasManager.setCurrentMode(viewModel.getCurrentMode());
         canvasManager.setMostrarGuias(true);
 
+        // Inicializar sub-controlador de acciones de elementos
+        elementActionsController = new ElementActionsController(
+                viewModel, projectManager, canvasManager, canvas,
+                this::dibujarCanvas,
+                this::ensurePropertiesPanelVisible,
+                this::mostrarDialogoFitMode);
+
         // -------------------------------------------------
         // Panel de propiedades (edición del elemento seleccionado)
         // -------------------------------------------------
-        propertiesPanelController = new PropertiesPanelController(canvas);
+        propertiesPanelController = new PropertiesPanelController(canvas, canvasManager);
 
-        propertiesPanelController.setOnPropertyChanged(() -> modeManager.switchMode(
-                viewModel.getCurrentMode(), viewModel.getProyectoActual(),
-                viewModel.getElementoSeleccionado(), projectManager.getProyectos()));
+        propertiesPanelController.setOnPropertyChanged(() -> {
+            // Solo refrescar el panel de propiedades, NO reconstruir todo el modo.
+            // Esto preserva el foco en campos como "Etiqueta" y evita el parpadeo.
+            modeManager.refreshPropertiesPanel(
+                    viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
+        });
 
         propertiesPanelController.setOnCanvasRedrawNeeded(() -> {
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                // Refresco ligero: actualiza el texto de la celda (nombre + etiqueta)
+                // sin reconstruir el panel ni perder el foco del campo de texto
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
             dibujarCanvas();
@@ -315,11 +358,13 @@ public class MainViewController {
         // ModeManager (montaje de paneles + acciones de UI)
         // -------------------------------------------------
         modeManager = new ModeManager(leftPanel, rightPanel, propertiesPanelController);
+        modeManager.setEtiquetasManager(etiquetasManager);
 
         modeManager.setOnAddText(this::onAñadirTexto);
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
         modeManager.setOnAddShape(this::onAñadirForma);
+        modeManager.setOnAddCode(this::onAñadirCodigo);
 
         modeManager.setOnValidateDesign(this::onValidarDiseno);
 
@@ -357,26 +402,24 @@ public class MainViewController {
 
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
-                
-                if (togglePropiedades.isSelected()) {
-                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
-                }
             }
             dibujarCanvas();
         });
 
         modeManager.setOnProjectSelected(proyecto -> {
-            viewModel.setProyectoActual(proyecto);
-            projectManager.setProyectoActual(proyecto);
-            canvasManager.setProyectoActual(proyecto);
-            
-            // Animación de entrada para la tarjeta
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
-            ft.setFromValue(0.4);
-            ft.setToValue(1.0);
-            ft.play();
-            
-            dibujarCanvas();
+            ejecutarCrossFade(() -> {
+                viewModel.setProyectoActual(proyecto);
+                projectManager.setProyectoActual(proyecto);
+                canvasManager.setProyectoActual(proyecto);
+                
+                // Adjust zoom if the project is vertical
+                if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                    ajustarZoomVerticalSiNecesario();
+                }
+                
+                checkDesignWarnings();
+                dibujarCanvas();
+            });
         });
 
         modeManager.setOnEditExternal(this::abrirEditorExterno);
@@ -385,7 +428,8 @@ public class MainViewController {
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                // Reconstruir para que el icono de candado se actualice en la celda
+                modeManager.rebuildLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
             dibujarCanvas();
         });
@@ -408,6 +452,10 @@ public class MainViewController {
         canvasManager.setOnElementSelected(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
             ensurePropertiesPanelVisible();
+            // Sincronizar selección en la lista de capas sin reconstruir (solo resalta la capa)
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+            }
         });
 
         canvasManager.setOnElementTransformed(() -> {
@@ -415,11 +463,20 @@ public class MainViewController {
             if (propertiesPanelController != null && viewModel.getElementoSeleccionado() != null) {
                 propertiesPanelController.updatePositionFields(viewModel.getElementoSeleccionado());
             }
+            checkDesignWarnings();
         });
 
         canvasManager.setOnCanvasChanged(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
-            buildEditPanels();
+            // Actualizar posición sin reconstruir paneles (evita parpadeo y pérdida de foco)
+            if (propertiesPanelController != null && viewModel.getElementoSeleccionado() != null) {
+                propertiesPanelController.updatePositionFields(viewModel.getElementoSeleccionado());
+            }
+            // Propagar deselección al panel de capas (cuando se hace click en el vacío del canvas)
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+            }
+            checkDesignWarnings();
             canvasManager.dibujarCanvas();
         });
 
@@ -429,6 +486,16 @@ public class MainViewController {
 
         // Importante: configurar mouse handlers para drag & resize
         canvasManager.setupMouseHandlers();
+        
+        // Habilitar zoom con la rueda del ratón
+        canvas.setOnScroll(event -> {
+            if (event.getDeltaY() > 0) {
+                onZoomIn();
+            } else if (event.getDeltaY() < 0) {
+                onZoomOut();
+            }
+            event.consume();
+        });
 
         canvas.setFocusTraversable(true);
         canvas.setOnKeyPressed(event -> {
@@ -462,8 +529,18 @@ public class MainViewController {
     private void posicionarSelectorCara() {
         if (selectorCaraBox != null && canvasContainer != null) {
             double zoom = viewModel.getZoomLevel();
-            double cardScaledWidth = EditorCanvasManager.CARD_WIDTH * zoom;
-            double cardScaledHeight = EditorCanvasManager.CARD_HEIGHT * zoom;
+            
+            double baseWidth = EditorCanvasManager.CARD_WIDTH;
+            double baseHeight = EditorCanvasManager.CARD_HEIGHT;
+            
+            if (viewModel.getProyectoActual() != null && 
+                viewModel.getProyectoActual().getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                baseWidth = EditorCanvasManager.CARD_HEIGHT;
+                baseHeight = EditorCanvasManager.CARD_WIDTH;
+            }
+            
+            double cardScaledWidth = baseWidth * zoom;
+            double cardScaledHeight = baseHeight * zoom;
             double bleedScaled = EditorCanvasManager.BLEED_MARGIN * zoom;
             
             double cw = canvasContainer.getWidth();
@@ -476,13 +553,18 @@ public class MainViewController {
             // Borde superior de la tarjeta con sangre
             double topEdge = cardY - bleedScaled;
             
-            // Margen vertical equilibrado (altura botón 20px + margen 30px)
-            double offset = 50; 
-            
-            // Alineación al borde izquierdo del área con sangre (ajuste final de -20px)
+            double offset = 65;
+            // Restaurar la posición "perfecta" original a la izquierda
             selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
             selectorCaraBox.setLayoutY(topEdge - offset);
         }
+    }
+
+    private void checkDesignWarnings() {
+        if (viewModel.getProyectoActual() == null) return;
+        com.tpsstudio.service.DesignValidatorService validator = new com.tpsstudio.service.DesignValidatorService();
+        java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
+        modeManager.setValidationWarning(!avisos.isEmpty());
     }
 
     private void onValidarDiseno() {
@@ -555,11 +637,19 @@ public class MainViewController {
 
     @FXML
     private void onModeEdit() {
+        // Aseguramos que siempre haya un modo activo (no permitimos deselección)
+        if (!btnModeEdit.isSelected()) {
+            btnModeEdit.setSelected(true);
+        }
         switchMode(AppMode.DESIGN);
     }
 
     @FXML
     private void onModeExport() {
+        // Aseguramos que siempre haya un modo activo (no permitimos deselección)
+        if (!btnModeExport.isSelected()) {
+            btnModeExport.setSelected(true);
+        }
         switchMode(AppMode.PRODUCTION);
     }
 
@@ -573,7 +663,7 @@ public class MainViewController {
         // En Producción, los paneles de diseño no aplican: los ocultamos
         if (newMode == AppMode.PRODUCTION) {
             if (bloqueContextual != null && bloqueContextual.isVisible()) {
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> {
                     bloqueContextual.setVisible(false);
@@ -582,6 +672,13 @@ public class MainViewController {
                 ft.play();
             }
             cerrarPanelDerecho();
+            
+            // Forzar un segundo ajuste tras un breve delay para asegurar que el layout se ha asentado
+            javafx.application.Platform.runLater(() -> {
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(100)); // Aumentado para mayor estabilidad
+                delay.setOnFinished(ev -> adjustCanvasCentering());
+                delay.play();
+            });
 
             // Iniciar parpadeo (respiración suave) en el botón Diseño invitando a pulsarlo
             if (btnModeEdit != null) {
@@ -606,7 +703,7 @@ public class MainViewController {
                 bloqueContextual.setOpacity(0.0);
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(1.0);
                 ft.play();
             }
@@ -622,6 +719,7 @@ public class MainViewController {
 
         modeManager.switchMode(newMode, viewModel.getProyectoActual(),
                 viewModel.getElementoSeleccionado(), projectManager.getProyectos());
+        actualizarLabelProyecto(false);
     }
 
     // =====================================================
@@ -687,12 +785,12 @@ public class MainViewController {
             if (shouldShow && !selectorCaraBox.isVisible()) {
                 selectorCaraBox.setOpacity(0.0);
                 selectorCaraBox.setVisible(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(400), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setToValue(1.0);
                 ft.play();
             } else if (!shouldShow && selectorCaraBox.isVisible() && selectorCaraBox.getOpacity() > 0) {
                 selectorCaraBox.setOpacity(0.0); // Prevenimos multiples animaciones superpuestas
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(300), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setFromValue(1.0);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> selectorCaraBox.setVisible(false));
@@ -737,6 +835,11 @@ public class MainViewController {
             // Igual que cuando se abre con el botón de la barra:
             // desplazar la tarjeta para que no quede tapada por el panel
             adjustCanvasCentering();
+        }
+
+        // Refrescar el contenido del panel de propiedades para el elemento seleccionado
+        if (viewModel.getElementoSeleccionado() != null && togglePropiedades.isSelected()) {
+            modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
         }
     }
 
@@ -1053,260 +1156,212 @@ public class MainViewController {
 
     @FXML
     private void onNuevoProyecto() {
-        mostrarDialogoNuevoProyecto();
+        projectActionsController.nuevoProyecto();
     }
 
     @FXML
     private void onAbrirProyecto() {
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Abrir Proyecto");
-        fileChooser.getExtensionFilters().add(
-                new javafx.stage.FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
-
-        File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-        if (file != null) {
-            projectManager.abrirProyectoDesdeArchivo(file);
-        }
+        projectActionsController.abrirProyecto();
     }
 
     @FXML
     private void onGuardarProyecto() {
-        // Guarda el proyecto actual (JSON / .tps)
-        projectManager.guardarProyecto();
+        projectActionsController.guardarProyecto();
     }
 
     @FXML
     private void onExportarProyecto() {
-        if (viewModel.getProyectoActual() == null) {
-            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
-            return;
-        }
-
-        com.tpsstudio.model.project.FuenteDatos fd = projectManager.getFuenteDatos();
-        int totalRegistros = (fd != null) ? fd.getTotalRegistros() : 1;
-
-        // 1. Diálogo de configuración de exportación
-        com.tpsstudio.view.dialogs.ExportDialog exportDialog = new com.tpsstudio.view.dialogs.ExportDialog(
-                canvas.getScene().getWindow(), totalRegistros, viewModel.getProyectoActual().getNombre());
-        java.util.Optional<com.tpsstudio.view.dialogs.ExportDialog.ExportConfig> cfg = exportDialog.showAndWait();
-        if (cfg.isEmpty() || cfg.get() == null)
-            return;
-
-        com.tpsstudio.view.dialogs.ExportDialog.ExportConfig config = cfg.get();
-
-        // 2. Resolver filas a exportar (solo si exportarRegistros es true)
-        java.util.List<Integer> filas = new java.util.ArrayList<>();
-        if (config.exportarRegistros()) {
-            try {
-                filas = com.tpsstudio.view.dialogs.ExportDialog.parseRangoFilas(config.rangoFilas(), totalRegistros);
-            } catch (IllegalArgumentException ex) {
-                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
-                        .showAndWait();
-                return;
-            }
-            if (filas.isEmpty()) {
-                com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
-                        .showAndWait();
-                return;
-            }
-        }
-
-        // 3. Elegir dónde guardar (usamos este base name para los generados)
-        javafx.stage.FileChooser fc = new javafx.stage.FileChooser();
-        fc.setTitle("Seleccionar ubicación para la exportación");
-        fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("PDF", "*.pdf"));
-        fc.setInitialFileName(viewModel.getProyectoActual().getNombre().replaceAll("[^a-zA-Z0-9._-]", "_") + ".pdf");
-        File destino = fc.showSaveDialog(canvas.getScene().getWindow());
-        if (destino == null)
-            return;
-
-        // 4. Generar PDFs en hilo de fondo
-        com.tpsstudio.service.PDFExportService pdfService = new com.tpsstudio.service.PDFExportService(
-                viewModel.getProyectoActual(),
-                fd);
-
-        final java.util.List<Integer> filasFinal = filas;
-        final File basePath = destino;
-        final Window ownerWindow = canvas.getScene().getWindow();
-
-        new Thread(() -> {
-            try {
-                String baseUri = basePath.getAbsolutePath().replaceAll("(?i)\\.pdf$", "");
-                int archivosGenerados = 0;
-
-                // A) PDF Mail-Merge
-                if (config.exportarRegistros()) {
-                    File fMerge = new File(baseUri + "_registros.pdf");
-                    pdfService.exportar(config, filasFinal, fMerge);
-                    archivosGenerados++;
-                }
-
-                // B) Prueba A4
-                if (config.configPrueba() != null) {
-                    File fPrueba = new File(baseUri + "_prueba.pdf");
-                    pdfService.generarPruebaA4(config.configPrueba(), fPrueba);
-                    archivosGenerados++;
-                }
-
-                // C) PDF Imprenta
-                if (config.exportarImprenta()) {
-                    File fImprenta = new File(baseUri + "_imprenta.pdf");
-                    pdfService.exportarImprenta(fImprenta);
-                    archivosGenerados++;
-                }
-
-                // Notificar éxito al usuario usando la alerta base Toast
-                int totalGenerados = archivosGenerados;
-                Platform.runLater(() -> TPSToast.mostrar(
-                        ownerWindow,
-                        "Exportación completada (" + totalGenerados + " archivos generados)",
-                        null,
-                        TPSToast.Tipo.EXITO));
-
-            } catch (Throwable ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al exportar");
-                    err.setHeaderText("No se pudo completar la exportación");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
-            }
-        }, "pdf-export-thread").start();
+        projectActionsController.exportarProyecto();
     }
 
     /**
      * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF temporal
      * con el mismo motor que la exportación y lo envía al sistema operativo.
-     *
-     * El hilo de fondo sigue el mismo patrón que onExportarProyecto().
      */
     @FXML
     private void onImprimirProyecto() {
-        if (viewModel.getProyectoActual() == null) {
-            com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
-            return;
-        }
+        projectActionsController.imprimirProyecto();
+    }
 
-        if (!SalidaPDFSistema.isSupported()) {
-            TPSToast.mostrar(canvas.getScene().getWindow(),
-                    "La impresión mediante el sistema no está disponible en este equipo.",
-                    null, TPSToast.Tipo.ERROR);
-            return;
-        }
-
-        com.tpsstudio.model.project.FuenteDatos fd = projectManager.getFuenteDatos();
-
-        ImpresionDialog dialog = new ImpresionDialog(
-                canvas.getScene().getWindow(),
-                viewModel.getProyectoActual(),
-                fd);
-
-        java.util.Optional<TrabajoImpresion> resultado = dialog.showAndWait();
-        if (resultado.isEmpty() || resultado.get() == null) return;
-
-        TrabajoImpresion trabajo = resultado.get();
-        com.tpsstudio.model.project.Proyecto proyecto = viewModel.getProyectoActual();
-        javafx.stage.Window owner = canvas.getScene().getWindow();
-
-        new Thread(() -> {
-            try {
-                SalidaImpresion salida;
-                if (trabajo.nombreImpresora() != null) {
-                    salida = new SalidaImpresoraDirecta(trabajo.nombreImpresora());
-                } else {
-                    salida = new SalidaPDFSistema();
-                }
-                new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
-
-                Platform.runLater(() -> TPSToast.mostrar(
-                        owner,
-                        "Trabajo enviado a la cola de impresión",
-                        null, TPSToast.Tipo.EXITO));
-
-            } catch (Throwable ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al imprimir");
-                    err.setHeaderText("No se pudo completar la impresión");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
-            }
-        }, "imprimir-thread").start();
+    @FXML
+    private void onNuevoCR80() {
+        projectActionsController.nuevoProyecto();
     }
 
     @FXML
     private void onShowFrente() {
         if (viewModel.getProyectoActual() == null) return;
-        viewModel.getProyectoActual().setMostrandoFrente(true);
-        viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
-            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
-        }
-        dibujarCanvas();
+        ejecutarCrossFade(() -> {
+            viewModel.getProyectoActual().setMostrandoFrente(true);
+            viewModel.setElementoSeleccionado(null);
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+            }
+            dibujarCanvas();
+        });
     }
 
     @FXML
     private void onShowDorso() {
         if (viewModel.getProyectoActual() == null) return;
-        viewModel.getProyectoActual().setMostrandoFrente(false);
-        viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            // Solo actualizamos las capas (no herramientas), sin animar el panel entero
-            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
-        }
-        dibujarCanvas();
+        ejecutarCrossFade(() -> {
+            viewModel.getProyectoActual().setMostrandoFrente(false);
+            viewModel.setElementoSeleccionado(null);
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+            }
+            dibujarCanvas();
+        });
     }
 
     @FXML
-    private void onNuevoCR80() {
-        mostrarDialogoNuevoProyecto();
+    private void onToggleOrientacion() {
+        Proyecto p = viewModel.getProyectoActual();
+        if (p == null) return;
+
+        ejecutarGiroTransition(() -> {
+            // Cambiar orientación
+            com.tpsstudio.model.enums.Orientacion nueva = (p.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
+                    ? com.tpsstudio.model.enums.Orientacion.VERTICAL
+                    : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+
+            p.setOrientacion(nueva);
+            if (p.getMetadata() != null) {
+                p.getMetadata().setOrientacion(nueva);
+            }
+
+            // Ajustar fondos existentes a las nuevas dimensiones base
+            canvasManager.refrescarFondosTrasCarga();
+
+            if (nueva == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                ajustarZoomVerticalSiNecesario();
+            }
+            dibujarCanvas();
+        });
     }
 
-    private void mostrarDialogoNuevoProyecto() {
-        Window owner = canvas.getScene() != null ? canvas.getScene().getWindow() : null;
-        NuevoProyectoDialog dialog = new NuevoProyectoDialog(owner);
-        java.util.Optional<ProyectoMetadata> result = dialog.showAndWait();
+    /**
+     * Transición específica para el giro de la tarjeta.
+     * Captura el estado actual y lo rota 90 grados mientras se desvanece.
+     */
+    private void ejecutarGiroTransition(Runnable accionCambio) {
+        if (canvas == null || canvasContainer == null) {
+            accionCambio.run();
+            return;
+        }
 
-        if (result.isPresent()) {
-            ProyectoMetadata metadata = result.get();
-            Proyecto nuevo = projectManager.crearProyectoDesdeMetadata(metadata);
+        try {
+            // 1. Captura transparente
+            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
+            
+            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
+            tempView.setMouseTransparent(true);
+            tempView.setManaged(false); // Posicionamiento manual para evitar saltos de layout
+            
+            // Posición exacta actual
+            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
+            tempView.setLayoutX(bounds.getMinX());
+            tempView.setLayoutY(bounds.getMinY());
+            
+            canvasContainer.getChildren().add(tempView);
 
-            if (nuevo != null) {
-                // Configurar propiedades físicas adicionales no incluidas en metadata
-                nuevo.setTipoTroquel(dialog.getTipoTroquelSeleccionado());
+            // 2. Animación combinada: Rotación + Desvanecimiento
+            // Determinamos el sentido del giro ANTES de ejecutar el cambio
+            Proyecto proyectoActual = viewModel.getProyectoActual();
+            if (proyectoActual == null) return;
+            boolean aVertical = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL);
+            double anguloFinal = aVertical ? 90 : -90;
 
-                // Mostrar alerta de éxito visual en el Controller
-                Platform.runLater(() -> {
-                    Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
-                    alert.initOwner(owner);
-                    alert.setTitle("Proyecto Creado");
-                    alert.setHeaderText("Proyecto creado y configurado con éxito");
-                    alert.setContentText(
-                            "Se ha generado la estructura completa para el proyecto:\n\n" +
-                                    "Carpeta principal:\n" + metadata.getCarpetaProyecto() + "\n\n" +
-                                    "Subcarpetas creadas automáticamente:\n" +
-                                    "• Fotos\n" +
-                                    "• Fondos\n" +
-                                    "• Base de Datos (BBDD)");
+            // EJECUTAR EL CAMBIO YA (Simultáneo a la animación como prefiere el usuario)
+            accionCambio.run();
 
-                    String css = getClass().getResource("/css/dialogs.css").toExternalForm();
-                    alert.getDialogPane().getStylesheets().add(css);
+            javafx.animation.RotateTransition rt = new javafx.animation.RotateTransition(javafx.util.Duration.millis(450), tempView);
+            rt.setByAngle(anguloFinal);
+            
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+            ft.setFromValue(1.0);
+            ft.setToValue(0.0);
 
-                    if (owner != null) {
-                        alert.setOnShown(e -> {
-                            javafx.stage.Stage stage = (javafx.stage.Stage) alert.getDialogPane().getScene()
-                                    .getWindow();
-                            stage.setX(owner.getX() + (owner.getWidth() - stage.getWidth()) / 2.0);
-                            stage.setY(owner.getY() + (owner.getHeight() - stage.getHeight()) / 2.0);
-                        });
-                    }
-                    alert.showAndWait();
-                });
+            javafx.animation.ParallelTransition parallel = new javafx.animation.ParallelTransition(rt, ft);
+            parallel.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
+            parallel.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
+            parallel.play();
+
+        } catch (Exception e) {
+            accionCambio.run();
+        }
+    }
+
+    /**
+     * Realiza una transición de fundido cruzado (cross-fade) entre el estado actual
+     * del canvas y el nuevo estado tras ejecutar la acción de cambio.
+     */
+    private void ejecutarCrossFade(Runnable accionCambio) {
+        if (canvas == null || canvasContainer == null) {
+            accionCambio.run();
+            return;
+        }
+
+        try {
+            // Si el canvas no está en escena o es el primer proyecto, hacemos un fade-in tradicional
+            if (canvas.getScene() == null || viewModel.getProyectoActual() == null) {
+                accionCambio.run();
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
+                ft.setFromValue(0.0);
+                ft.setToValue(1.0);
+                ft.play();
+                return;
+            }
+
+            // 1. Capturar el estado actual del canvas
+            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
+            
+            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
+            tempView.setMouseTransparent(true);
+            tempView.setManaged(false); // Crítico: evita que el ImageView se mueva si el panel derecho se abre/cierra
+            
+            // Fijar posición absoluta inicial basada en los bounds del canvas
+            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
+            tempView.setLayoutX(bounds.getMinX());
+            tempView.setLayoutY(bounds.getMinY());
+            
+            canvasContainer.getChildren().add(tempView);
+
+            // 2. Ejecutar el cambio real
+            accionCambio.run();
+
+            // 3. Animar el desvanecimiento
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+            ft.setFromValue(1.0);
+            ft.setToValue(0.0);
+            ft.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
+            ft.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
+            ft.play();
+            
+        } catch (Exception e) {
+            accionCambio.run();
+        }
+    }
+
+    private void ajustarZoomVerticalSiNecesario() {
+        if (canvasContainer == null || canvasContainer.getHeight() <= 0) return;
+        
+        double currentZoom = viewModel.getZoomLevel();
+        double cardHeightScaled = EditorCanvasManager.CARD_WIDTH * currentZoom; // En vertical, la altura base es CARD_WIDTH
+        double maxHeight = canvasContainer.getHeight() - 80; // Margen superior e inferior
+        
+        if (cardHeightScaled > maxHeight) {
+            double targetZoom = maxHeight / EditorCanvasManager.CARD_WIDTH;
+            targetZoom = Math.floor(targetZoom * 10) / 10.0;
+            if (targetZoom < 0.5) targetZoom = 0.5;
+            
+            if (targetZoom < currentZoom) {
+                viewModel.setZoomLevel(targetZoom);
+                actualizarZoom();
             }
         }
     }
@@ -1316,101 +1371,27 @@ public class MainViewController {
     // =====================================================
 
     private void onAñadirTexto() {
-        TextoElemento texto = projectManager.añadirTexto();
-        if (texto != null) {
-            viewModel.setElementoSeleccionado(texto);
-            canvasManager.setElementoSeleccionado(texto);
-            ensurePropertiesPanelVisible();
-        }
+        elementActionsController.añadirTexto();
     }
 
     private void onAñadirImagen() {
-        ImagenElemento imagen = projectManager.añadirImagenPlaceholder();
-        if (imagen != null) {
-            viewModel.setElementoSeleccionado(imagen);
-            canvasManager.setElementoSeleccionado(imagen);
-            ensurePropertiesPanelVisible();
-
-            // Avisar al usuario si se detectó y vinculó columna de foto automáticamente
-            if (imagen.getColumnaVinculada() != null) {
-                notificarColumnaAutoVinculada(imagen.getColumnaVinculada());
-            }
-        }
+        elementActionsController.añadirImagen();
     }
 
     private void onAñadirForma(FormaElemento.TipoForma tipo) {
-        FormaElemento forma = projectManager.añadirForma(tipo);
-        if (forma != null) {
-            viewModel.setElementoSeleccionado(forma);
-            canvasManager.setElementoSeleccionado(forma);
-            ensurePropertiesPanelVisible();
-        }
+        elementActionsController.añadirForma(tipo);
     }
 
-    /*
-     * Muestra un toast con retraso cuando la auto-detección vincula columna de
-     * foto.
-     */
-    private void notificarColumnaAutoVinculada(String columna) {
-        PauseTransition delay = new PauseTransition(Duration.seconds(1.2));
-        delay.setOnFinished(e -> TPSToast.mostrar(
-                canvas.getScene().getWindow(),
-                "✔ Columna \"" + columna + "\" vinculada automáticamente",
-                "La imagen cambiará al navegar por los registros. Puedes cambiarla en Propiedades.",
-                TPSToast.Tipo.EXITO,
-                5.5));
-        delay.play();
+    private void onAñadirCodigo(TipoCodigo tipo) {
+        elementActionsController.añadirCodigo(tipo);
     }
 
     private void onEliminarElemento() {
-        if (projectManager.eliminarElemento(viewModel.getElementoSeleccionado())) {
-
-            canvasManager.setElementoSeleccionado(null);
-        }
+        elementActionsController.eliminarElemento();
     }
 
     private void onAñadirFondo() {
-        if (viewModel.getProyectoActual() == null)
-            return;
-
-        ImagenFondoElemento fondoExistente = viewModel.getProyectoActual().getFondoActual();
-        if (fondoExistente != null && !confirmarReemplazoFondo()) {
-            return;
-        }
-
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Seleccionar Imagen de Fondo");
-        fileChooser.getExtensionFilters().addAll(
-                new javafx.stage.FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
-        File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
-        if (file == null)
-            return;
-
-        FondoFitMode fitMode;
-        if (viewModel.getProyectoActual().isNoVolverAPreguntarFondo()
-                && viewModel.getProyectoActual().getFondoFitModePreferido() != null) {
-            fitMode = viewModel.getProyectoActual().getFondoFitModePreferido();
-        } else {
-            fitMode = mostrarDialogoFitMode();
-            if (fitMode == null)
-                return;
-        }
-
-        ImagenFondoElemento fondo = projectManager.añadirFondoDesdeArchivo(file, fitMode);
-
-        if (fondo != null) {
-            viewModel.setElementoSeleccionado(fondo);
-            canvasManager.setElementoSeleccionado(fondo);
-        }
-    }
-
-    private boolean confirmarReemplazoFondo() {
-        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Reemplazar Fondo");
-        alert.setHeaderText("¡Ojo! Ya tienes un fondo puesto.");
-        alert.setContentText("¿Seguro que quieres cambiarlo por uno nuevo?");
-        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        elementActionsController.añadirFondo();
     }
 
     // =====================================================
@@ -1465,8 +1446,9 @@ public class MainViewController {
      * apertura del panel se vean sincronizados.
      */
     private void adjustCanvasCentering() {
-        boolean panelVisible = (togglePropiedades != null && togglePropiedades.isSelected()) ||
-                (toggleDatosVariables != null && toggleDatosVariables.isSelected());
+        boolean panelVisible = viewModel.getCurrentMode() == AppMode.DESIGN &&
+                ((togglePropiedades != null && togglePropiedades.isSelected()) ||
+                (toggleDatosVariables != null && toggleDatosVariables.isSelected()));
 
         if (canvasContainer.getWidth() <= 0) {
             Platform.runLater(this::adjustCanvasCentering);
@@ -1474,33 +1456,97 @@ public class MainViewController {
         }
 
         double targetX = panelVisible ? -(rightPanel.getPrefWidth() / 2.0) : 0;
-        AnimationHelper.shiftCanvas(canvas, targetX);
+        double duration = panelVisible ? AnimationHelper.DURATION_OPEN : AnimationHelper.DURATION_CLOSE;
+        
+        AnimationHelper.shiftCanvas(canvas, targetX, duration);
         if (canvasOverlay != null) {
-            AnimationHelper.shiftCanvas(canvasOverlay, targetX);
+            AnimationHelper.shiftCanvas(canvasOverlay, targetX, duration);
         }
     }
 
     /* Abre el diálogo para editar o eliminar un proyecto existente. */
-
     private void abrirDialogoEditarProyecto(Proyecto proyecto) {
-
-        Window owner = canvas.getScene().getWindow();
-        EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner);
-        java.util.Optional<ProyectoMetadata> resultado = dialog.showAndWait();
-
-        if (dialog.isEliminarProyecto()) {
-            projectManager.eliminarProyecto(proyecto);
-            return;
-        }
-
-        if (resultado.isPresent()) {
-            ProyectoMetadata nuevaMetadata = resultado.get();
-            projectManager.editarProyecto(proyecto, nuevaMetadata);
-
-            // Si la BD vinculada cambió, recargar la fuente de datos y reconstruir paneles
-            projectManager.cargarFuenteDatos(nuevaMetadata.getRutaBBDD());
+        boolean changed = projectActionsController.editarProyecto(proyecto);
+        if (changed) {
+            actualizarLabelProyecto(false);
+            // Si la BD vinculada pudo haber cambiado, reconstruir paneles
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 buildEditPanels();
+            }
+        }
+    }
+
+    private void actualizarLabelProyecto(boolean animate) {
+        if (lblProyectoActivo != null) {
+            if (viewModel.getProyectoActual() != null) {
+                String nombre = viewModel.getProyectoActual().getNombre();
+                String inicial = nombre.isEmpty() ? "P" : nombre.substring(0, 1).toUpperCase();
+
+                // Si la escena no está lista O indicamos no animar, configuramos el estado inicial de golpe
+                if (lblProyectoActivo.getScene() == null || !animate) {
+                    if (isProjectChipCollapsed) {
+                        lblProyectoActivo.setText(inicial);
+                        lblProyectoActivo.setPrefWidth(28);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
+                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;"); // Muy oscuro
+                    } else {
+                        lblProyectoActivo.setText("Proyecto · " + nombre);
+                        lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                        lblProyectoActivo.setStyle("");
+                    }
+                    return;
+                }
+
+                // Transición suave
+                javafx.animation.Timeline timeline = new javafx.animation.Timeline();
+                if (isProjectChipCollapsed) {
+                    // Animación de CERRAR: mantener el texto completo para que se recorte desde la derecha
+                    lblProyectoActivo.setText("Proyecto · " + nombre);
+                    lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0 0 0 15;"); 
+                    
+                    // Fijar ancho actual para que empiece a encoger
+                    double currentWidth = lblProyectoActivo.getWidth();
+                    if (currentWidth > 30) {
+                        lblProyectoActivo.setPrefWidth(currentWidth);
+                    }
+                    
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), 28, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
+                    timeline.getKeyFrames().add(kf);
+                    
+                    timeline.setOnFinished(e -> {
+                        // Al terminar de cerrar, ponemos la inicial y centramos
+                        lblProyectoActivo.setText(inicial);
+                        lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
+                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;");
+                    });
+                } else {
+                    // Animación de ABRIR: preparar el texto completo desde el principio
+                    lblProyectoActivo.setText("Proyecto · " + nombre);
+                    lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    lblProyectoActivo.setStyle(""); 
+                    
+                    // Medimos cuánto va a ocupar expandido
+                    lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+                    lblProyectoActivo.applyCss();
+                    lblProyectoActivo.layout();
+                    double targetWidth = lblProyectoActivo.prefWidth(-1);
+                    
+                    // Empezamos desde el cuadradito
+                    lblProyectoActivo.setPrefWidth(28);
+                    
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), targetWidth, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
+                    timeline.getKeyFrames().add(kf);
+                    
+                    timeline.setOnFinished(e -> lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE));
+                }
+                timeline.play();
+
+            } else {
+                lblProyectoActivo.setText("");
             }
         }
     }

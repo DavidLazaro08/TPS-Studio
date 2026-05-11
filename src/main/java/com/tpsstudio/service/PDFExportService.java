@@ -4,6 +4,7 @@ import com.tpsstudio.model.elements.*;
 import com.tpsstudio.model.project.ClienteInfo;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
+import com.tpsstudio.util.TextUtils;
 import com.tpsstudio.view.dialogs.ExportDialog;
 import com.tpsstudio.view.dialogs.PruebaConfigDialog;
 import com.tpsstudio.view.managers.EditorCanvasManager;
@@ -66,6 +67,20 @@ public class PDFExportService {
     public PDFExportService(Proyecto proyecto, FuenteDatos fuenteDatos) {
         this.proyecto = proyecto;
         this.fuenteDatos = fuenteDatos;
+    }
+
+    private double getCardWidth() {
+        if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return EditorCanvasManager.CARD_HEIGHT;
+        }
+        return EditorCanvasManager.CARD_WIDTH;
+    }
+
+    private double getCardHeight() {
+        if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return EditorCanvasManager.CARD_WIDTH;
+        }
+        return EditorCanvasManager.CARD_HEIGHT;
     }
 
     /**
@@ -159,8 +174,8 @@ public class PDFExportService {
      * Resultado: canvas limpio con fondo o blanco puro. Sin guías.
      */
     private BufferedImage renderizarSoloFondo(boolean esFrente) throws Exception {
-        double cardW = EditorCanvasManager.CARD_WIDTH  * EXPORT_SCALE;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * EXPORT_SCALE;
+        double cardW = getCardWidth()  * EXPORT_SCALE;
+        double cardH = getCardHeight() * EXPORT_SCALE;
         double bleed = EditorCanvasManager.BLEED_MARGIN * EXPORT_SCALE;
         double canvasW = cardW + bleed * 2;
         double canvasH = cardH + bleed * 2;
@@ -212,9 +227,9 @@ public class PDFExportService {
      */
     private BufferedImage renderizarTarjeta(boolean esFrente, boolean recortarSangre) throws Exception {
 
-        // Dimensiones del canvas virtual a 3× escala (para conseguir ~300dpi)
-        double cardW = EditorCanvasManager.CARD_WIDTH  * EXPORT_SCALE;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * EXPORT_SCALE;
+        // Dimensiones del canvas virtual a escala de exportación
+        double cardW = getCardWidth()  * EXPORT_SCALE;
+        double cardH = getCardHeight() * EXPORT_SCALE;
         double bleed = EditorCanvasManager.BLEED_MARGIN * EXPORT_SCALE;
 
         double canvasW = cardW + bleed * 2;
@@ -323,9 +338,26 @@ public class PDFExportService {
             }
 
             // Multi-línea con auto-wrap (mismo algoritmo que EditorCanvasManager)
-            List<String> lines = computeLines(contenido, texto.isSaltoLinea(), gc.getFont(), ew);
+            String renderText = contenido != null ? contenido : "";
+            double effectiveFontSize = texto.getFontSize();
 
-            double lineH = texto.getFontSize() * scale * 1.2;
+            // Lógica de Auto-ajuste visual (Shrink to Fit)
+            if (texto.isAutoAjustar() && !texto.isSaltoLinea()) {
+                javafx.scene.text.Text helper = new javafx.scene.text.Text(renderText);
+                helper.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * scale));
+                double measuredWidth = helper.getLayoutBounds().getWidth();
+                
+                if (measuredWidth > ew && ew > 0) {
+                    double ratio = ew / measuredWidth;
+                    effectiveFontSize = Math.max(4.0, texto.getFontSize() * ratio);
+                    gc.setFont(Font.font(texto.getFontFamily(), weight, posture, effectiveFontSize * scale));
+                }
+            }
+
+            List<String> lines = TextUtils.computeLines(renderText, texto.isSaltoLinea(), gc.getFont(), ew);
+
+            double lineH = effectiveFontSize * scale * 1.2;
+            // Usamos el fontSize original para el Y inicial para mantener la línea de base
             double curY  = ey + (texto.getFontSize() * scale);
 
             for (String line : lines) {
@@ -396,44 +428,6 @@ public class PDFExportService {
         }
     }
 
-    /** Misma lógica de word-wrap que EditorCanvasManager para coherencia visual */
-    // SYNC: mantener coherente con EditorCanvasManager#computeLines para evitar diferencias entre vista y PDF.
-    private List<String> computeLines(String contenido, boolean saltoLinea, Font font, double maxWidth) {
-        List<String> rawLines = java.util.Arrays.asList(contenido.split("\n", -1));
-        List<String> finalLines = new ArrayList<>();
-
-        if (saltoLinea) {
-            javafx.scene.text.Text helper = new javafx.scene.text.Text();
-            helper.setFont(font);
-            for (String raw : rawLines) {
-                if (raw.isEmpty()) { finalLines.add(""); continue; }
-                String[] words = raw.split(" ", -1);
-                StringBuilder current = new StringBuilder();
-                for (String word : words) {
-                    String test = current.length() == 0 ? word : current + " " + word;
-                    helper.setText(test);
-                    if (helper.getLayoutBounds().getWidth() > maxWidth) {
-                        if (current.length() > 0) { finalLines.add(current.toString()); current = new StringBuilder(); }
-                        helper.setText(word);
-                        if (helper.getLayoutBounds().getWidth() > maxWidth) {
-                            StringBuilder partial = new StringBuilder();
-                            for (char c : word.toCharArray()) {
-                                helper.setText(partial.toString() + c);
-                                if (helper.getLayoutBounds().getWidth() > maxWidth && partial.length() > 0) {
-                                    finalLines.add(partial.toString()); partial = new StringBuilder().append(c);
-                                } else { partial.append(c); }
-                            }
-                            current = partial;
-                        } else { current = new StringBuilder(word); }
-                    } else { current = new StringBuilder(test); }
-                }
-                if (current.length() > 0) finalLines.add(current.toString());
-            }
-        } else {
-            finalLines.addAll(rawLines);
-        }
-        return finalLines;
-    }
 
     /** Intenta cargar una imagen desde la columna de datos (nombre de archivo) */
     private Image resolverImagenVariable(String nombreArchivo) {
@@ -466,8 +460,8 @@ public class PDFExportService {
         int A4_H_PX = (int) Math.round(297.0 / 25.4 * PRUEBA_DPI);
 
         double CARD_SCALE_PRUEBA = (PRUEBA_DPI * EditorCanvasManager.CR80_WIDTH_MM / 25.4) / EditorCanvasManager.CARD_WIDTH;
-        double cardW_px  = EditorCanvasManager.CARD_WIDTH  * CARD_SCALE_PRUEBA;
-        double cardH_px  = EditorCanvasManager.CARD_HEIGHT * CARD_SCALE_PRUEBA;
+        double cardW_px  = getCardWidth()  * CARD_SCALE_PRUEBA;
+        double cardH_px  = getCardHeight() * CARD_SCALE_PRUEBA;
         double bleed_px  = EditorCanvasManager.BLEED_MARGIN * CARD_SCALE_PRUEBA;
 
         final String nombreProyecto = proyecto.getNombre();
@@ -709,8 +703,8 @@ public class PDFExportService {
     private void renderTarjetaEnCanvas(GraphicsContext gc, List<? extends Elemento> elementos,
                                        ImagenFondoElemento fondo, double startX, double startY,
                                        double scale, boolean modoVista) {
-        double cardW = EditorCanvasManager.CARD_WIDTH  * scale;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * scale;
+        double cardW = getCardWidth()  * scale;
+        double cardH = getCardHeight() * scale;
         double bleed = EditorCanvasManager.BLEED_MARGIN * scale;
         double cardX = startX + bleed;
         double cardY = startY + bleed;

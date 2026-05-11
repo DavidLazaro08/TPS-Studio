@@ -17,8 +17,10 @@ import javafx.stage.Window;
 import javafx.application.Platform;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -152,6 +154,7 @@ public class ProjectManager {
 
         Proyecto nuevoProyecto = new Proyecto(metadata.getNombre());
         nuevoProyecto.setMetadata(metadata);
+        nuevoProyecto.setOrientacion(metadata.getOrientacion());
 
         if (!fileManager.guardarProyecto(nuevoProyecto, metadata)) {
             mostrarError("No se pudo guardar el archivo de proyecto.");
@@ -224,6 +227,18 @@ public class ProjectManager {
         return fuenteDatosActual;
     }
 
+    /** Guarda los cambios de la fuente de datos actual en el archivo físico. */
+    public void guardarFuenteDatosActual() {
+        if (proyectoActual != null && fuenteDatosActual != null && proyectoActual.getMetadata().getRutaBBDD() != null) {
+            boolean exito = datosVariablesManager.guardar(fuenteDatosActual, proyectoActual.getMetadata().getRutaBBDD());
+            if (exito) {
+                if (onNotificacion != null) onNotificacion.accept("info", "Base de datos actualizada correctamente.");
+            } else {
+                if (onNotificacion != null) onNotificacion.accept("error", "Error al guardar los cambios en la base de datos.");
+            }
+        }
+    }
+
     /*
      * Carga los proyectos recientes desde el historial.
      * maxProyectos: 0 = ninguno, -1 = todos, N = N proyectos
@@ -278,6 +293,7 @@ public class ProjectManager {
 
         proyecto.setNombre(nuevaMetadata.getNombre());
         proyecto.setMetadata(nuevaMetadata);
+        proyecto.setOrientacion(nuevaMetadata.getOrientacion());
 
         // Si la BD vinculada es un archivo externo al proyecto, copiarlo dentro
         String rutaBD = nuevaMetadata.getRutaBBDD();
@@ -310,19 +326,107 @@ public class ProjectManager {
      */
 
     public void eliminarProyecto(Proyecto proyecto) {
-
-        if (proyecto == null)
-            return;
-
+        if (proyecto == null) return;
         eliminarDeRecientes(proyecto);
         proyectos.remove(proyecto);
-
         if (proyectoActual == proyecto) {
             proyectoActual = null;
         }
-
         avisarProyectoCambiado();
         mostrarInfo("Proyecto cerrado.");
+    }
+
+    /**
+     * Duplica un proyecto existente creando una nueva carpeta física y copiando todos sus archivos.
+     */
+    public Proyecto duplicarProyecto(Proyecto original) {
+        if (original == null || original.getMetadata() == null) return null;
+
+        ProyectoMetadata metaOriginal = original.getMetadata();
+        File folderOriginal = new File(metaOriginal.getCarpetaProyecto());
+        if (!folderOriginal.exists()) {
+            mostrarError("La carpeta del proyecto original no existe.");
+            return null;
+        }
+
+        try {
+            // 1. Preparar nueva metadata
+            ProyectoMetadata nuevaMeta = new ProyectoMetadata();
+            nuevaMeta.setNombre(original.getNombre() + " (Copia)");
+            nuevaMeta.setClienteInfo(metaOriginal.getClienteInfo());
+            nuevaMeta.setUbicacion(metaOriginal.getUbicacion());
+            
+            // Generar nueva ruta base (evitar colisiones de nombres de carpeta)
+            String parent = folderOriginal.getParent();
+            String nombreLimpio = original.getNombre().replaceAll("[^a-zA-Z0-9_\\-\\s]", "_");
+            String nuevoNombreCarpeta = "TPS_" + nombreLimpio + "_Copia";
+            File folderCopia = new File(parent, nuevoNombreCarpeta);
+            int i = 1;
+            while (folderCopia.exists()) {
+                folderCopia = new File(parent, nuevoNombreCarpeta + "_" + i++);
+            }
+
+            // No establecemos carpetaProyecto directamente porque se calcula en base a la ubicación y nombre
+            nuevaMeta.setUbicacion(parent);
+            
+            // Crear la estructura de carpetas básica
+            if (!fileManager.crearEstructuraCarpetas(nuevaMeta)) {
+                mostrarError("No se pudo crear la estructura para el duplicado.");
+                return null;
+            }
+
+            // 2. Copiar archivos relevantes (Fotos y Fondos)
+            copyDirectory(Paths.get(metaOriginal.getRutaFotos()), Paths.get(nuevaMeta.getRutaFotos()));
+            copyDirectory(Paths.get(metaOriginal.getRutaFondos()), Paths.get(nuevaMeta.getRutaFondos()));
+            
+            // Si hay base de datos y es interna al proyecto, copiarla también
+            if (metaOriginal.getRutaBBDD() != null && metaOriginal.getRutaBBDD().contains(metaOriginal.getCarpetaProyecto())) {
+                File bdOrig = new File(metaOriginal.getRutaBBDD());
+                if (bdOrig.exists()) {
+                    String bdCopiada = fileManager.copiarBDAlProyecto(bdOrig, nuevaMeta);
+                    nuevaMeta.setRutaBBDD(bdCopiada);
+                }
+            } else {
+                nuevaMeta.setRutaBBDD(metaOriginal.getRutaBBDD());
+            }
+
+            // 3. Crear el nuevo objeto Proyecto (clonado profundo mediante recarga)
+            Proyecto copia = fileManager.cargarProyecto(new File(metaOriginal.getRutaTPS()));
+            if (copia != null) {
+                copia.setNombre(nuevaMeta.getNombre());
+                copia.setMetadata(nuevaMeta);
+                
+                // Guardar el nuevo archivo .tps
+                fileManager.guardarProyecto(copia, nuevaMeta);
+                
+                proyectos.add(copia);
+                recentManager.añadirReciente(nuevaMeta.getRutaTPS());
+                ordenarProyectos();
+                mostrarInfo("Proyecto duplicado correctamente.");
+                return copia;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            mostrarError("Error al duplicar: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private void copyDirectory(Path source, Path target) throws java.io.IOException {
+        if (!Files.exists(source)) return;
+        Files.walk(source).forEach(s -> {
+            try {
+                Path d = target.resolve(source.relativize(s));
+                if (Files.isDirectory(s)) {
+                    if (!Files.exists(d)) Files.createDirectory(d);
+                } else {
+                    Files.copy(s, d, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (Exception e) {
+                // Error de copia individual
+            }
+        });
     }
 
     /* Guarda el proyecto actual en su ruta .tps. */
@@ -374,6 +478,25 @@ public class ProjectManager {
         avisarElementoAñadido();
 
         return texto;
+    }
+
+    /**
+     * Crea un ElementoCodigo (QR o Barras) por defecto y lo añade al proyecto actual.
+     */
+    public com.tpsstudio.model.elements.ElementoCodigo añadirCodigo(com.tpsstudio.model.enums.TipoCodigo tipo) {
+        if (proyectoActual == null) return null;
+
+        int num = proyectoActual.getElementosActuales().size() + 1;
+        String nombre = tipo.getNombre() + " " + num;
+
+        // Posición aproximada al centro de la tarjeta CR80 (342 × 216 px)
+        com.tpsstudio.model.elements.ElementoCodigo codigo =
+                new com.tpsstudio.model.elements.ElementoCodigo(nombre, 131, 88, tipo);
+
+        proyectoActual.getElementosActuales().add(codigo);
+        avisarElementoAñadido();
+
+        return codigo;
     }
 
     /**
@@ -510,15 +633,18 @@ public class ProjectManager {
                 Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
                 Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
+                double cardW = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL)
+                        ? EditorCanvasManager.CARD_HEIGHT : EditorCanvasManager.CARD_WIDTH;
+                double cardH = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL)
+                        ? EditorCanvasManager.CARD_WIDTH : EditorCanvasManager.CARD_HEIGHT;
+
                 ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
                         rutaRelativa, img,
-                        EditorCanvasManager.CARD_WIDTH,
-                        EditorCanvasManager.CARD_HEIGHT,
+                        cardW, cardH,
                         fitMode);
 
                 nuevoFondo.ajustarATamaño(
-                        EditorCanvasManager.CARD_WIDTH,
-                        EditorCanvasManager.CARD_HEIGHT,
+                        cardW, cardH,
                         EditorCanvasManager.BLEED_MARGIN);
 
                 proyectoActual.setFondoActual(nuevoFondo);

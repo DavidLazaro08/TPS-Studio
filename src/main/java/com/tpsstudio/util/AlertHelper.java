@@ -21,4 +21,13 @@ public class AlertHelper {
         alert.getDialogPane().getStylesheets().add(CSS);
         return alert;
     }
+
+    /**
+     * Applies the application's dialog stylesheet to any Dialog (including TextInputDialog, ChoiceDialog, etc.)
+     */
+    public static void applyStyle(javafx.scene.control.Dialog<?> dialog) {
+        if (dialog != null && dialog.getDialogPane() != null) {
+            dialog.getDialogPane().getStylesheets().add(CSS);
+        }
+    }
 }
