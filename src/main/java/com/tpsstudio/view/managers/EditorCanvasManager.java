@@ -379,13 +379,30 @@ public class EditorCanvasManager {
                     if (valorVariable != null) contenidoFinal = valorVariable;
                 }
 
-                // Procesamiento multi-linea y auto-wrap centralizado
-                java.util.List<String> finalLines = TextUtils.computeLines(contenidoFinal, texto.isSaltoLinea(), gc.getFont(), ew);
+                // =======================================================
+                // Lógica de Renderizado y Auto-ajuste
+                // =======================================================
+                double effectiveFontSize = texto.getFontSize();
+                String renderText = contenidoFinal != null ? contenidoFinal : "";
 
-                // =======================================================
-                // Auto-ajuste Inteligente de Dimensiones de Caja
-                // =======================================================
-                double lineHeight = texto.getFontSize() * zoomLevel * 1.2;
+                // Si el auto-ajuste está activo y NO hay salto de línea, calculamos el escalado visual
+                if (texto.isAutoAjustar() && !texto.isSaltoLinea()) {
+                    javafx.scene.text.Text helper = new javafx.scene.text.Text(renderText);
+                    helper.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * zoomLevel));
+                    double measuredWidth = helper.getLayoutBounds().getWidth();
+                    
+                    if (measuredWidth > ew && ew > 0) {
+                        double ratio = ew / measuredWidth;
+                        effectiveFontSize = Math.max(4.0, texto.getFontSize() * ratio);
+                        // Actualizamos la fuente del contexto solo para este dibujado
+                        gc.setFont(Font.font(texto.getFontFamily(), weight, posture, effectiveFontSize * zoomLevel));
+                    }
+                }
+
+                // Cálculo de líneas (usa el font actual del gc, que puede estar escalado)
+                java.util.List<String> finalLines = TextUtils.computeLines(renderText, texto.isSaltoLinea(), gc.getFont(), ew);
+
+                double lineHeight = effectiveFontSize * zoomLevel * 1.2;
                 double maxLineWidth = 0;
 
                 for (String line : finalLines) {
@@ -395,34 +412,36 @@ public class EditorCanvasManager {
                     if (lw > maxLineWidth) maxLineWidth = lw;
                 }
 
-                // Cómputo de la dimensión exacta en espacio "puro/real" sin zoom
-                double requiredWidth = (maxLineWidth / zoomLevel) + 2.0; // Ligero margen
-                double requiredHeight = (finalLines.size() * (texto.getFontSize() * 1.2)) + (texto.getFontSize() * 0.3);
+                // Cómputo de la dimensión exacta en espacio "puro/real" sin zoom (solo si no hay auto-ajuste)
+                double requiredWidth = (maxLineWidth / zoomLevel) + 2.0;
+                double requiredHeight = (finalLines.size() * (effectiveFontSize * 1.2)) + (effectiveFontSize * 0.3);
 
                 boolean dimensionsChanged = false;
 
-                // Si NO hay auto-wrap, la caja se debe estirar al Ancho de la palabra infinita
-                if (!texto.isSaltoLinea()) {
-                    if (Math.abs(texto.getWidth() - requiredWidth) > 1.0) {
-                        texto.setWidth(requiredWidth);
-                        ew = requiredWidth * zoomLevel; // Actualiza variable local de render
+                // Solo ajustamos dimensiones de caja si el auto-ajuste está DESACTIVADO
+                if (!texto.isAutoAjustar()) {
+                    // Ancho (solo si no hay salto de línea)
+                    if (!texto.isSaltoLinea()) {
+                        if (Math.abs(texto.getWidth() - requiredWidth) > 1.0) {
+                            texto.setWidth(requiredWidth);
+                            ew = requiredWidth * zoomLevel;
+                            dimensionsChanged = true;
+                        }
+                    }
+
+                    // Alto (siempre ajusta si no hay auto-ajuste)
+                    if (Math.abs(texto.getHeight() - requiredHeight) > 1.0) {
+                        texto.setHeight(requiredHeight);
                         dimensionsChanged = true;
                     }
                 }
 
-                // El Alto SIEMPRE se ajusta dinámicamente para que quepan todos los saltos de línea
-                if (Math.abs(texto.getHeight() - requiredHeight) > 1.0) {
-                    texto.setHeight(requiredHeight);
-                    dimensionsChanged = true;
-                }
-
                 if (dimensionsChanged && elementoSeleccionado == texto && onElementTransformed != null) {
-                    onElementTransformed.run(); // Refresca las cifras laterales en tiempo real
+                    onElementTransformed.run();
                 }
 
-                // Renderizado de las líneas calculadas
-                double currentY = ey + (texto.getFontSize() * zoomLevel);
-                
+                // Renderizado final de las líneas
+                double currentY = ey + (effectiveFontSize * zoomLevel);
                 for (String line : finalLines) {
                     double textX = ex;
                     javafx.scene.text.Text tempText = new javafx.scene.text.Text(line);

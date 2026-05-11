@@ -338,10 +338,26 @@ public class PDFExportService {
             }
 
             // Multi-línea con auto-wrap (mismo algoritmo que EditorCanvasManager)
-            List<String> lines = TextUtils.computeLines(contenido, texto.isSaltoLinea(), gc.getFont(), ew);
+            String renderText = contenido != null ? contenido : "";
+            double effectiveFontSize = texto.getFontSize();
 
-            double lineH = texto.getFontSize() * scale * 1.2;
-            double curY  = ey + (texto.getFontSize() * scale);
+            // Lógica de Auto-ajuste visual (Shrink to Fit)
+            if (texto.isAutoAjustar() && !texto.isSaltoLinea()) {
+                javafx.scene.text.Text helper = new javafx.scene.text.Text(renderText);
+                helper.setFont(Font.font(texto.getFontFamily(), weight, posture, texto.getFontSize() * scale));
+                double measuredWidth = helper.getLayoutBounds().getWidth();
+                
+                if (measuredWidth > ew && ew > 0) {
+                    double ratio = ew / measuredWidth;
+                    effectiveFontSize = Math.max(4.0, texto.getFontSize() * ratio);
+                    gc.setFont(Font.font(texto.getFontFamily(), weight, posture, effectiveFontSize * scale));
+                }
+            }
+
+            List<String> lines = TextUtils.computeLines(renderText, texto.isSaltoLinea(), gc.getFont(), ew);
+
+            double lineH = effectiveFontSize * scale * 1.2;
+            double curY  = ey + (effectiveFontSize * scale);
 
             for (String line : lines) {
                 double textX = ex;

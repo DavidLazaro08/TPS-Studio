@@ -13,6 +13,7 @@ public class TextoElemento extends Elemento {
     private boolean negrita;
     private boolean cursiva;
     private Boolean saltoLinea; // Usamos Boolean para que GSON lo deje a null en proyectos viejos
+    private Boolean autoAjustar; // null = false por defecto
     private String columnaVinculada; // null = elemento fijo; valor = columna del Excel vinculada
 
     public TextoElemento(String nombre, double x, double y) {
@@ -25,6 +26,7 @@ public class TextoElemento extends Elemento {
         this.negrita = false;
         this.cursiva = false;
         this.saltoLinea = true;
+        this.autoAjustar = false;
     }
 
     // Getters y setters
@@ -98,5 +100,13 @@ public class TextoElemento extends Elemento {
 
     public void setSaltoLinea(boolean saltoLinea) {
         this.saltoLinea = saltoLinea;
+    }
+
+    public boolean isAutoAjustar() {
+        return autoAjustar == null ? false : autoAjustar;
+    }
+
+    public void setAutoAjustar(boolean autoAjustar) {
+        this.autoAjustar = autoAjustar;
     }
 }

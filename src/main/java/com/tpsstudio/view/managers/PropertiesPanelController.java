@@ -432,6 +432,15 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
+        CheckBox chkAutoFit = new CheckBox("Auto-ajustar al ancho");
+        chkAutoFit.setSelected(texto.isAutoAjustar());
+        chkAutoFit.getStyleClass().add("prop-checkbox");
+        chkAutoFit.setTooltip(new Tooltip("Reduce el tamaño de la letra automáticamente para que el texto quepa en el cuadro sin desbordar."));
+        chkAutoFit.selectedProperty().addListener((obs, old, newVal) -> {
+            texto.setAutoAjustar(newVal);
+            notifyCanvasRedraw();
+        });
+
         // ---- Fuente ----
         Label lblFuente = new Label("Fuente:");
         lblFuente.getStyleClass().add("prop-label-small");
@@ -525,7 +534,7 @@ public class PropertiesPanelController {
         filaHerramientas.setAlignment(javafx.geometry.Pos.BOTTOM_LEFT);
 
         props.getChildren().addAll(
-                lblTexto, txtContenido, chkSaltoLinea,
+                lblTexto, txtContenido, chkSaltoLinea, chkAutoFit,
                 lblFuente, cmbFuente,
                 filaHerramientas
         );
