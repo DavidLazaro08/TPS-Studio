@@ -1,6 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ElementoQR;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
@@ -467,6 +468,34 @@ public class EditorCanvasManager {
                 }
             } else if (elem instanceof FormaElemento forma) {
                 dibujarForma(gc, forma, ex, ey, ew, eh);
+
+            } else if (elem instanceof ElementoQR qr) {
+                // Resolver texto: dinámico (fuente de datos) o estático
+                String textoQR = qr.getContenido();
+                if (qr.esDinamico() && fuenteDatos != null) {
+                    String valorVariable = fuenteDatos.getValor(qr.getColumnaVinculada());
+                    if (valorVariable != null && !valorVariable.isBlank()) {
+                        textoQR = valorVariable;
+                    }
+                }
+
+                javafx.scene.image.Image imgQR = qr.getImagenQR(textoQR);
+
+                if (imgQR != null) {
+                    gc.drawImage(imgQR, ex, ey, ew, eh);
+                } else {
+                    // Placeholder cuando el texto está vacío o falla ZXing
+                    gc.setFill(Color.web("#2c2a2b"));
+                    gc.fillRect(ex, ey, ew, eh);
+                    gc.setStroke(Color.web("#5a5758"));
+                    gc.setLineWidth(1);
+                    gc.setLineDashes(4, 4);
+                    gc.strokeRect(ex, ey, ew, eh);
+                    gc.setLineDashes();
+                    gc.setFill(Color.web("#7a7578"));
+                    gc.setFont(Font.font("Arial", Math.max(9, ew * 0.15)));
+                    gc.fillText("QR", ex + ew * 0.3, ey + eh * 0.6);
+                }
             }
 
             // Selección + handles (Solo visibles en modo diseño)

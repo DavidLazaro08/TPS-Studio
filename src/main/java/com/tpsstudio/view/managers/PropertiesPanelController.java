@@ -1,6 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ElementoQR;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
@@ -108,6 +109,8 @@ public class PropertiesPanelController {
             buildImagePanel(props, lblProps, imagen);
         } else if (elemento instanceof FormaElemento forma) {
             buildFormaPanel(props, lblProps, forma);
+        } else if (elemento instanceof ElementoQR qr) {
+            buildQRPanel(props, lblProps, qr);
         }
 
         return props;
@@ -694,6 +697,134 @@ public class PropertiesPanelController {
 
             props.getChildren().addAll(chkRelleno, lblRelleno, cpRelleno);
         }
+    }
+
+    // ===================== PANEL QR =====================
+
+    private void buildQRPanel(VBox props, Label lblProps, ElementoQR qr) {
+        props.getChildren().add(lblProps);
+
+        // Etiqueta del elemento
+        addEtiquetaControl(props, qr.getEtiqueta(), qr::setEtiqueta, "Ej: QR ACCESO, QR WEB...");
+
+        // Controles de Contenido
+        Label lblContenido = new Label("Contenido del QR:");
+        lblContenido.getStyleClass().add("prop-label-small");
+
+        TextArea txtContenido = new TextArea(qr.getContenido());
+        txtContenido.setPromptText("URL o texto...");
+        txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
+        txtContenido.setPrefRowCount(2);
+        txtContenido.setWrapText(true);
+        txtContenido.textProperty().addListener((obs, old, newVal) -> {
+            qr.setContenido(newVal);
+            qr.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        // Aplicar estado inicial según vinculación
+        boolean vinculadoInicial = qr.getColumnaVinculada() != null;
+        txtContenido.setDisable(vinculadoInicial);
+        if (vinculadoInicial) {
+            lblContenido.setText("Contenido (vinculado a base de datos):");
+        }
+
+        // Sección Datos Variables
+        if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
+            addSeccionDatosVariablesQR(props, qr, lblContenido, txtContenido);
+            props.getChildren().add(new Separator());
+        }
+
+        // Posición y Tamaño
+        addPositionSizeControls(props, qr);
+
+        props.getChildren().add(new Separator());
+
+        // Colores
+        Label lblColorQR = new Label("Color del Código:");
+        lblColorQR.getStyleClass().add("prop-label-small");
+        ColorPicker cpQR = new ColorPicker(Color.web(qr.getColorQR()));
+        cpQR.setMaxWidth(MAX_CONTROL_WIDTH);
+        cpQR.valueProperty().addListener((obs, old, newVal) -> {
+            qr.setColorQR(String.format("#%02X%02X%02X",
+                    (int) (newVal.getRed() * 255), (int) (newVal.getGreen() * 255), (int) (newVal.getBlue() * 255)));
+            qr.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        Label lblColorFondo = new Label("Color de Fondo:");
+        lblColorFondo.getStyleClass().add("prop-label-small");
+        ColorPicker cpFondo = new ColorPicker(Color.web(qr.getColorFondo()));
+        cpFondo.setMaxWidth(MAX_CONTROL_WIDTH);
+        cpFondo.valueProperty().addListener((obs, old, newVal) -> {
+            qr.setColorFondo(String.format("#%02X%02X%02X",
+                    (int) (newVal.getRed() * 255), (int) (newVal.getGreen() * 255), (int) (newVal.getBlue() * 255)));
+            qr.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        // Margen y Corrección
+        Label lblMargen = new Label("Margen de silencio:");
+        lblMargen.getStyleClass().add("prop-label-small");
+        Spinner<Integer> spMargen = new Spinner<>(0, 10, qr.getMargen());
+        spMargen.setMaxWidth(MAX_CONTROL_WIDTH);
+        spMargen.valueProperty().addListener((obs, old, newVal) -> {
+            qr.setMargen(newVal);
+            qr.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        Label lblError = new Label("Nivel de corrección:");
+        lblError.getStyleClass().add("prop-label-small");
+        ComboBox<String> cmbError = new ComboBox<>(FXCollections.observableArrayList("L (7%)", "M (15%)", "Q (25%)", "H (30%)"));
+        cmbError.setMaxWidth(MAX_CONTROL_WIDTH);
+        
+        // Mapear el nivel actual (letra) al item descriptivo
+        String nivelActual = qr.getNivelCorreccion();
+        for (String item : cmbError.getItems()) {
+            if (item.startsWith(nivelActual)) {
+                cmbError.setValue(item);
+                break;
+            }
+        }
+
+        cmbError.valueProperty().addListener((obs, old, newVal) -> {
+            if (newVal != null) {
+                // Extraer solo la primera letra (L, M, Q, H) para el modelo
+                String letra = newVal.substring(0, 1);
+                qr.setNivelCorreccion(letra);
+                qr.invalidarCache();
+                notifyCanvasRedraw();
+            }
+        });
+
+        props.getChildren().addAll(lblContenido, txtContenido, lblColorQR, cpQR, lblColorFondo, cpFondo, lblMargen, spMargen, lblError, cmbError);
+    }
+
+    private void addSeccionDatosVariablesQR(VBox props, ElementoQR qr, Label lblContenido, TextArea txtContenido) {
+        Label lblSeccion = new Label("Datos Variables");
+        lblSeccion.getStyleClass().add("prop-label");
+
+        ComboBox<String> cmbColumna = new ComboBox<>();
+        cmbColumna.setMaxWidth(MAX_CONTROL_WIDTH);
+        List<String> opciones = new ArrayList<>();
+        opciones.add("(sin vincular)");
+        opciones.addAll(fuenteDatos.getColumnas());
+        cmbColumna.setItems(FXCollections.observableArrayList(opciones));
+
+        String actual = qr.getColumnaVinculada();
+        cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
+
+        cmbColumna.valueProperty().addListener((obs, old, newVal) -> {
+            boolean isVinculado = !"(sin vincular)".equals(newVal);
+            qr.setColumnaVinculada(isVinculado ? newVal : null);
+            txtContenido.setDisable(isVinculado);
+            lblContenido.setText(isVinculado ? "Contenido (vinculado a base de datos):" : "Contenido del QR:");
+            qr.invalidarCache();
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblSeccion, cmbColumna);
     }
 
     // ===================== SECCIÓN DATOS VARIABLES =====================

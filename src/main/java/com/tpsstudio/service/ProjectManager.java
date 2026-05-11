@@ -481,6 +481,25 @@ public class ProjectManager {
     }
 
     /**
+     * Crea un ElementoQR por defecto y lo añade al proyecto actual.
+     * El QR se coloca centrado en la tarjeta (aprox. 170×170 px / 2).
+     */
+    public com.tpsstudio.model.elements.ElementoQR añadirQR() {
+        if (proyectoActual == null) return null;
+
+        int num = proyectoActual.getElementosActuales().size() + 1;
+
+        // Posición aproximada al centro de la tarjeta CR80 (342 × 216 px)
+        com.tpsstudio.model.elements.ElementoQR qr =
+                new com.tpsstudio.model.elements.ElementoQR("QR " + num, 141, 78);
+
+        proyectoActual.getElementosActuales().add(qr);
+        avisarElementoAñadido();
+
+        return qr;
+    }
+
+    /**
      * Añade una forma geométrica (Rectángulo, Elipse o Línea) al proyecto actual.
      */
     public FormaElemento añadirForma(FormaElemento.TipoForma tipo) {

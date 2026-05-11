@@ -1,5 +1,6 @@
 package com.tpsstudio.view.controllers.sub;
 
+import com.tpsstudio.model.elements.ElementoQR;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
@@ -113,6 +114,18 @@ public class ElementActionsController {
         if (forma != null) {
             viewModel.setElementoSeleccionado(forma);
             canvasManager.setElementoSeleccionado(forma);
+            onEnsureProps.run();
+        }
+    }
+
+    /**
+     * Añade un nuevo código QR al proyecto activo y lo selecciona.
+     */
+    public void añadirQR() {
+        ElementoQR qr = projectManager.añadirQR();
+        if (qr != null) {
+            viewModel.setElementoSeleccionado(qr);
+            canvasManager.setElementoSeleccionado(qr);
             onEnsureProps.run();
         }
     }

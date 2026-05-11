@@ -364,6 +364,7 @@ public class MainViewController {
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
         modeManager.setOnAddShape(this::onAñadirForma);
+        modeManager.setOnAddQR(this::onAñadirQR);
 
         modeManager.setOnValidateDesign(this::onValidarDiseno);
 
@@ -401,10 +402,6 @@ public class MainViewController {
 
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
-                
-                if (togglePropiedades.isSelected()) {
-                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
-                }
             }
             dibujarCanvas();
         });
@@ -458,9 +455,6 @@ public class MainViewController {
             // Sincronizar selección en la lista de capas sin reconstruir (solo resalta la capa)
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
-                if (togglePropiedades.isSelected()) {
-                    modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
-                }
             }
         });
 
@@ -841,6 +835,11 @@ public class MainViewController {
             // Igual que cuando se abre con el botón de la barra:
             // desplazar la tarjeta para que no quede tapada por el panel
             adjustCanvasCentering();
+        }
+
+        // Refrescar el contenido del panel de propiedades para el elemento seleccionado
+        if (viewModel.getElementoSeleccionado() != null && togglePropiedades.isSelected()) {
+            modeManager.refreshPropertiesPanel(viewModel.getElementoSeleccionado(), viewModel.getProyectoActual());
         }
     }
 
@@ -1381,6 +1380,10 @@ public class MainViewController {
 
     private void onAñadirForma(FormaElemento.TipoForma tipo) {
         elementActionsController.añadirForma(tipo);
+    }
+
+    private void onAñadirQR() {
+        elementActionsController.añadirQR();
     }
 
     private void onEliminarElemento() {

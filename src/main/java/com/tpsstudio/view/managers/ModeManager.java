@@ -1,6 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
+import com.tpsstudio.model.elements.ElementoQR;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
@@ -25,14 +26,19 @@ import javafx.scene.layout.VBox;
 import javafx.scene.input.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.WritableImage;
+import javafx.scene.image.ImageView;
 import java.util.Collections;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import javafx.css.PseudoClass;
 import com.tpsstudio.util.AnimationHelper;
 
 /**
@@ -113,6 +119,9 @@ public class ModeManager {
 
     // Nuevo callback para añadir formas
     private java.util.function.Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> onAddShape;
+
+    // Callback para añadir código QR
+    private Runnable onAddQR;
 
     // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el
     // panel izquierdo
@@ -260,6 +269,10 @@ public class ModeManager {
         this.onAddShape = callback;
     }
 
+    public void setOnAddQR(Runnable callback) {
+        this.onAddQR = callback;
+    }
+
     public void setOnCanvasRedraw(Runnable callback) {
         this.onCanvasRedraw = callback;
     }
@@ -322,15 +335,10 @@ public class ModeManager {
             javafx.scene.Node targetNode = isPropertiesActive ? propertiesNode : datosNode;
             
             if (targetNode != null) {
-                // Animación suave de cambio de pestaña (Cross-fade)
-                javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(AnimationHelper.DURATION_SLOW), rightPanel);
-                fade.setFromValue(0.4);
-                fade.setToValue(1.0);
-                fade.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
-                
-                VBox.setVgrow(targetNode, Priority.ALWAYS); 
-                rightPanel.getChildren().setAll(targetNode);
-                fade.play();
+                VBox.setVgrow(targetNode, Priority.ALWAYS);
+                ejecutarTransicionSutil(rightPanel, () -> {
+                    rightPanel.getChildren().setAll(targetNode);
+                });
             }
         }
     }
@@ -347,8 +355,32 @@ public class ModeManager {
         this.propertiesNode = scrollProps;
 
         if (isPropertiesActive && currentMode == AppMode.DESIGN) {
-            rightPanel.getChildren().setAll(propertiesNode);
+            ejecutarTransicionSutil(rightPanel, () -> {
+                rightPanel.getChildren().setAll(propertiesNode);
+            });
         }
+    }
+
+    /**
+     * Realiza una transición de fundido muy sutil para el panel derecho,
+     * dando feedback visual sin interferir con el layout.
+     */
+    private void ejecutarTransicionSutil(VBox panel, Runnable action) {
+        if (panel == null || panel.getScene() == null) {
+            action.run();
+            return;
+        }
+
+        // Ejecutar el cambio instantáneamente
+        action.run();
+        
+        // Aplicar un pequeño "shimmer" o fundido de entrada muy rápido
+        javafx.animation.FadeTransition fadeIn = new javafx.animation.FadeTransition(
+            javafx.util.Duration.millis(300), panel);
+        fadeIn.setFromValue(0.6);
+        fadeIn.setToValue(1.0);
+        fadeIn.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+        fadeIn.play();
     }
 
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
@@ -455,6 +487,10 @@ public class ModeManager {
         Button btnFondo = makeToolButton("⬚", "tool-icon", "Fondo", "tool-label", "tool-button");
         btnFondo.setOnAction(e -> { if (onAddBackground != null) onAddBackground.run(); });
 
+        // ---- Código QR ----
+        Button btnQR = makeToolButton("⦀", "tool-icon", "Código QR", "tool-label", "tool-button");
+        btnQR.setOnAction(e -> { if (onAddQR != null) onAddQR.run(); });
+
         // ---- Subherramientas de forma ----
         VBox shapesSubMenu = new VBox(1);
         shapesSubMenu.getStyleClass().add("tool-subtools");
@@ -513,6 +549,7 @@ public class ModeManager {
                 btnTexto,
                 btnImagen,
                 btnFondo,
+                btnQR,
                 btnToggleFormas,
                 shapesSubMenu,
                 new Separator(),
@@ -679,6 +716,37 @@ public class ModeManager {
                     hOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), hoverOverlay);
                     hOut.setToValue(0.0);
 
+                    // LÓGICA DE SELECCIÓN ROBUSTA (PseudoClass + Listener)
+                    selectedProperty().addListener((obs, old, isSelected) -> {
+                        pseudoClassStateChanged(PseudoClass.getPseudoClass("selected"), isSelected);
+                        
+                        if (isSelected) {
+                            selectedOverlay.setOpacity(1.0);
+                            activeBar.setVisible(true);
+                            activeBar.setOpacity(1.0);
+                            actions.setVisible(true);
+                            lblNombre.setStyle("-fx-font-weight: bold; -fx-text-fill: white;");
+                            lblIcon.setStyle("-fx-text-fill: white;");
+                            
+                            if (pulse == null) {
+                                pulse = new javafx.animation.Timeline(
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH)),
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2), new javafx.animation.KeyValue(activeBar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
+                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4), new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH))
+                                );
+                                pulse.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+                                pulse.play();
+                            }
+                        } else {
+                            selectedOverlay.setOpacity(0.0);
+                            activeBar.setVisible(false);
+                            actions.setVisible(false);
+                            lblNombre.setStyle("-fx-font-weight: normal; -fx-text-fill: #a0a5cc;");
+                            lblIcon.setStyle("-fx-text-fill: #a0a5cc;");
+                            if (pulse != null) { pulse.stop(); pulse = null; }
+                        }
+                    });
+
                     card.setOnMouseEntered(e -> {
                         hIn.playFromStart();
                         if (!isSelected()) actions.setVisible(true);
@@ -698,24 +766,26 @@ public class ModeManager {
                         setGraphic(null);
                         setText(null);
                         if (pulse != null) { pulse.stop(); pulse = null; }
-                    } else {
-                        // Siempre resetear el estado visual al inicio — las celdas son recicladas por JavaFX
-                        // y pueden traer opacity/visibility residual de otro item anterior.
-                        hoverOverlay.setOpacity(0.0);
+                        // Limpieza radical para celdas vacías
+                        selectedOverlay.setOpacity(0.0);
+                        activeBar.setVisible(false);
                         actions.setVisible(false);
+                    } else {
+                        // Reset de hover (siempre al inicio)
+                        hoverOverlay.setOpacity(0.0);
                         
                         // Actualizar contenido
                         String iconStr = "·";
                         if (item instanceof ImagenFondoElemento) iconStr = "⬚";
                         else if (item instanceof TextoElemento)  iconStr = "T";
                         else if (item instanceof ImagenElemento) iconStr = "▣";
+                        else if (item instanceof ElementoQR)     iconStr = "⦀";
                         else iconStr = "⬒";
                         
                         lblIcon.setText(iconStr);
-                        // toString() devuelve "Nombre | Etiqueta" si hay etiqueta
                         lblNombre.setText(item.toString());
                         
-                        // Botones de acción (reordenar + eliminar) — solo para no-fondo
+                        // Botones de acción (reordenar + eliminar)
                         actions.getChildren().clear();
                         if (item.isLocked()) {
                             Label lock = new Label("🔒");
@@ -753,41 +823,26 @@ public class ModeManager {
                             actions.getChildren().addAll(btnUp, btnDown, btnDel);
                         }
 
-                        // Estado visual — aplicamos estilos directamente para evitar
-                        // contaminación de CSS entre celdas recicladas por JavaFX
-                        boolean selected = isSelected() || (getListView() != null && getListView().getSelectionModel().getSelectedItem() == item);
-
-                        if (selected) {
-                            getStyleClass().add("layer-item-selected");
+                        // Sincronizar estado visual inicial de la celda reciclada
+                        boolean isSelected = isSelected();
+                        pseudoClassStateChanged(PseudoClass.getPseudoClass("selected"), isSelected);
+                        
+                        if (isSelected) {
                             selectedOverlay.setOpacity(1.0);
                             activeBar.setVisible(true);
                             activeBar.setOpacity(1.0);
                             actions.setVisible(true);
-                            // Estilo directo: evita que celdas recicladas hereden el bold
                             lblNombre.setStyle("-fx-font-weight: bold; -fx-text-fill: white;");
                             lblIcon.setStyle("-fx-text-fill: white;");
-                            
-                            if (pulse == null) {
-                                pulse = new javafx.animation.Timeline(
-                                    new javafx.animation.KeyFrame(javafx.util.Duration.ZERO, new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH)),
-                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2), new javafx.animation.KeyValue(activeBar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
-                                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4), new javafx.animation.KeyValue(activeBar.opacityProperty(), 0.3, javafx.animation.Interpolator.EASE_BOTH))
-                                );
-                                pulse.setCycleCount(javafx.animation.Timeline.INDEFINITE);
-                                pulse.play();
-                            }
                         } else {
-                            getStyleClass().remove("layer-item-selected");
                             selectedOverlay.setOpacity(0.0);
                             activeBar.setVisible(false);
-                            activeBar.setOpacity(0.0);
                             actions.setVisible(false);
-                            // Reset explícito de estilos en línea (para evitar celdas fantasma al reciclar)
                             lblNombre.setStyle("-fx-font-weight: normal; -fx-text-fill: #a0a5cc;");
                             lblIcon.setStyle("-fx-text-fill: #a0a5cc;");
-                            if (pulse != null) { pulse.stop(); pulse = null; }
                         }
 
+                        // Menú contextual
                         cm.getItems().clear();
                         if (item instanceof ImagenFondoElemento) {
                             MenuItem mEdit = new MenuItem("Editar fondo...");
