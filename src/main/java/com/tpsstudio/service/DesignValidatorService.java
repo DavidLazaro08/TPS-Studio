@@ -62,14 +62,16 @@ public class DesignValidatorService {
             double realW = fondo.getImagen().getWidth();
             double realH = fondo.getImagen().getHeight();
 
-            // 1a. Resolución mínima para impresión a 300 DPI
+            // 1a. Resolución mínima para impresión a 300 DPI (con un pequeño margen de tolerancia del 2% para evitar falsos positivos)
             double minW = (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? MIN_PRINT_H : MIN_PRINT_W;
             double minH = (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? MIN_PRINT_W : MIN_PRINT_H;
             
-            if (realW < minW || realH < minH) {
+            // Tolerancia para no ser excesivamente estricto con imágenes que están casi en el límite
+            double tolerance = 0.98; 
+            if (realW < (minW * tolerance) || realH < (minH * tolerance)) {
                 avisos.add("[" + capa + "] El fondo tiene una resolución baja para impresión "
-                        + String.format("(%.0f×%.0f px detectados, mínimo recomendado: %.0f×%.0f px a 300 dpi). ", realW, realH, minW, minH)
-                        + "Puede verse pixelado al imprimir. Considere usar el botón 'Editor Externo' para ajustarlo.");
+                        + String.format("(%.0f×%.0f px detectados, el óptimo es: %.0f×%.0f px). ", realW, realH, minW, minH)
+                        + "La calidad de impresión podría verse comprometida.");
             }
 
             // 1b. Proporción de la imagen vs proporción CR80 (85.60 x 53.98 mm → ratio ≈ 1.585)
@@ -120,23 +122,30 @@ public class DesignValidatorService {
             boolean saleDerecha = (ex + ew) > (currentCardWidth + BLEED_MARGIN);
             boolean saleAbajo = (ey + eh) > (currentCardHeight + BLEED_MARGIN);
 
-            if (elem instanceof TextoElemento) {
-                if (saleIzquierda || saleArriba || saleDerecha || saleAbajo) {
-                    avisos.add("[" + capa + "] El texto '" + name + "' sale fuera del área de impresión.");
+            String tipoLabel = "El elemento";
+            if (elem instanceof TextoElemento) tipoLabel = "El texto";
+            else if (elem instanceof ImagenElemento) tipoLabel = "La imagen";
+            else if (elem instanceof com.tpsstudio.model.elements.ElementoCodigo) tipoLabel = "El código (QR/Barras)";
+
+            if (saleIzquierda || saleArriba || saleDerecha || saleAbajo) {
+                avisos.add("[" + capa + "] " + tipoLabel + " '" + name + "' sale fuera del área de impresión.");
+            } else {
+                // Chequeo de zona de sangrado (solo si no se sale totalmente)
+                if (ex < 0 || ey < 0 || (ex + ew) > currentCardWidth || (ey + eh) > currentCardHeight) {
+                    avisos.add("[" + capa + "] " + tipoLabel + " '" + name + "' invade la zona de sangrado (será recortado).");
                 } else {
-                    if (ex < 0 || ey < 0 || (ex + ew) > currentCardWidth || (ey + eh) > currentCardHeight) {
-                        avisos.add("[" + capa + "] El texto '" + name + "' invade la zona de sangrado (será recortado).");
-                    } else {
-                        if (ex < SAFETY_MARGIN || ey < SAFETY_MARGIN ||
-                           (ex + ew) > (currentCardWidth - SAFETY_MARGIN) ||
-                           (ey + eh) > (currentCardHeight - SAFETY_MARGIN)) {
-                            avisos.add("[" + capa + "] (Aviso leve) El texto '" + name + "' está fuera del margen de seguridad.");
+                    // Margen de seguridad (solo avisos leves)
+                    if (ex < SAFETY_MARGIN || ey < SAFETY_MARGIN ||
+                       (ex + ew) > (currentCardWidth - SAFETY_MARGIN) ||
+                       (ey + eh) > (currentCardHeight - SAFETY_MARGIN)) {
+                        
+                        // Para códigos, el margen de seguridad es más importante para la lectura
+                        if (elem instanceof com.tpsstudio.model.elements.ElementoCodigo) {
+                            avisos.add("[" + capa + "] El código '" + name + "' está muy cerca del borde. Podría tener problemas de lectura al imprimir.");
+                        } else {
+                            avisos.add("[" + capa + "] (Aviso leve) " + tipoLabel + " '" + name + "' está fuera del margen de seguridad.");
                         }
                     }
-                }
-            } else if (elem instanceof ImagenElemento) {
-                if (saleIzquierda || saleArriba || saleDerecha || saleAbajo) {
-                    avisos.add("[" + capa + "] La imagen '" + name + "' o su caja de selección se sale excesivamente fuera de los límites.");
                 }
             }
 

@@ -425,26 +425,44 @@ public class PropertiesPanelController {
         props.getChildren().add(new Separator());
 
         CheckBox chkSaltoLinea = new CheckBox("Pasar a la línea inferior si no cabe");
+        CheckBox chkAutoFit = new CheckBox("Auto-ajustar al ancho");
+
         chkSaltoLinea.setSelected(texto.isSaltoLinea());
         chkSaltoLinea.getStyleClass().add("prop-checkbox");
         chkSaltoLinea.selectedProperty().addListener((obs, old, newVal) -> {
-            texto.setSaltoLinea(newVal);
+            if (newVal) {
+                texto.setSaltoLinea(true);
+                // Si activamos salto de linea, desactivamos auto-ajuste
+                if (texto.isAutoAjustar()) {
+                    texto.setAutoAjustar(false);
+                    chkAutoFit.setSelected(false);
+                }
+            } else {
+                texto.setSaltoLinea(false);
+            }
             notifyCanvasRedraw();
         });
 
-        CheckBox chkAutoFit = new CheckBox("Auto-ajustar al ancho");
         chkAutoFit.setSelected(texto.isAutoAjustar());
         chkAutoFit.getStyleClass().add("prop-checkbox");
         chkAutoFit.setTooltip(new Tooltip("Reduce el tamaño de la letra automáticamente para que el texto quepa en el cuadro sin desbordar."));
         chkAutoFit.selectedProperty().addListener((obs, old, newVal) -> {
-            texto.setAutoAjustar(newVal);
             if (newVal) {
+                texto.setAutoAjustar(true);
+                // Si activamos auto-ajuste, desactivamos salto de linea
+                if (texto.isSaltoLinea()) {
+                    texto.setSaltoLinea(false);
+                    chkSaltoLinea.setSelected(false);
+                }
+                
                 com.tpsstudio.util.TPSToast.mostrar(
                     canvas.getScene().getWindow(),
                     "Auto-ajuste activado",
                     "El texto se encogerá visualmente para no desbordar el cuadro.",
                     com.tpsstudio.util.TPSToast.Tipo.EXITO
                 );
+            } else {
+                texto.setAutoAjustar(false);
             }
             notifyCanvasRedraw();
         });
