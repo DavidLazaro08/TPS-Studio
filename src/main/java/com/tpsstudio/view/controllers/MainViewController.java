@@ -410,24 +410,19 @@ public class MainViewController {
         });
 
         modeManager.setOnProjectSelected(proyecto -> {
-            viewModel.setProyectoActual(proyecto);
-            projectManager.setProyectoActual(proyecto);
-            canvasManager.setProyectoActual(proyecto);
-            
-            // Adjust zoom if the project is vertical
-            if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
-                ajustarZoomVerticalSiNecesario();
-            }
-            
-            checkDesignWarnings();
-
-            // Animación de entrada para la tarjeta
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
-            ft.setFromValue(0.4);
-            ft.setToValue(1.0);
-            ft.play();
-            
-            dibujarCanvas();
+            ejecutarCrossFade(() -> {
+                viewModel.setProyectoActual(proyecto);
+                projectManager.setProyectoActual(proyecto);
+                canvasManager.setProyectoActual(proyecto);
+                
+                // Adjust zoom if the project is vertical
+                if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                    ajustarZoomVerticalSiNecesario();
+                }
+                
+                checkDesignWarnings();
+                dibujarCanvas();
+            });
         });
 
         modeManager.setOnEditExternal(this::abrirEditorExterno);
@@ -1311,6 +1306,16 @@ public class MainViewController {
         }
 
         try {
+            // Si el canvas no está en escena o es el primer proyecto, hacemos un fade-in tradicional
+            if (canvas.getScene() == null || viewModel.getProyectoActual() == null) {
+                accionCambio.run();
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
+                ft.setFromValue(0.0);
+                ft.setToValue(1.0);
+                ft.play();
+                return;
+            }
+
             // 1. Capturar el estado actual del canvas
             javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
             params.setFill(javafx.scene.paint.Color.TRANSPARENT);

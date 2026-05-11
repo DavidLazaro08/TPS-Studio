@@ -394,12 +394,8 @@ public class ModeManager {
         if (layersListView != null) {
             isUpdatingSelection = true;
             try {
-                // Sincronizar la lista de elementos según la cara (frente/dorso)
-                if (proyecto != null) {
-                    layersListView.setItems(proyecto.getElementosActuales());
-                } else {
-                    layersListView.setItems(javafx.collections.FXCollections.observableArrayList());
-                }
+                // Sincronizar la lista de elementos (incluyendo el fondo virtual)
+                layersListView.setItems(getCapasDeProyecto(proyecto));
 
                 layersListView.getSelectionModel().clearSelection();
                 if (selectedElement != null) {
@@ -594,14 +590,7 @@ public class ModeManager {
 
         final Proyecto currentProj = proyecto;
         if (currentProj != null) {
-            ObservableList<Elemento> allElements = FXCollections.observableArrayList();
-
-            // Fondo (si hay) + elementos del lado actual
-            ImagenFondoElemento fondo = proyecto.getFondoActual();
-            if (fondo != null) allElements.add(fondo);
-            allElements.addAll(proyecto.getElementosActuales());
-
-            layersListView.setItems(allElements);
+            layersListView.setItems(getCapasDeProyecto(proyecto));
 
             if (selectedElement != null) {
                 isUpdatingSelection = true;
@@ -845,6 +834,21 @@ public class ModeManager {
         return panel;
     }
 
+    /**
+     * Helper para obtener la lista de capas completa (Fondo + Elementos) para la cara actual.
+     */
+    private ObservableList<Elemento> getCapasDeProyecto(Proyecto proyecto) {
+        ObservableList<Elemento> capas = FXCollections.observableArrayList();
+        if (proyecto != null) {
+            ImagenFondoElemento fondo = proyecto.getFondoActual();
+            if (fondo != null) {
+                capas.add(fondo);
+            }
+            capas.addAll(proyecto.getElementosActuales());
+        }
+        return capas;
+    }
+
     /* Construye el panel de navegación y vista del registro activo. */
     private VBox buildDatosVariablesPanel(FuenteDatos datos, Proyecto proyecto) {
         VBox panel = new VBox(12);
@@ -1072,6 +1076,9 @@ public class ModeManager {
         header.setAlignment(Pos.CENTER_LEFT);
 
         // --- BARRA DE BÚSQUEDA ---
+        proyectosFiltrados = javafx.collections.FXCollections.observableArrayList();
+        actualizarListaFiltrada(projects);
+
         TextField txtBusqueda = new TextField();
         txtBusqueda.setPromptText("Buscar por nombre, cliente...");
         txtBusqueda.getStyleClass().add("search-field");
@@ -1083,7 +1090,6 @@ public class ModeManager {
         txtBusqueda.setText(filtroTexto); // Restaurar si venimos de otro modo
 
         // Lista de proyectos — filtrada o completa
-        proyectosFiltrados = FXCollections.observableArrayList();
         ListView<Proyecto> listProyectos = new ListView<>(proyectosFiltrados);
         listProyectos.getStyleClass().add("project-list");
         VBox.setVgrow(listProyectos, Priority.ALWAYS);
@@ -1262,7 +1268,19 @@ public class ModeManager {
         });
 
         if (currentProject != null) {
-            listProyectos.getSelectionModel().select(currentProject);
+            // Buscamos el proyecto equivalente por ID en la lista filtrada para asegurar la selección visual
+            Proyecto equivalente = proyectosFiltrados.stream()
+                    .filter(p -> p.getId() == currentProject.getId())
+                    .findFirst()
+                    .orElse(null);
+            
+            if (equivalente != null) {
+                // Usamos runLater para asegurar que el ListView esté listo para procesar la selección
+                javafx.application.Platform.runLater(() -> {
+                    listProyectos.getSelectionModel().select(equivalente);
+                    listProyectos.scrollTo(equivalente);
+                });
+            }
         }
 
         listProyectos.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
