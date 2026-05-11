@@ -414,6 +414,11 @@ public class MainViewController {
             projectManager.setProyectoActual(proyecto);
             canvasManager.setProyectoActual(proyecto);
             
+            // Adjust zoom if the project is vertical
+            if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                ajustarZoomVerticalSiNecesario();
+            }
+
             // Animación de entrada para la tarjeta
             javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
             ft.setFromValue(0.4);
@@ -531,8 +536,18 @@ public class MainViewController {
     private void posicionarSelectorCara() {
         if (selectorCaraBox != null && canvasContainer != null) {
             double zoom = viewModel.getZoomLevel();
-            double cardScaledWidth = EditorCanvasManager.CARD_WIDTH * zoom;
-            double cardScaledHeight = EditorCanvasManager.CARD_HEIGHT * zoom;
+            
+            double baseWidth = EditorCanvasManager.CARD_WIDTH;
+            double baseHeight = EditorCanvasManager.CARD_HEIGHT;
+            
+            if (viewModel.getProyectoActual() != null && 
+                viewModel.getProyectoActual().getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                baseWidth = EditorCanvasManager.CARD_HEIGHT;
+                baseHeight = EditorCanvasManager.CARD_WIDTH;
+            }
+            
+            double cardScaledWidth = baseWidth * zoom;
+            double cardScaledHeight = baseHeight * zoom;
             double bleedScaled = EditorCanvasManager.BLEED_MARGIN * zoom;
             
             double cw = canvasContainer.getWidth();
@@ -549,9 +564,6 @@ public class MainViewController {
             // Restaurar la posición "perfecta" original a la izquierda
             selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
             selectorCaraBox.setLayoutY(topEdge - offset);
-            
-            // Dejar que el HBox tome el tamaño natural de sus botones
-            selectorCaraBox.autosize();
         }
     }
 
@@ -1193,6 +1205,58 @@ public class MainViewController {
         dibujarCanvas();
     }
 
+    @FXML
+    private void onToggleOrientacion() {
+        Proyecto p = viewModel.getProyectoActual();
+        if (p == null) return;
+
+        // Cambiar orientación
+        com.tpsstudio.model.enums.Orientacion nueva = (p.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
+                ? com.tpsstudio.model.enums.Orientacion.VERTICAL
+                : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+
+        p.setOrientacion(nueva);
+        if (p.getMetadata() != null) {
+            p.getMetadata().setOrientacion(nueva);
+        }
+
+        // Ajustar fondos existentes a las nuevas dimensiones base (sin escalar con zoom)
+        double w = (nueva == com.tpsstudio.model.enums.Orientacion.HORIZONTAL) ? EditorCanvasManager.CARD_WIDTH : EditorCanvasManager.CARD_HEIGHT;
+        double h = (nueva == com.tpsstudio.model.enums.Orientacion.HORIZONTAL) ? EditorCanvasManager.CARD_HEIGHT : EditorCanvasManager.CARD_WIDTH;
+
+        if (p.getFondoFrente() != null) {
+            p.getFondoFrente().ajustarATamaño(w, h, EditorCanvasManager.BLEED_MARGIN);
+        }
+        if (p.getFondoDorso() != null) {
+            p.getFondoDorso().ajustarATamaño(w, h, EditorCanvasManager.BLEED_MARGIN);
+        }
+
+        if (nueva == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            ajustarZoomVerticalSiNecesario();
+        }
+
+        dibujarCanvas();
+    }
+
+    private void ajustarZoomVerticalSiNecesario() {
+        if (canvasContainer == null || canvasContainer.getHeight() <= 0) return;
+        
+        double currentZoom = viewModel.getZoomLevel();
+        double cardHeightScaled = EditorCanvasManager.CARD_WIDTH * currentZoom; // En vertical, la altura base es CARD_WIDTH
+        double maxHeight = canvasContainer.getHeight() - 80; // Margen superior e inferior
+        
+        if (cardHeightScaled > maxHeight) {
+            double targetZoom = maxHeight / EditorCanvasManager.CARD_WIDTH;
+            targetZoom = Math.floor(targetZoom * 10) / 10.0;
+            if (targetZoom < 0.5) targetZoom = 0.5;
+            
+            if (targetZoom < currentZoom) {
+                viewModel.setZoomLevel(targetZoom);
+                actualizarZoom();
+            }
+        }
+    }
+
     // =====================================================
     // Acciones de edición (añadir / eliminar elementos)
     // =====================================================
@@ -1370,9 +1434,6 @@ public class MainViewController {
 
             } else {
                 lblProyectoActivo.setText("");
-            }
-            if (selectorCaraBox != null) {
-                selectorCaraBox.autosize();
             }
         }
     }

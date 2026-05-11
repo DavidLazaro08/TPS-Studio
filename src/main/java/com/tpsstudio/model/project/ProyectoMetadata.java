@@ -36,11 +36,13 @@ public class ProyectoMetadata {
     private ClienteInfo clienteInfo; // Información del cliente
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
+    private com.tpsstudio.model.enums.Orientacion orientacion;
 
     public ProyectoMetadata() {
         this.clienteInfo = new ClienteInfo();
         this.fechaCreacion = LocalDateTime.now();
         this.fechaModificacion = LocalDateTime.now();
+        this.orientacion = com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
     // ================== GETTERS Y SETTERS ==================
@@ -115,6 +117,14 @@ public class ProyectoMetadata {
 
     public void setFechaModificacion(LocalDateTime fechaModificacion) {
         this.fechaModificacion = fechaModificacion;
+    }
+
+    public com.tpsstudio.model.enums.Orientacion getOrientacion() {
+        return orientacion != null ? orientacion : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+    }
+
+    public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) {
+        this.orientacion = orientacion;
     }
 
     /* Obtiene la carpeta raíz del proyecto (TPS_NombreProyecto) */

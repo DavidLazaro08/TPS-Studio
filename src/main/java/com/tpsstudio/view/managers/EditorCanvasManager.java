@@ -98,7 +98,22 @@ public class EditorCanvasManager {
     // Guías
     public static final double SAFETY_MARGIN = 3.0 * SCALE; // 3mm
     public static final double BLEED_MARGIN = 2.0 * SCALE;  // 2mm
+
     public static final double HANDLE_SIZE = 8.0;
+
+    private double getCardWidth() {
+        if (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return CARD_HEIGHT;
+        }
+        return CARD_WIDTH;
+    }
+
+    private double getCardHeight() {
+        if (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return CARD_WIDTH;
+        }
+        return CARD_HEIGHT;
+    }
 
     // Estado externo (lo controla el controlador principal)
     private Proyecto proyectoActual;
@@ -261,8 +276,8 @@ public class EditorCanvasManager {
         }
 
         // Centrar la tarjeta en el canvas
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -516,7 +531,8 @@ public class EditorCanvasManager {
 
         // --- 6.2: PROYECTO y CLIENTE CENTRADOS DE FORMA ESTÁTICA ARRIBA ---
         // (Se animan suavemente por código leyendo hudOpacity, entre modo diseño y producción)
-        if (hudOpacity > 0.0) {
+        boolean isVertical = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL);
+        if (hudOpacity > 0.0 && !isVertical) {
             gc.save();
             gc.setGlobalAlpha(hudOpacity);
             
@@ -580,9 +596,11 @@ public class EditorCanvasManager {
         gc.setFill(Color.web("#a0a5cc"));
         gc.setFont(Font.font("Arial", 11));
 
+        double mmW = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? CR80_HEIGHT_MM : CR80_WIDTH_MM;
+        double mmH = (proyectoActual != null && proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) ? CR80_WIDTH_MM : CR80_HEIGHT_MM;
         String infoDimensiones = String.format(
                 "CR80: %.2f × %.2f mm | Con sangre: %.2f × %.2f mm",
-                CR80_WIDTH_MM, CR80_HEIGHT_MM, CR80_WIDTH_MM + 4.0, CR80_HEIGHT_MM + 4.0
+                mmW, mmH, mmW + 4.0, mmH + 4.0
         );
 
         double bleedScaled = BLEED_MARGIN * zoomLevel;
@@ -611,8 +629,8 @@ public class EditorCanvasManager {
 
         if (proyectoActual == null || currentMode != AppMode.DESIGN) return;
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -805,8 +823,8 @@ public class EditorCanvasManager {
             return;
         }
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
 
@@ -883,8 +901,8 @@ public class EditorCanvasManager {
             return;
         }
 
-        double scaledWidth = CARD_WIDTH * zoomLevel;
-        double scaledHeight = CARD_HEIGHT * zoomLevel;
+        double scaledWidth = getCardWidth() * zoomLevel;
+        double scaledHeight = getCardHeight() * zoomLevel;
         double cardX = (canvas.getWidth() / 2) - (scaledWidth / 2);
         double cardY = (canvas.getHeight() / 2) - (scaledHeight / 2);
         double mx = e.getX();

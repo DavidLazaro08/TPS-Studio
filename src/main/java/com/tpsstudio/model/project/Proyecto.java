@@ -61,6 +61,9 @@ public class Proyecto {
     // Metadatos del proyecto (ubicación, cliente, etc.)
     private ProyectoMetadata metadata;
 
+    // Orientación de la tarjeta
+    private com.tpsstudio.model.enums.Orientacion orientacion;
+
     private static int contadorId = 1;
 
     public Proyecto(String nombre) {
@@ -75,6 +78,7 @@ public class Proyecto {
         this.fondoFitModePreferido = null;
         this.noVolverAPreguntarFondo = false;
         this.tipoTroquel = TipoTroquel.NINGUNO;
+        this.orientacion = com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
     // Getters y setters
@@ -182,6 +186,14 @@ public class Proyecto {
 
     public void setTipoTroquel(TipoTroquel tipoTroquel) {
         this.tipoTroquel = tipoTroquel;
+    }
+
+    public com.tpsstudio.model.enums.Orientacion getOrientacion() {
+        return orientacion != null ? orientacion : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+    }
+
+    public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) {
+        this.orientacion = orientacion;
     }
 
     /** Devuelve las etiquetas asignadas. Nunca null (retrocompatible). */

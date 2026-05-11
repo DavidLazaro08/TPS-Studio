@@ -146,7 +146,7 @@
                 
                 <!-- Overlay para controles posicionados sobre el lienzo -->
                 <Pane fx:id="canvasOverlay" pickOnBounds="false" StackPane.alignment="TOP_LEFT">
-                    <HBox fx:id="selectorCaraBox" spacing="12" styleClass="integrated-view-selector" pickOnBounds="false" managed="false" alignment="CENTER_LEFT">
+                    <HBox fx:id="selectorCaraBox" spacing="12" styleClass="integrated-view-selector" pickOnBounds="false" alignment="CENTER_LEFT">
                         <HBox spacing="0">
                             <fx:define>
                                 <ToggleGroup fx:id="caraToggleGroup" />
@@ -156,6 +156,7 @@
                             <ToggleButton fx:id="btnCaraDorso" text="Dorso" toggleGroup="$caraToggleGroup"
                                           onAction="#onShowDorso" styleClass="view-selector-btn-right" minWidth="80" />
                         </HBox>
+                        <Button fx:id="btnGirar" text="⟲" onAction="#onToggleOrientacion" styleClass="view-selector-btn-flip" minWidth="-Infinity" />
                         <Label fx:id="lblProyectoActivo" minWidth="-Infinity" styleClass="design-project-chip" />
                     </HBox>
                 </Pane>
