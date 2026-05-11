@@ -1197,23 +1197,27 @@ public class MainViewController {
     @FXML
     private void onShowFrente() {
         if (viewModel.getProyectoActual() == null) return;
-        viewModel.getProyectoActual().setMostrandoFrente(true);
-        viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
-        }
-        dibujarCanvas();
+        ejecutarCrossFade(() -> {
+            viewModel.getProyectoActual().setMostrandoFrente(true);
+            viewModel.setElementoSeleccionado(null);
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+            }
+            dibujarCanvas();
+        });
     }
 
     @FXML
     private void onShowDorso() {
         if (viewModel.getProyectoActual() == null) return;
-        viewModel.getProyectoActual().setMostrandoFrente(false);
-        viewModel.setElementoSeleccionado(null);
-        if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-            modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
-        }
-        dibujarCanvas();
+        ejecutarCrossFade(() -> {
+            viewModel.getProyectoActual().setMostrandoFrente(false);
+            viewModel.setElementoSeleccionado(null);
+            if (viewModel.getCurrentMode() == AppMode.DESIGN) {
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
+            }
+            dibujarCanvas();
+        });
     }
 
     @FXML
@@ -1221,24 +1225,122 @@ public class MainViewController {
         Proyecto p = viewModel.getProyectoActual();
         if (p == null) return;
 
-        // Cambiar orientación
-        com.tpsstudio.model.enums.Orientacion nueva = (p.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
-                ? com.tpsstudio.model.enums.Orientacion.VERTICAL
-                : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+        ejecutarGiroTransition(() -> {
+            // Cambiar orientación
+            com.tpsstudio.model.enums.Orientacion nueva = (p.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
+                    ? com.tpsstudio.model.enums.Orientacion.VERTICAL
+                    : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
 
-        p.setOrientacion(nueva);
-        if (p.getMetadata() != null) {
-            p.getMetadata().setOrientacion(nueva);
+            p.setOrientacion(nueva);
+            if (p.getMetadata() != null) {
+                p.getMetadata().setOrientacion(nueva);
+            }
+
+            // Ajustar fondos existentes a las nuevas dimensiones base
+            canvasManager.refrescarFondosTrasCarga();
+
+            if (nueva == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+                ajustarZoomVerticalSiNecesario();
+            }
+            dibujarCanvas();
+        });
+    }
+
+    /**
+     * Transición específica para el giro de la tarjeta.
+     * Captura el estado actual y lo rota 90 grados mientras se desvanece.
+     */
+    private void ejecutarGiroTransition(Runnable accionCambio) {
+        if (canvas == null || canvasContainer == null) {
+            accionCambio.run();
+            return;
         }
 
-        // Ajustar fondos existentes a las nuevas dimensiones base
-        canvasManager.refrescarFondosTrasCarga();
+        try {
+            // 1. Captura transparente
+            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
+            
+            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
+            tempView.setMouseTransparent(true);
+            tempView.setManaged(false); // Posicionamiento manual para evitar saltos de layout
+            
+            // Posición exacta actual
+            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
+            tempView.setLayoutX(bounds.getMinX());
+            tempView.setLayoutY(bounds.getMinY());
+            
+            canvasContainer.getChildren().add(tempView);
 
-        if (nueva == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
-            ajustarZoomVerticalSiNecesario();
+            // 2. Animación combinada: Rotación + Desvanecimiento
+            // Determinamos el sentido del giro ANTES de ejecutar el cambio
+            Proyecto proyectoActual = viewModel.getProyectoActual();
+            if (proyectoActual == null) return;
+            boolean aVertical = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL);
+            double anguloFinal = aVertical ? 90 : -90;
+
+            // EJECUTAR EL CAMBIO YA (Simultáneo a la animación como prefiere el usuario)
+            accionCambio.run();
+
+            javafx.animation.RotateTransition rt = new javafx.animation.RotateTransition(javafx.util.Duration.millis(450), tempView);
+            rt.setByAngle(anguloFinal);
+            
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+            ft.setFromValue(1.0);
+            ft.setToValue(0.0);
+
+            javafx.animation.ParallelTransition parallel = new javafx.animation.ParallelTransition(rt, ft);
+            parallel.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
+            parallel.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
+            parallel.play();
+
+        } catch (Exception e) {
+            accionCambio.run();
+        }
+    }
+
+    /**
+     * Realiza una transición de fundido cruzado (cross-fade) entre el estado actual
+     * del canvas y el nuevo estado tras ejecutar la acción de cambio.
+     */
+    private void ejecutarCrossFade(Runnable accionCambio) {
+        if (canvas == null || canvasContainer == null) {
+            accionCambio.run();
+            return;
         }
 
-        dibujarCanvas();
+        try {
+            // 1. Capturar el estado actual del canvas
+            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
+            
+            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
+            tempView.setMouseTransparent(true);
+            tempView.setManaged(false); // Crítico: evita que el ImageView se mueva si el panel derecho se abre/cierra
+            
+            // Fijar posición absoluta inicial basada en los bounds del canvas
+            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
+            tempView.setLayoutX(bounds.getMinX());
+            tempView.setLayoutY(bounds.getMinY());
+            
+            canvasContainer.getChildren().add(tempView);
+
+            // 2. Ejecutar el cambio real
+            accionCambio.run();
+
+            // 3. Animar el desvanecimiento
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+            ft.setFromValue(1.0);
+            ft.setToValue(0.0);
+            ft.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
+            ft.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
+            ft.play();
+            
+        } catch (Exception e) {
+            accionCambio.run();
+        }
     }
 
     private void ajustarZoomVerticalSiNecesario() {

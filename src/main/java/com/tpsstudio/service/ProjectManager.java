@@ -614,15 +614,18 @@ public class ProjectManager {
                 Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaRelativa);
                 Image img = ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
+                double cardW = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL)
+                        ? EditorCanvasManager.CARD_HEIGHT : EditorCanvasManager.CARD_WIDTH;
+                double cardH = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL)
+                        ? EditorCanvasManager.CARD_WIDTH : EditorCanvasManager.CARD_HEIGHT;
+
                 ImagenFondoElemento nuevoFondo = new ImagenFondoElemento(
                         rutaRelativa, img,
-                        EditorCanvasManager.CARD_WIDTH,
-                        EditorCanvasManager.CARD_HEIGHT,
+                        cardW, cardH,
                         fitMode);
 
                 nuevoFondo.ajustarATamaño(
-                        EditorCanvasManager.CARD_WIDTH,
-                        EditorCanvasManager.CARD_HEIGHT,
+                        cardW, cardH,
                         EditorCanvasManager.BLEED_MARGIN);
 
                 proyectoActual.setFondoActual(nuevoFondo);

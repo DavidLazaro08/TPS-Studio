@@ -394,12 +394,19 @@ public class ModeManager {
         if (layersListView != null) {
             isUpdatingSelection = true;
             try {
+                // Sincronizar la lista de elementos según la cara (frente/dorso)
+                if (proyecto != null) {
+                    layersListView.setItems(proyecto.getElementosActuales());
+                } else {
+                    layersListView.setItems(javafx.collections.FXCollections.observableArrayList());
+                }
+
                 layersListView.getSelectionModel().clearSelection();
                 if (selectedElement != null) {
                     layersListView.getSelectionModel().select(selectedElement);
                     layersListView.scrollTo(selectedElement);
                 }
-                // Forzar refresco visual de las celdas afectadas
+                // Forzar refresco visual de las celdas
                 layersListView.refresh();
             } finally {
                 isUpdatingSelection = false;
