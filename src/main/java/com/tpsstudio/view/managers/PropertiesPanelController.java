@@ -438,6 +438,14 @@ public class PropertiesPanelController {
         chkAutoFit.setTooltip(new Tooltip("Reduce el tamaño de la letra automáticamente para que el texto quepa en el cuadro sin desbordar."));
         chkAutoFit.selectedProperty().addListener((obs, old, newVal) -> {
             texto.setAutoAjustar(newVal);
+            if (newVal) {
+                com.tpsstudio.util.TPSToast.mostrar(
+                    canvas.getScene().getWindow(),
+                    "Auto-ajuste activado",
+                    "El texto se encogerá visualmente para no desbordar el cuadro.",
+                    com.tpsstudio.util.TPSToast.Tipo.EXITO
+                );
+            }
             notifyCanvasRedraw();
         });
 
