@@ -69,6 +69,20 @@ public class PDFExportService {
         this.fuenteDatos = fuenteDatos;
     }
 
+    private double getCardWidth() {
+        if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return EditorCanvasManager.CARD_HEIGHT;
+        }
+        return EditorCanvasManager.CARD_WIDTH;
+    }
+
+    private double getCardHeight() {
+        if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+            return EditorCanvasManager.CARD_WIDTH;
+        }
+        return EditorCanvasManager.CARD_HEIGHT;
+    }
+
     /**
      * Genera el PDF y lo guarda en la ruta indicada.
      *
@@ -160,8 +174,8 @@ public class PDFExportService {
      * Resultado: canvas limpio con fondo o blanco puro. Sin guías.
      */
     private BufferedImage renderizarSoloFondo(boolean esFrente) throws Exception {
-        double cardW = EditorCanvasManager.CARD_WIDTH  * EXPORT_SCALE;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * EXPORT_SCALE;
+        double cardW = getCardWidth()  * EXPORT_SCALE;
+        double cardH = getCardHeight() * EXPORT_SCALE;
         double bleed = EditorCanvasManager.BLEED_MARGIN * EXPORT_SCALE;
         double canvasW = cardW + bleed * 2;
         double canvasH = cardH + bleed * 2;
@@ -213,9 +227,9 @@ public class PDFExportService {
      */
     private BufferedImage renderizarTarjeta(boolean esFrente, boolean recortarSangre) throws Exception {
 
-        // Dimensiones del canvas virtual a 3× escala (para conseguir ~300dpi)
-        double cardW = EditorCanvasManager.CARD_WIDTH  * EXPORT_SCALE;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * EXPORT_SCALE;
+        // Dimensiones del canvas virtual a escala de exportación
+        double cardW = getCardWidth()  * EXPORT_SCALE;
+        double cardH = getCardHeight() * EXPORT_SCALE;
         double bleed = EditorCanvasManager.BLEED_MARGIN * EXPORT_SCALE;
 
         double canvasW = cardW + bleed * 2;
@@ -429,8 +443,8 @@ public class PDFExportService {
         int A4_H_PX = (int) Math.round(297.0 / 25.4 * PRUEBA_DPI);
 
         double CARD_SCALE_PRUEBA = (PRUEBA_DPI * EditorCanvasManager.CR80_WIDTH_MM / 25.4) / EditorCanvasManager.CARD_WIDTH;
-        double cardW_px  = EditorCanvasManager.CARD_WIDTH  * CARD_SCALE_PRUEBA;
-        double cardH_px  = EditorCanvasManager.CARD_HEIGHT * CARD_SCALE_PRUEBA;
+        double cardW_px  = getCardWidth()  * CARD_SCALE_PRUEBA;
+        double cardH_px  = getCardHeight() * CARD_SCALE_PRUEBA;
         double bleed_px  = EditorCanvasManager.BLEED_MARGIN * CARD_SCALE_PRUEBA;
 
         final String nombreProyecto = proyecto.getNombre();
@@ -672,8 +686,8 @@ public class PDFExportService {
     private void renderTarjetaEnCanvas(GraphicsContext gc, List<? extends Elemento> elementos,
                                        ImagenFondoElemento fondo, double startX, double startY,
                                        double scale, boolean modoVista) {
-        double cardW = EditorCanvasManager.CARD_WIDTH  * scale;
-        double cardH = EditorCanvasManager.CARD_HEIGHT * scale;
+        double cardW = getCardWidth()  * scale;
+        double cardH = getCardHeight() * scale;
         double bleed = EditorCanvasManager.BLEED_MARGIN * scale;
         double cardX = startX + bleed;
         double cardY = startY + bleed;
