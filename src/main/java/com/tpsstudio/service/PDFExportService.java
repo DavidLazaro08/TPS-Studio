@@ -357,7 +357,8 @@ public class PDFExportService {
             List<String> lines = TextUtils.computeLines(renderText, texto.isSaltoLinea(), gc.getFont(), ew);
 
             double lineH = effectiveFontSize * scale * 1.2;
-            double curY  = ey + (effectiveFontSize * scale);
+            // Usamos el fontSize original para el Y inicial para mantener la línea de base
+            double curY  = ey + (texto.getFontSize() * scale);
 
             for (String line : lines) {
                 double textX = ex;

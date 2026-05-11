@@ -441,7 +441,9 @@ public class EditorCanvasManager {
                 }
 
                 // Renderizado final de las líneas
-                double currentY = ey + (effectiveFontSize * zoomLevel);
+                // Usamos el fontSize original para el Y inicial para mantener la línea de base alineada
+                // con otros elementos aunque este se haya encogido.
+                double currentY = ey + (texto.getFontSize() * zoomLevel);
                 for (String line : finalLines) {
                     double textX = ex;
                     javafx.scene.text.Text tempText = new javafx.scene.text.Text(line);
