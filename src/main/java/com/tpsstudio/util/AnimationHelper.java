@@ -128,4 +128,15 @@ public class AnimationHelper {
         pulse.setCycleCount(Animation.INDEFINITE);
         return pulse;
     }
+
+    /**
+     * Aplica un fundido (fade) genérico a cualquier nodo.
+     */
+    public static void applyFadeTransition(Node target, double durationMs, double from, double to) {
+        FadeTransition fade = new FadeTransition(Duration.millis(durationMs), target);
+        fade.setFromValue(from);
+        fade.setToValue(to);
+        fade.setInterpolator(Interpolator.EASE_BOTH);
+        fade.play();
+    }
 }
