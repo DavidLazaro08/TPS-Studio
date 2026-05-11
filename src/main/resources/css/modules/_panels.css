@@ -62,7 +62,7 @@
 }
 
 .tool-button:hover .tool-icon {
-    -fx-text-fill: #c4c0c2;
+    -fx-text-fill: #a0a5cc; /* Azulito de las capas */
 }
 
 /* Texto del botón principal */
@@ -72,7 +72,7 @@
 }
 
 .tool-button:hover .tool-label {
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #a0a5cc; /* Azulito de las capas */
 }
 
 /* ---- SUBHERRAMIENTAS (34px altura, indentadas) ---- */
@@ -924,3 +924,15 @@
     -fx-text-fill: #e8e6e7;
 }
 
+
+/* ---- ANIMACIÓN DE PULSO PARA VALIDAR DISEÑO ---- */
+
+.validate-button.has-warnings {
+    -fx-border-color: #d48a8a;
+    -fx-border-width: 1.5;
+}
+
+.validate-button.has-warnings .tool-icon,
+.validate-button.has-warnings .tool-label {
+    -fx-text-fill: #ff8a8a;
+}

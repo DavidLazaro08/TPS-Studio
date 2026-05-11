@@ -154,6 +154,7 @@ public class ProjectManager {
 
         Proyecto nuevoProyecto = new Proyecto(metadata.getNombre());
         nuevoProyecto.setMetadata(metadata);
+        nuevoProyecto.setOrientacion(metadata.getOrientacion());
 
         if (!fileManager.guardarProyecto(nuevoProyecto, metadata)) {
             mostrarError("No se pudo guardar el archivo de proyecto.");
@@ -292,6 +293,7 @@ public class ProjectManager {
 
         proyecto.setNombre(nuevaMetadata.getNombre());
         proyecto.setMetadata(nuevaMetadata);
+        proyecto.setOrientacion(nuevaMetadata.getOrientacion());
 
         // Si la BD vinculada es un archivo externo al proyecto, copiarlo dentro
         String rutaBD = nuevaMetadata.getRutaBBDD();

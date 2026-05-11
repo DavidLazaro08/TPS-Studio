@@ -418,6 +418,8 @@ public class MainViewController {
             if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
                 ajustarZoomVerticalSiNecesario();
             }
+            
+            checkDesignWarnings();
 
             // Animación de entrada para la tarjeta
             javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
@@ -472,6 +474,7 @@ public class MainViewController {
             if (propertiesPanelController != null && viewModel.getElementoSeleccionado() != null) {
                 propertiesPanelController.updatePositionFields(viewModel.getElementoSeleccionado());
             }
+            checkDesignWarnings();
         });
 
         canvasManager.setOnCanvasChanged(() -> {
@@ -484,6 +487,7 @@ public class MainViewController {
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
+            checkDesignWarnings();
             canvasManager.dibujarCanvas();
         });
 
@@ -560,11 +564,18 @@ public class MainViewController {
             // Borde superior de la tarjeta con sangre
             double topEdge = cardY - bleedScaled;
             
-            double offset = 50;
+            double offset = 65;
             // Restaurar la posición "perfecta" original a la izquierda
             selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
             selectorCaraBox.setLayoutY(topEdge - offset);
         }
+    }
+
+    private void checkDesignWarnings() {
+        if (viewModel.getProyectoActual() == null) return;
+        com.tpsstudio.service.DesignValidatorService validator = new com.tpsstudio.service.DesignValidatorService();
+        java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
+        modeManager.setValidationWarning(!avisos.isEmpty());
     }
 
     private void onValidarDiseno() {
@@ -1220,16 +1231,8 @@ public class MainViewController {
             p.getMetadata().setOrientacion(nueva);
         }
 
-        // Ajustar fondos existentes a las nuevas dimensiones base (sin escalar con zoom)
-        double w = (nueva == com.tpsstudio.model.enums.Orientacion.HORIZONTAL) ? EditorCanvasManager.CARD_WIDTH : EditorCanvasManager.CARD_HEIGHT;
-        double h = (nueva == com.tpsstudio.model.enums.Orientacion.HORIZONTAL) ? EditorCanvasManager.CARD_HEIGHT : EditorCanvasManager.CARD_WIDTH;
-
-        if (p.getFondoFrente() != null) {
-            p.getFondoFrente().ajustarATamaño(w, h, EditorCanvasManager.BLEED_MARGIN);
-        }
-        if (p.getFondoDorso() != null) {
-            p.getFondoDorso().ajustarATamaño(w, h, EditorCanvasManager.BLEED_MARGIN);
-        }
+        // Ajustar fondos existentes a las nuevas dimensiones base
+        canvasManager.refrescarFondosTrasCarga();
 
         if (nueva == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
             ajustarZoomVerticalSiNecesario();

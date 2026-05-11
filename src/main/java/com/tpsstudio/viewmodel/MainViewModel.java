@@ -24,7 +24,7 @@ public class MainViewModel {
     private final ObjectProperty<Elemento> elementoSeleccionado = new SimpleObjectProperty<>(null);
 
     // Nivel de zoom actual
-    private final DoubleProperty zoomLevel = new SimpleDoubleProperty(1.4);
+    private final DoubleProperty zoomLevel = new SimpleDoubleProperty(1.5);
 
     // =====================================================
     // statusText

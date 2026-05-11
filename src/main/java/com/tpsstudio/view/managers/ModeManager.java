@@ -131,6 +131,11 @@ public class ModeManager {
     // Estado de expansión del submenú de formas
     private boolean shapesExpanded = false;
 
+    // Botón de validación para aplicar animaciones
+    private Button btnValidar;
+    private javafx.animation.Timeline periodicReminder;
+    private javafx.animation.Timeline pulseAnimation;
+
     public ModeManager(VBox leftPanel, VBox rightPanel, PropertiesPanelController propertiesPanelController) {
         this.leftPanel = leftPanel;
         this.rightPanel = rightPanel;
@@ -182,6 +187,57 @@ public class ModeManager {
 
     public void setOnEditProject(Consumer<Proyecto> callback) {
         this.onEditProject = callback;
+    }
+
+    /**
+     * Activa el recordatorio periódico de advertencia de diseño.
+     * El botón parpadeará/cambiará de color solo durante unos segundos cada cierto tiempo
+     * para no generar ruido visual constante.
+     */
+    public void setValidationWarning(boolean hasWarning) {
+        if (btnValidar == null) return;
+        
+        if (hasWarning) {
+            // Si ya hay un recordatorio en marcha, no hacemos nada
+            if (periodicReminder != null) return;
+            
+            // Creamos un ciclo de 10 minutos
+            // El primer aviso no es inmediato (espera los 10 min) para no molestar al editar
+            periodicReminder = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10), e -> startWarningVisuals()),
+                new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10).add(javafx.util.Duration.seconds(8)), e -> stopWarningVisuals())
+            );
+            periodicReminder.setCycleCount(javafx.animation.Animation.INDEFINITE);
+            periodicReminder.play();
+        } else {
+            // Si el diseño es correcto, matamos el recordatorio y limpiamos visuales
+            if (periodicReminder != null) {
+                periodicReminder.stop();
+                periodicReminder = null;
+            }
+            stopWarningVisuals();
+        }
+    }
+
+    private void startWarningVisuals() {
+        if (btnValidar == null) return;
+        if (!btnValidar.getStyleClass().contains("has-warnings")) {
+            btnValidar.getStyleClass().add("has-warnings");
+        }
+        if (pulseAnimation == null) {
+            pulseAnimation = com.tpsstudio.util.AnimationHelper.createPulseAnimation(btnValidar);
+        }
+        pulseAnimation.play();
+    }
+
+    private void stopWarningVisuals() {
+        if (btnValidar == null) return;
+        btnValidar.getStyleClass().remove("has-warnings");
+        if (pulseAnimation != null) {
+            pulseAnimation.stop();
+            btnValidar.setScaleX(1.0);
+            btnValidar.setScaleY(1.0);
+        }
     }
 
     public void setOnEditExternal(Consumer<ImagenFondoElemento> callback) {
@@ -446,7 +502,7 @@ public class ModeManager {
         });
 
         // ---- Validar Diseño ----
-        Button btnValidar = makeToolButton("✓", "tool-icon", "Validar Diseño", "tool-label", "validate-button");
+        btnValidar = makeToolButton("✓", "tool-icon", "Validar Diseño", "tool-label", "validate-button");
         btnValidar.setOnAction(e -> { if (onValidateDesign != null) onValidateDesign.run(); });
 
         toolbox.getChildren().addAll(

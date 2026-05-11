@@ -113,4 +113,19 @@ public class AnimationHelper {
             fade.play();
         }
     }
+    /**
+     * Crea un efecto de pulso sutil (escala) para llamar la atención.
+     */
+    public static Timeline createPulseAnimation(Node target) {
+        Timeline pulse = new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(target.scaleXProperty(), 1.0, Interpolator.EASE_BOTH)),
+            new KeyFrame(Duration.ZERO, new KeyValue(target.scaleYProperty(), 1.0, Interpolator.EASE_BOTH)),
+            new KeyFrame(Duration.millis(800), new KeyValue(target.scaleXProperty(), 1.05, Interpolator.EASE_BOTH)),
+            new KeyFrame(Duration.millis(800), new KeyValue(target.scaleYProperty(), 1.05, Interpolator.EASE_BOTH)),
+            new KeyFrame(Duration.millis(1600), new KeyValue(target.scaleXProperty(), 1.0, Interpolator.EASE_BOTH)),
+            new KeyFrame(Duration.millis(1600), new KeyValue(target.scaleYProperty(), 1.0, Interpolator.EASE_BOTH))
+        );
+        pulse.setCycleCount(Animation.INDEFINITE);
+        return pulse;
+    }
 }

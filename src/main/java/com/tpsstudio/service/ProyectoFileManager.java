@@ -204,6 +204,7 @@ public class ProyectoFileManager implements ProyectoDAO {
             dto.setMostrandoFrente(proyecto.isMostrandoFrente());
             dto.setFondoFitModePreferido(proyecto.getFondoFitModePreferido());
             dto.setNoVolverAPreguntarFondo(proyecto.isNoVolverAPreguntarFondo());
+            dto.setOrientacion(proyecto.getOrientacion());
 
             dto.setElementosFrente(convertirElementosADTO(proyecto.getElementosFrente()));
             dto.setElementosDorso(convertirElementosADTO(proyecto.getElementosDorso()));
@@ -250,6 +251,13 @@ public class ProyectoFileManager implements ProyectoDAO {
             proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
+            
+            if (dto.getOrientacion() != null) {
+                proyecto.setOrientacion(dto.getOrientacion());
+            } else if (proyecto.getMetadata() != null) {
+                // Fallback a metadata por si se guardó ahí en versiones previas
+                proyecto.setOrientacion(proyecto.getMetadata().getOrientacion());
+            }
 
             if (dto.getEtiquetaIds() != null) {
                 proyecto.setEtiquetaIds(new ArrayList<>(dto.getEtiquetaIds()));
@@ -598,6 +606,7 @@ public class ProyectoFileManager implements ProyectoDAO {
         private FondoDTO fondoFrente;
         private FondoDTO fondoDorso;
         private List<String> etiquetaIds;
+        private com.tpsstudio.model.enums.Orientacion orientacion;
 
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
@@ -628,6 +637,9 @@ public class ProyectoFileManager implements ProyectoDAO {
 
         public List<String> getEtiquetaIds() { return etiquetaIds; }
         public void setEtiquetaIds(List<String> etiquetaIds) { this.etiquetaIds = etiquetaIds; }
+
+        public com.tpsstudio.model.enums.Orientacion getOrientacion() { return orientacion; }
+        public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) { this.orientacion = orientacion; }
     }
 
     public static class ElementoDTO {

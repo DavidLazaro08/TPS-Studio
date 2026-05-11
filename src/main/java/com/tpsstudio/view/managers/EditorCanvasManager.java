@@ -170,6 +170,26 @@ public class EditorCanvasManager {
 
     public void setProyectoActual(Proyecto proyecto) {
         this.proyectoActual = proyecto;
+        refrescarFondosTrasCarga();
+    }
+
+    /**
+     * Fuerza a los fondos (frente y dorso) a recalcular sus dimensiones
+     * basándose en la orientación actual del proyecto. 
+     * Útil al cargar un proyecto o cambiar de orientación.
+     */
+    public void refrescarFondosTrasCarga() {
+        if (proyectoActual == null) return;
+        
+        double w = getCardWidth();
+        double h = getCardHeight();
+        
+        if (proyectoActual.getFondoFrente() != null) {
+            proyectoActual.getFondoFrente().ajustarATamaño(w, h, BLEED_MARGIN);
+        }
+        if (proyectoActual.getFondoDorso() != null) {
+            proyectoActual.getFondoDorso().ajustarATamaño(w, h, BLEED_MARGIN);
+        }
     }
 
     public void setElementoSeleccionado(Elemento elemento) {
