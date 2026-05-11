@@ -14,6 +14,7 @@ import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.util.AnimationHelper;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.util.TextUtils;
+import com.tpsstudio.util.TPSToast;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
@@ -146,6 +147,10 @@ public class EditorCanvasManager {
     private PauseTransition tooltipDelay;
     private String currentTooltipTarget = null;
     private double lastScreenX, lastScreenY;
+
+    // --- Estado del Cuentagotas ---
+    private boolean eyedropperActive = false;
+    private java.util.function.Consumer<Color> onColorPickedCallback;
 
     public void setOnClientDataRequested(Runnable callback) {
         this.onClientDataRequested = callback;
@@ -687,6 +692,11 @@ public class EditorCanvasManager {
     // ===================== EVENTOS DE RATÓN =====================
 
     private void onCanvasMousePressed(MouseEvent e) {
+        if (eyedropperActive) {
+            pickColorAt(e.getX(), e.getY());
+            return;
+        }
+        
         wasDragged = false;
         
         // Interpretar click en el botón figurado de Cliente
@@ -1019,6 +1029,46 @@ public class EditorCanvasManager {
 
     public Elemento getElementoSeleccionado() {
         return elementoSeleccionado;
+    }
+
+    // ===================== CUENTAGOTAS =====================
+
+    public void activateEyedropper(java.util.function.Consumer<Color> callback) {
+        this.eyedropperActive = true;
+        this.onColorPickedCallback = callback;
+        canvas.setCursor(Cursor.CROSSHAIR);
+        
+        // Usar el sistema de Toast oficial con estilo EXITO (verde) como pidió el usuario
+        if (canvas.getScene() != null && canvas.getScene().getWindow() != null) {
+            TPSToast.mostrar(canvas.getScene().getWindow(), 
+                "Modo Cuentagotas Activado", 
+                "Haz clic en cualquier color del diseño para capturarlo", 
+                TPSToast.Tipo.EXITO);
+        }
+    }
+
+    public void deactivateEyedropper() {
+        this.eyedropperActive = false;
+        canvas.setCursor(Cursor.DEFAULT);
+    }
+
+    private void pickColorAt(double x, double y) {
+        // 1. Tomar snapshot del canvas actual
+        Image snapshot = canvas.snapshot(null, null);
+        javafx.scene.image.PixelReader pr = snapshot.getPixelReader();
+        
+        // 2. Obtener color (asegurando límites)
+        int ix = (int) Math.max(0, Math.min(snapshot.getWidth() - 1, x));
+        int iy = (int) Math.max(0, Math.min(snapshot.getHeight() - 1, y));
+        Color picked = pr.getColor(ix, iy);
+        
+        // 3. Notificar y desactivar
+        if (onColorPickedCallback != null) {
+            onColorPickedCallback.accept(picked);
+        }
+        
+        eyedropperActive = false;
+        canvas.setCursor(Cursor.DEFAULT);
     }
 
     /* Intenta cargar la imagen cuyo nombre de archivo viene del Excel.

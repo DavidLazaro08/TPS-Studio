@@ -332,7 +332,7 @@ public class MainViewController {
         // -------------------------------------------------
         // Panel de propiedades (edición del elemento seleccionado)
         // -------------------------------------------------
-        propertiesPanelController = new PropertiesPanelController(canvas);
+        propertiesPanelController = new PropertiesPanelController(canvas, canvasManager);
 
         propertiesPanelController.setOnPropertyChanged(() -> {
             // Solo refrescar el panel de propiedades, NO reconstruir todo el modo.

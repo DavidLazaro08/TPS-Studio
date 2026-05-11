@@ -42,6 +42,10 @@ public class PropertiesPanelController {
     private static final double MAX_CONTROL_WIDTH = Double.MAX_VALUE;
 
     private final Canvas canvas;
+    private final EditorCanvasManager canvasManager;
+    
+    // Propiedad para rastrear si el cuentagotas está activo (para estilos)
+    private final javafx.beans.property.BooleanProperty eyedropperActive = new javafx.beans.property.SimpleBooleanProperty(false);
 
     private Runnable onPropertyChanged;
     private Runnable onCanvasRedrawNeeded;
@@ -55,8 +59,9 @@ public class PropertiesPanelController {
     // Fuente de datos activa (puede ser null si no hay Excel vinculado)
     private FuenteDatos fuenteDatos;
 
-    public PropertiesPanelController(Canvas canvas) {
+    public PropertiesPanelController(Canvas canvas, EditorCanvasManager canvasManager) {
         this.canvas = canvas;
+        this.canvasManager = canvasManager;
     }
 
     public void setOnPropertyChanged(Runnable callback) {
@@ -519,27 +524,16 @@ public class PropertiesPanelController {
         HBox filaHerramientas = new HBox(8, colTamaño, colEstilo, colAlineacion);
         filaHerramientas.setAlignment(javafx.geometry.Pos.BOTTOM_LEFT);
 
-        // ---- Color ----
-        Label lblColor = new Label("Color:");
-        lblColor.getStyleClass().add("prop-label-small");
-
-        ColorPicker cpColor = new ColorPicker(Color.web(texto.getColor()));
-        cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpColor.valueProperty().addListener((obs, old, newVal) -> {
-            texto.setColor(String.format("#%02X%02X%02X",
-                    (int) (newVal.getRed() * 255),
-                    (int) (newVal.getGreen() * 255),
-                    (int) (newVal.getBlue() * 255)
-            ));
-            notifyCanvasRedraw();
-        });
-
         props.getChildren().addAll(
                 lblTexto, txtContenido, chkSaltoLinea,
                 lblFuente, cmbFuente,
-                filaHerramientas,
-                lblColor, cpColor
+                filaHerramientas
         );
+
+        addColorControlWithEyedropper(props, "Color:", texto.getColor(), newColor -> {
+            texto.setColor(newColor);
+            notifyCanvasRedraw();
+        });
     }
 
     // ===================== PANEL IMAGEN =====================
@@ -639,39 +633,26 @@ public class PropertiesPanelController {
         Label lblEstilo = new Label("Estilo de Forma");
         lblEstilo.getStyleClass().add("prop-label");
 
-        // Borde activo
+        // --- Borde ---
         CheckBox chkBorde = new CheckBox("Borde activo");
         chkBorde.setSelected(forma.isConBorde());
         chkBorde.getStyleClass().add("prop-checkbox");
 
-        // Color de Borde
-        Label lblBorde = new Label("Color del Borde:");
-        lblBorde.getStyleClass().add("prop-label-small");
-        ColorPicker cpBorde = new ColorPicker(Color.web(forma.getColorBorde()));
-        cpBorde.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpBorde.setDisable(!forma.isConBorde());
+        addColorControlWithEyedropper(props, "Color del Borde:", forma.getColorBorde(), chkBorde.selectedProperty(), newColor -> {
+            forma.setColorBorde(newColor);
+            notifyCanvasRedraw();
+        });
 
         // Grosor de Borde
         Label lblGrosor = new Label("Grosor del Borde:");
         lblGrosor.getStyleClass().add("prop-label-small");
         Spinner<Double> spnGrosor = new Spinner<>(0.5, 20.0, forma.getGrosorBorde(), 0.5);
         spnGrosor.setEditable(true);
-        spnGrosor.setMaxWidth(MAX_CONTROL_WIDTH);
-        spnGrosor.setDisable(!forma.isConBorde());
-
+        spnGrosor.setMaxWidth(100); // Más compacto
+        spnGrosor.disableProperty().bind(chkBorde.selectedProperty().not());
+        
         chkBorde.selectedProperty().addListener((obs, old, newVal) -> {
             forma.setConBorde(newVal);
-            cpBorde.setDisable(!newVal);
-            spnGrosor.setDisable(!newVal);
-            notifyCanvasRedraw();
-        });
-
-        cpBorde.valueProperty().addListener((obs, old, newVal) -> {
-            forma.setColorBorde(String.format("#%02X%02X%02X",
-                    (int) (newVal.getRed() * 255),
-                    (int) (newVal.getGreen() * 255),
-                    (int) (newVal.getBlue() * 255)
-            ));
             notifyCanvasRedraw();
         });
 
@@ -682,7 +663,7 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(lblEstilo, chkBorde, lblBorde, cpBorde, lblGrosor, spnGrosor);
+        props.getChildren().addAll(lblEstilo, chkBorde, lblGrosor, spnGrosor);
 
         // --- Opacidad ---
         Label lblOpacidad = new Label("Opacidad:");
@@ -714,28 +695,17 @@ public class PropertiesPanelController {
             chkRelleno.setSelected(forma.isConRelleno());
             chkRelleno.getStyleClass().add("prop-checkbox");
 
-            Label lblRelleno = new Label("Color de Relleno:");
-            lblRelleno.getStyleClass().add("prop-label-small");
-            ColorPicker cpRelleno = new ColorPicker(Color.web(forma.getColorRelleno()));
-            cpRelleno.setMaxWidth(MAX_CONTROL_WIDTH);
-            cpRelleno.setDisable(!forma.isConRelleno());
-
             chkRelleno.selectedProperty().addListener((obs, old, newVal) -> {
                 forma.setConRelleno(newVal);
-                cpRelleno.setDisable(!newVal);
                 notifyCanvasRedraw();
             });
 
-            cpRelleno.valueProperty().addListener((obs, old, newVal) -> {
-                forma.setColorRelleno(String.format("#%02X%02X%02X",
-                        (int) (newVal.getRed() * 255),
-                        (int) (newVal.getGreen() * 255),
-                        (int) (newVal.getBlue() * 255)
-                ));
+            props.getChildren().add(chkRelleno);
+
+            addColorControlWithEyedropper(props, "Color de Relleno:", forma.getColorRelleno(), chkRelleno.selectedProperty(), newColor -> {
+                forma.setColorRelleno(newColor);
                 notifyCanvasRedraw();
             });
-
-            props.getChildren().addAll(chkRelleno, lblRelleno, cpRelleno);
         }
     }
 
@@ -793,25 +763,6 @@ public class PropertiesPanelController {
         VBox posSizeBox = new VBox();
         addPositionSizeControls(posSizeBox, codigo);
 
-        // Colores
-        Label lblColorCodigo = new Label("Color del Código:");
-        lblColorCodigo.getStyleClass().add("prop-label-small");
-        ColorPicker cpColor = new ColorPicker(Color.web(codigo.getColorCodigo()));
-        cpColor.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpColor.valueProperty().addListener((obs, old, newVal) -> {
-            codigo.setColorCodigo(colorToHex(newVal));
-            notifyCanvasRedraw();
-        });
-
-        Label lblColorFondo = new Label("Color de Fondo:");
-        lblColorFondo.getStyleClass().add("prop-label-small");
-        ColorPicker cpFondo = new ColorPicker(Color.web(codigo.getColorFondo()));
-        cpFondo.setMaxWidth(MAX_CONTROL_WIDTH);
-        cpFondo.valueProperty().addListener((obs, old, newVal) -> {
-            codigo.setColorFondo(colorToHex(newVal));
-            notifyCanvasRedraw();
-        });
-
         // Margen
         Label lblMargen = new Label("Margen (Quiet Zone):");
         lblMargen.getStyleClass().add("prop-label-small");
@@ -822,7 +773,20 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        props.getChildren().addAll(lblTipo, cmbTipo, new Separator(), lblContenido, txtContenido, varBox, posSizeBox, new Separator(), lblColorCodigo, cpColor, lblColorFondo, cpFondo, lblMargen, spMargen);
+        props.getChildren().addAll(lblTipo, cmbTipo, new Separator(), lblContenido, txtContenido, varBox, posSizeBox, new Separator());
+        
+        // Colores con cuentagotas (se añaden ellos mismos a props)
+        addColorControlWithEyedropper(props, "Color del Código:", codigo.getColorCodigo(), newColor -> {
+            codigo.setColorCodigo(newColor);
+            notifyCanvasRedraw();
+        });
+
+        addColorControlWithEyedropper(props, "Color de Fondo:", codigo.getColorFondo(), newColor -> {
+            codigo.setColorFondo(newColor);
+            notifyCanvasRedraw();
+        });
+
+        props.getChildren().addAll(lblMargen, spMargen);
 
         // Controles específicos de QR
         if (codigo.getTipo() == TipoCodigo.QR) {
@@ -922,6 +886,94 @@ public class PropertiesPanelController {
         });
 
         box.getChildren().addAll(lblSeccion, cmbColumna);
+    }
+
+    private void addColorControlWithEyedropper(VBox box, String labelText, String hexInitial, Consumer<String> onColorChange) {
+        addColorControlWithEyedropper(box, labelText, hexInitial, null, onColorChange);
+    }
+
+    private void addColorControlWithEyedropper(VBox box, String labelText, String hexInitial, javafx.beans.property.BooleanProperty disableProperty, Consumer<String> onColorChange) {
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("prop-label-small");
+
+        ColorPicker cp = new ColorPicker(Color.web(hexInitial));
+        cp.setPrefWidth(140); // Ancho fijo para que no estire todo
+        if (disableProperty != null) cp.disableProperty().bind(disableProperty.not());
+
+        // Botón de Cuentagotas compacto e independiente
+        Button btnEyedropper = new Button("⌖");
+        btnEyedropper.getStyleClass().add("prop-toggle-btn"); 
+        btnEyedropper.setMinWidth(30);
+        btnEyedropper.setPrefWidth(30);
+        btnEyedropper.setPrefHeight(25);
+        btnEyedropper.setTooltip(new Tooltip("Cuentagotas: Capturar color desde el diseño"));
+        if (disableProperty != null) btnEyedropper.disableProperty().bind(disableProperty.not());
+
+        // Estilo base: Fondo oscuro translúcido y borde sutil para que parezca un botón real
+        btnEyedropper.setStyle("-fx-background-color: rgba(255,255,255,0.05); -fx-border-color: rgba(255,255,255,0.1); -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        // Animación de Pulso (Escala)
+        javafx.animation.ScaleTransition pulse = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(600), btnEyedropper);
+        pulse.setFromX(1.0); pulse.setFromY(1.0);
+        pulse.setToX(1.15); pulse.setToY(1.15);
+        pulse.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        pulse.setAutoReverse(true);
+
+        // Efecto visual de "pulsado" con los colores oficiales de TPS Studio (como Validar Diseño)
+        btnEyedropper.styleProperty().bind(
+            javafx.beans.binding.Bindings.when(eyedropperActive)
+                .then("-fx-background-color: #221e3a; -fx-text-fill: #c4bcec; -fx-border-color: #3b3570; -fx-effect: dropshadow(gaussian, rgba(59, 53, 112, 0.8), 15, 0.4, 0, 0);")
+                .otherwise("-fx-background-color: rgba(255,255,255,0.05); -fx-border-color: rgba(255,255,255,0.1);")
+        );
+
+        // Controlar la animación según el estado
+        eyedropperActive.addListener((obs, old, active) -> {
+            if (active) pulse.play();
+            else {
+                pulse.stop();
+                btnEyedropper.setScaleX(1.0);
+                btnEyedropper.setScaleY(1.0);
+            }
+        });
+
+        btnEyedropper.setOnAction(e -> {
+            if (eyedropperActive.get()) {
+                canvasManager.deactivateEyedropper();
+                eyedropperActive.set(false);
+            } else {
+                eyedropperActive.set(true);
+                canvasManager.activateEyedropper(color -> {
+                    cp.setValue(color);
+                    onColorChange.accept(colorToHex(color));
+                    eyedropperActive.set(false);
+                });
+            }
+        });
+
+        cp.setFocusTraversable(false); // Evitar que el foco robe eventos de clic sutiles
+
+        // Transición suave al abrir el popup
+        cp.showingProperty().addListener((obs, old, isShowing) -> {
+            if (isShowing) {
+                javafx.scene.Node popup = cp.lookup(".color-picker-grid");
+                if (popup != null) {
+                    popup.setOpacity(0);
+                    javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), popup);
+                    ft.setFromValue(0);
+                    ft.setToValue(1);
+                    ft.play();
+                }
+            }
+        });
+
+        HBox row = new HBox(8, cp, btnEyedropper); // Separados por un hueco elegante
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        cp.valueProperty().addListener((obs, old, newVal) -> {
+            onColorChange.accept(colorToHex(newVal));
+        });
+
+        box.getChildren().addAll(lbl, row);
     }
 
     private String colorToHex(Color c) {

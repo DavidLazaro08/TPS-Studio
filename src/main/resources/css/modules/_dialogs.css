@@ -44,3 +44,101 @@
     -fx-border-color: #3d3739;
 }
 
+/* =====================================================
+   COLOR PICKER DIALOG (Modo Oscuro Completo)
+   ===================================================== */
+.custom-color-dialog {
+    -fx-background-color: #1e1b1d;
+    -fx-border-color: #2a252e;
+    -fx-border-width: 1;
+}
+
+/* Panel central que suele salir blanco por defecto */
+.custom-color-dialog .custom-color-main {
+    -fx-background-color: transparent;
+}
+
+.custom-color-dialog .label {
+    -fx-text-fill: #c4c0c2; /* tps-text-2 */
+    -fx-font-size: 11px;
+}
+
+/* Pestañas (HSB, RGB, Web) */
+.custom-color-dialog .toggle-button {
+    -fx-background-color: #252123;
+    -fx-text-fill: #9a9598;
+    -fx-border-color: #3a3638;
+    -fx-border-width: 1;
+}
+
+.custom-color-dialog .toggle-button:selected {
+    -fx-background-color: #2e2954; /* tps-accent-dark */
+    -fx-text-fill: #e8e6e7;
+    -fx-border-color: #463f74;
+}
+
+/* Sliders */
+.custom-color-dialog .slider .track {
+    -fx-background-color: #252123;
+    -fx-pref-height: 4;
+}
+
+.custom-color-dialog .slider .thumb {
+    -fx-background-color: #463f74;
+}
+
+/* Campos de texto numéricos */
+.custom-color-dialog .text-field {
+    -fx-background-color: #0a0809;
+    -fx-text-fill: #e8e6e7;
+    -fx-border-color: #3a3638;
+    -fx-border-radius: 2;
+    -fx-padding: 2 4;
+}
+
+/* Botones de acción (Guardar, Usar, Cancelar) */
+.custom-color-dialog .button {
+    -fx-background-color: #2a252e;
+    -fx-text-fill: #c4c0c2;
+    -fx-background-radius: 4;
+    -fx-padding: 6 18;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.custom-color-dialog .button:hover {
+    -fx-background-color: #3a3638;
+    -fx-text-fill: white;
+}
+
+/* El botón azul de acción principal (Guardar) */
+.custom-color-dialog .button:default {
+    -fx-background-color: #221e3a; /* tps-accent-deep */
+    -fx-text-fill: #c4bcec; /* tps-accent-light */
+    -fx-border-color: #3b3570;
+}
+
+.custom-color-dialog .button:default:hover {
+    -fx-background-color: #2e2954;
+    -fx-effect: dropshadow(gaussian, rgba(59, 53, 112, 0.4), 10, 0, 0, 0);
+}
+
+/* Rectángulos de color */
+.custom-color-dialog .color-rect-pane {
+    -fx-border-color: #3a3638;
+    -fx-background-color: #0a0809;
+}
+
+.custom-color-dialog .color-rect {
+    -fx-border-color: rgba(255,255,255,0.2);
+}
+
+/* Ajuste de posición del popup para no tapar el botón y facilitar el cierre */
+.color-picker-popup {
+    -fx-translate-y: 4;
+    -fx-background-color: #1e1b1d;
+    -fx-border-color: #3b3570;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}

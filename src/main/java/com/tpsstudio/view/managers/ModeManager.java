@@ -497,15 +497,15 @@ public class ModeManager {
 
         Label textCodes = new Label("Códigos");
         textCodes.getStyleClass().add("tool-label");
-        HBox.setHgrow(textCodes, Priority.ALWAYS);
+        // HBox.setHgrow(textCodes, Priority.ALWAYS); // Eliminado para consistencia con otros botones
 
         Region spacerC = new Region();
         HBox.setHgrow(spacerC, Priority.ALWAYS);
 
         HBox codesGraphic = new HBox(iconCodes, textCodes, spacerC, iconExpanderC);
         codesGraphic.setAlignment(Pos.CENTER_LEFT);
-        codesGraphic.setSpacing(10); // Mantener el espacio entre icono y texto
         codesGraphic.setMaxWidth(Double.MAX_VALUE);
+        codesGraphic.setSpacing(0); // Eliminar el espaciado extra para alinear con Texto e Imagen
 
         Button btnToggleCodes = new Button();
         btnToggleCodes.setGraphic(codesGraphic);
