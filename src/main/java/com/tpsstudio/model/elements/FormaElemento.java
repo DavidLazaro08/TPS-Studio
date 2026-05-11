@@ -13,14 +13,20 @@ public class FormaElemento extends Elemento {
     private String colorBorde;
     private double grosorBorde;
     private boolean conRelleno;
+    private boolean conBorde;
+    private double radioCurvatura; // Para rectángulos redondeados
+    private double opacidad;       // 0.0 a 1.0
 
     public FormaElemento(String nombre, double x, double y, double width, double height, TipoForma tipo) {
         super(nombre, x, y, width, height);
-        this.tipoForma    = tipo;
-        this.colorBorde   = "#000000";
-        this.colorRelleno = "#4a6b7c";
-        this.grosorBorde  = 2.0;
-        this.conRelleno   = (tipo != TipoForma.LINEA); // Las líneas nunca tienen relleno
+        this.tipoForma      = tipo;
+        this.colorBorde     = "#000000";
+        this.colorRelleno   = "#4a6b7c";
+        this.grosorBorde    = 2.0;
+        this.conRelleno     = (tipo != TipoForma.LINEA);
+        this.conBorde       = true;
+        this.radioCurvatura = 0.0;
+        this.opacidad       = 1.0;
     }
 
     public TipoForma getTipoForma() { return tipoForma; }
@@ -37,4 +43,13 @@ public class FormaElemento extends Elemento {
 
     public boolean isConRelleno() { return conRelleno; }
     public void setConRelleno(boolean conRelleno) { this.conRelleno = conRelleno; }
+
+    public boolean isConBorde() { return conBorde; }
+    public void setConBorde(boolean conBorde) { this.conBorde = conBorde; }
+
+    public double getRadioCurvatura() { return radioCurvatura; }
+    public void setRadioCurvatura(double radioCurvatura) { this.radioCurvatura = radioCurvatura; }
+
+    public double getOpacidad() { return opacidad; }
+    public void setOpacidad(double opacidad) { this.opacidad = opacidad; }
 }

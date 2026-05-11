@@ -481,22 +481,43 @@ public class ModeManager {
         // ---- Acordeón de Códigos (QR + Barras) ----
         VBox codesContainer = new VBox(0);
         
-        Button btnToggleCodes = makeToolButton("⦀", "tool-icon", "Códigos", "tool-label", "tool-button");
-        btnToggleCodes.setPrefWidth(200);
-        
-        Label iconExpanderC = new Label(barcodesExpanded ? "\u25BE" : "\u25B8");
-        iconExpanderC.setStyle("-fx-text-fill: #a0a5cc; -fx-font-size: 10px;");
-        Region spacerC = new Region();
-        HBox.setHgrow(spacerC, Priority.ALWAYS);
-        
-        btnToggleCodes.setGraphic(new HBox(10, btnToggleCodes.getGraphic(), spacerC, iconExpanderC));
-        ((HBox)btnToggleCodes.getGraphic()).setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        ((HBox)btnToggleCodes.getGraphic()).setMinWidth(180);
-
         VBox codesSubMenu = new VBox(1);
         codesSubMenu.getStyleClass().add("tool-subtools");
         codesSubMenu.setVisible(barcodesExpanded);
         codesSubMenu.setManaged(barcodesExpanded);
+
+        Label iconExpanderC = new Label(barcodesExpanded ? "\u25BE" : "\u25B8");
+        iconExpanderC.getStyleClass().add("tool-icon");
+        iconExpanderC.setMinWidth(16);
+        iconExpanderC.setPrefWidth(16);
+        iconExpanderC.setMaxWidth(16);
+
+        Label iconCodes = new Label("⦀");
+        iconCodes.getStyleClass().add("tool-icon");
+
+        Label textCodes = new Label("Códigos");
+        textCodes.getStyleClass().add("tool-label");
+        HBox.setHgrow(textCodes, Priority.ALWAYS);
+
+        Region spacerC = new Region();
+        HBox.setHgrow(spacerC, Priority.ALWAYS);
+
+        HBox codesGraphic = new HBox(iconCodes, textCodes, spacerC, iconExpanderC);
+        codesGraphic.setAlignment(Pos.CENTER_LEFT);
+        codesGraphic.setSpacing(10); // Mantener el espacio entre icono y texto
+        codesGraphic.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnToggleCodes = new Button();
+        btnToggleCodes.setGraphic(codesGraphic);
+        btnToggleCodes.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        btnToggleCodes.setMaxWidth(Double.MAX_VALUE);
+        btnToggleCodes.getStyleClass().add("tool-button");
+        
+        btnToggleCodes.setOnAction(e -> {
+            barcodesExpanded = !barcodesExpanded;
+            iconExpanderC.setText(barcodesExpanded ? "\u25BE" : "\u25B8");
+            AnimationHelper.animateAccordion(codesSubMenu, barcodesExpanded);
+        });
 
         // 1. Añadir el QR primero (especial)
         Button btnQR = makeSubToolButton("⦀", "Código QR");

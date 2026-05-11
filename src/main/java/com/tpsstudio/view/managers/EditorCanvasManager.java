@@ -485,10 +485,22 @@ public class EditorCanvasManager {
                     
                     // Dibujar texto human-readable si es 1D y está activo
                     if (!codigo.getTipo().isEs2D() && codigo.isMostrarTexto()) {
+                        double fontSize = codigo.getFontSize();
+                        FontWeight weight = codigo.isNegrita() ? FontWeight.BOLD : FontWeight.NORMAL;
+                        Font font = Font.font("Arial", weight, codigo.isCursiva() ? javafx.scene.text.FontPosture.ITALIC : javafx.scene.text.FontPosture.REGULAR, fontSize);
+                        
+                        // 1. Dibujar fondo para el texto (para que parezca parte de la etiqueta)
+                        gc.setFill(Color.web(codigo.getColorFondo()));
+                        gc.fillRect(ex, ey + eh, ew, fontSize + 5);
+                        
+                        // 2. Dibujar texto centrado
                         gc.setFill(Color.web(codigo.getColorCodigo()));
-                        gc.setFont(Font.font("Arial", FontWeight.BOLD, codigo.getFontSize()));
+                        gc.setFont(font);
                         gc.setTextAlign(TextAlignment.CENTER);
-                        gc.fillText(texto, ex + ew / 2, ey + eh + codigo.getFontSize() + 2);
+                        gc.fillText(codigo.getTextoProcesado(texto), ex + ew / 2, ey + eh + fontSize + 2);
+                        
+                        // IMPORTANTE: Resetear alineación para no romper el resto del canvas
+                        gc.setTextAlign(TextAlignment.LEFT);
                     }
                 } else {
                     // Placeholder visual si falla la generación
@@ -1040,28 +1052,41 @@ public class EditorCanvasManager {
         gc.setLineWidth(grosor);
         gc.setLineDashes();
 
+        // Aplicar opacidad
+        double oldAlpha = gc.getGlobalAlpha();
+        gc.setGlobalAlpha(forma.getOpacidad());
+
         switch (forma.getTipoForma()) {
             case RECTANGULO -> {
+                double arc = forma.getRadioCurvatura() * zoomLevel;
                 if (forma.isConRelleno()) {
                     gc.setFill(Color.web(forma.getColorRelleno()));
-                    gc.fillRect(ex, ey, ew, eh);
+                    gc.fillRoundRect(ex, ey, ew, eh, arc, arc);
                 }
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                gc.strokeRect(ex, ey, ew, eh);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeRoundRect(ex, ey, ew, eh, arc, arc);
+                }
             }
             case ELIPSE -> {
                 if (forma.isConRelleno()) {
                     gc.setFill(Color.web(forma.getColorRelleno()));
                     gc.fillOval(ex, ey, ew, eh);
                 }
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                gc.strokeOval(ex, ey, ew, eh);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeOval(ex, ey, ew, eh);
+                }
             }
             case LINEA -> {
-                gc.setStroke(Color.web(forma.getColorBorde()));
-                // La línea va de la esquina superior-izquierda a la inferior-derecha
-                gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+                if (forma.isConBorde()) {
+                    gc.setStroke(Color.web(forma.getColorBorde()));
+                    gc.strokeLine(ex, ey + eh / 2, ex + ew, ey + eh / 2);
+                }
             }
         }
+        
+        // Resetear opacidad
+        gc.setGlobalAlpha(oldAlpha);
     }
 }

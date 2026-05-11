@@ -32,7 +32,9 @@ public class ElementoCodigo extends Elemento {
     private String nivelCorreccion; // Solo para QR
     private int margen;
     private boolean mostrarTexto; 
-    private int fontSize; // Nuevo campo para el tamaño del texto inferior
+    private int fontSize;
+    private boolean negrita;
+    private boolean cursiva;
 
     // ─── Caché en memoria ─────────────────────────────────────────────────────
     private transient Image imagenCacheada;
@@ -58,7 +60,9 @@ public class ElementoCodigo extends Elemento {
         this.nivelCorreccion  = "M";
         this.margen           = tipo.isEs2D() ? 1 : 10;
         this.mostrarTexto     = true;
-        this.fontSize         = 10; // Tamaño de fuente para el texto inferior
+        this.fontSize         = 10;
+        this.negrita          = true; // Por defecto negrita para que se vea bien
+        this.cursiva          = false;
     }
 
     // ─── Generación de imagen ─────────────────────────────────────────────────
@@ -84,6 +88,9 @@ public class ElementoCodigo extends Elemento {
 
     private Image generarImagen(String texto) {
         try {
+            // Lógica Inteligente: Limpiar y completar checksum si es EAN/UPC
+            String textoProcesado = procesarTextoSegunTipo(texto, tipo);
+            
             MultiFormatWriter writer = new MultiFormatWriter();
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
             hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
@@ -100,7 +107,7 @@ public class ElementoCodigo extends Elemento {
             // Forzar cuadrado para QR
             if (tipo.isEs2D()) targetHeight = targetWidth;
 
-            BitMatrix matrix = writer.encode(texto, tipo.getFormat(), targetWidth, targetHeight, hints);
+            BitMatrix matrix = writer.encode(textoProcesado, tipo.getFormat(), targetWidth, targetHeight, hints);
 
             int argbColor = hexToArgb(colorCodigo);
             int argbFondo = hexToArgb(colorFondo);
@@ -128,6 +135,51 @@ public class ElementoCodigo extends Elemento {
         } catch (NumberFormatException e) {
             return 0xFF000000;
         }
+    }
+
+    public String getTextoProcesado(String textoRaw) {
+        return procesarTextoSegunTipo(textoRaw, tipo);
+    }
+
+    private String procesarTextoSegunTipo(String texto, TipoCodigo tipo) {
+        if (texto == null || texto.isBlank()) return "";
+        
+        // Solo procesamos EAN13 y UPCA que son los que tienen checksum rígido
+        if (tipo == TipoCodigo.EAN13) {
+            String soloNumeros = texto.replaceAll("[^0-9]", "");
+            if (soloNumeros.length() >= 12) {
+                String base = soloNumeros.substring(0, 12);
+                return base + calcularCheckDigitEAN(base);
+            }
+        } else if (tipo == TipoCodigo.UPCA) {
+            String soloNumeros = texto.replaceAll("[^0-9]", "");
+            if (soloNumeros.length() >= 11) {
+                String base = soloNumeros.substring(0, 11);
+                return base + calcularCheckDigitUPC(base);
+            }
+        }
+        
+        return texto;
+    }
+
+    private int calcularCheckDigitEAN(String base12) {
+        int sum = 0;
+        for (int i = 0; i < 12; i++) {
+            int digit = Character.getNumericValue(base12.charAt(i));
+            sum += (i % 2 == 0) ? digit : digit * 3;
+        }
+        int res = 10 - (sum % 10);
+        return (res == 10) ? 0 : res;
+    }
+
+    private int calcularCheckDigitUPC(String base11) {
+        int sum = 0;
+        for (int i = 0; i < 11; i++) {
+            int digit = Character.getNumericValue(base11.charAt(i));
+            sum += (i % 2 == 0) ? digit * 3 : digit;
+        }
+        int res = 10 - (sum % 10);
+        return (res == 10) ? 0 : res;
     }
 
     // ─── Getters y Setters ────────────────────────────────────────────────────
@@ -166,6 +218,12 @@ public class ElementoCodigo extends Elemento {
 
     public int getFontSize() { return fontSize; }
     public void setFontSize(int fontSize) { this.fontSize = fontSize; }
+
+    public boolean isNegrita() { return negrita; }
+    public void setNegrita(boolean negrita) { this.negrita = negrita; }
+
+    public boolean isCursiva() { return cursiva; }
+    public void setCursiva(boolean cursiva) { this.cursiva = cursiva; }
 
     public boolean esDinamico() { return columnaVinculada != null && !columnaVinculada.isBlank(); }
 

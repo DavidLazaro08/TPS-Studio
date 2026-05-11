@@ -14,6 +14,7 @@ import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.ImageUtils;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -638,11 +639,33 @@ public class PropertiesPanelController {
         Label lblEstilo = new Label("Estilo de Forma");
         lblEstilo.getStyleClass().add("prop-label");
 
+        // Borde activo
+        CheckBox chkBorde = new CheckBox("Borde activo");
+        chkBorde.setSelected(forma.isConBorde());
+        chkBorde.getStyleClass().add("prop-checkbox");
+
         // Color de Borde
         Label lblBorde = new Label("Color del Borde:");
         lblBorde.getStyleClass().add("prop-label-small");
         ColorPicker cpBorde = new ColorPicker(Color.web(forma.getColorBorde()));
         cpBorde.setMaxWidth(MAX_CONTROL_WIDTH);
+        cpBorde.setDisable(!forma.isConBorde());
+
+        // Grosor de Borde
+        Label lblGrosor = new Label("Grosor del Borde:");
+        lblGrosor.getStyleClass().add("prop-label-small");
+        Spinner<Double> spnGrosor = new Spinner<>(0.5, 20.0, forma.getGrosorBorde(), 0.5);
+        spnGrosor.setEditable(true);
+        spnGrosor.setMaxWidth(MAX_CONTROL_WIDTH);
+        spnGrosor.setDisable(!forma.isConBorde());
+
+        chkBorde.selectedProperty().addListener((obs, old, newVal) -> {
+            forma.setConBorde(newVal);
+            cpBorde.setDisable(!newVal);
+            spnGrosor.setDisable(!newVal);
+            notifyCanvasRedraw();
+        });
+
         cpBorde.valueProperty().addListener((obs, old, newVal) -> {
             forma.setColorBorde(String.format("#%02X%02X%02X",
                     (int) (newVal.getRed() * 255),
@@ -652,12 +675,6 @@ public class PropertiesPanelController {
             notifyCanvasRedraw();
         });
 
-        // Grosor de Borde
-        Label lblGrosor = new Label("Grosor del Borde:");
-        lblGrosor.getStyleClass().add("prop-label-small");
-        Spinner<Double> spnGrosor = new Spinner<>(0.5, 20.0, forma.getGrosorBorde(), 0.5);
-        spnGrosor.setEditable(true);
-        spnGrosor.setMaxWidth(MAX_CONTROL_WIDTH);
         spnGrosor.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 forma.setGrosorBorde(newVal);
@@ -665,7 +682,29 @@ public class PropertiesPanelController {
             }
         });
 
-        props.getChildren().addAll(lblEstilo, lblBorde, cpBorde, lblGrosor, spnGrosor);
+        props.getChildren().addAll(lblEstilo, chkBorde, lblBorde, cpBorde, lblGrosor, spnGrosor);
+
+        // --- Opacidad ---
+        Label lblOpacidad = new Label("Opacidad:");
+        lblOpacidad.getStyleClass().add("prop-label-small");
+        Slider sldOpacidad = new Slider(0, 1, forma.getOpacidad());
+        sldOpacidad.valueProperty().addListener((obs, old, newVal) -> {
+            forma.setOpacidad(newVal.doubleValue());
+            notifyCanvasRedraw();
+        });
+        props.getChildren().addAll(lblOpacidad, sldOpacidad);
+
+        // --- Redondeado (Solo Rectángulos) ---
+        if (forma.getTipoForma() == FormaElemento.TipoForma.RECTANGULO) {
+            Label lblRadio = new Label("Redondeado de Esquinas:");
+            lblRadio.getStyleClass().add("prop-label-small");
+            Slider sldRadio = new Slider(0, 100, forma.getRadioCurvatura());
+            sldRadio.valueProperty().addListener((obs, old, newVal) -> {
+                forma.setRadioCurvatura(newVal.doubleValue());
+                notifyCanvasRedraw();
+            });
+            props.getChildren().addAll(lblRadio, sldRadio);
+        }
 
         // Relleno (solo para Rectángulo y Elipse)
         if (forma.getTipoForma() != FormaElemento.TipoForma.LINEA) {
@@ -725,15 +764,12 @@ public class PropertiesPanelController {
         // Etiqueta del elemento
         addEtiquetaControl(props, codigo.getEtiqueta(), codigo::setEtiqueta, "Ej: QR WEB, CODIGO SOCIO...");
 
-        // Controles de Contenido
         Label lblContenido = new Label("Contenido:");
         lblContenido.getStyleClass().add("prop-label-small");
 
-        TextArea txtContenido = new TextArea(codigo.getContenido());
+        TextField txtContenido = new TextField(codigo.getContenido());
         txtContenido.setPromptText("Introduzca los datos...");
         txtContenido.setMaxWidth(MAX_CONTROL_WIDTH);
-        txtContenido.setPrefRowCount(2);
-        txtContenido.setWrapText(true);
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             codigo.setContenido(newVal);
             notifyCanvasRedraw();
@@ -809,28 +845,60 @@ public class PropertiesPanelController {
             props.getChildren().addAll(lblError, cmbError);
         } else {
             // Controles específicos de códigos de barras (1D)
-            CheckBox chkTexto = new CheckBox("Mostrar texto inferior");
+            HBox textConfigRow = new HBox(8);
+            textConfigRow.setAlignment(Pos.CENTER_LEFT);
+
+            // 1. Checkbox compacto
+            CheckBox chkTexto = new CheckBox("Texto");
             chkTexto.getStyleClass().add("prop-checkbox");
             chkTexto.setSelected(codigo.isMostrarTexto());
+            chkTexto.setMinWidth(70);
             chkTexto.selectedProperty().addListener((obs, old, newVal) -> {
                 codigo.setMostrarTexto(newVal);
                 notifyCanvasRedraw();
+                if (onPropertyChanged != null) onPropertyChanged.run();
             });
 
-            Label lblFontSize = new Label("Tamaño texto:");
-            lblFontSize.getStyleClass().add("prop-label-small");
-            Spinner<Integer> spFontSize = new Spinner<>(6, 24, codigo.getFontSize());
-            spFontSize.setMaxWidth(MAX_CONTROL_WIDTH);
-            spFontSize.valueProperty().addListener((obs, old, newVal) -> {
-                codigo.setFontSize(newVal);
-                notifyCanvasRedraw();
-            });
+            textConfigRow.getChildren().add(chkTexto);
 
-            props.getChildren().addAll(new Separator(), chkTexto, lblFontSize, spFontSize);
+            // 2. Controles de estilo (solo si está activo)
+            if (codigo.isMostrarTexto()) {
+                // Tamaño (Spinner idéntico al de textos)
+                Spinner<Integer> spSize = new Spinner<>(6, 24, codigo.getFontSize());
+                spSize.setPrefWidth(60);
+                spSize.setMinWidth(60);
+                spSize.setMaxWidth(60);
+                spSize.valueProperty().addListener((obs, old, newVal) -> {
+                    codigo.setFontSize(newVal);
+                    notifyCanvasRedraw();
+                });
+
+                // Botones B e I (Segmented Group como en textos)
+                ToggleButton btnBold = new ToggleButton("B");
+                btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+                btnBold.setSelected(codigo.isNegrita());
+                btnBold.setPrefWidth(30);
+                btnBold.setStyle("-fx-font-weight: bold;");
+                btnBold.setOnAction(e -> { codigo.setNegrita(btnBold.isSelected()); notifyCanvasRedraw(); });
+
+                ToggleButton btnItalic = new ToggleButton("I");
+                btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
+                btnItalic.setSelected(codigo.isCursiva());
+                btnItalic.setPrefWidth(30);
+                btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
+                btnItalic.setOnAction(e -> { codigo.setCursiva(btnItalic.isSelected()); notifyCanvasRedraw(); });
+
+                HBox styleButtons = new HBox(0, btnBold, btnItalic);
+                styleButtons.getStyleClass().add("prop-segmented-group");
+
+                textConfigRow.getChildren().addAll(spSize, styleButtons);
+            }
+            
+            props.getChildren().add(textConfigRow);
         }
     }
 
-    private void addSeccionDatosVariablesCodigo(VBox box, ElementoCodigo codigo, Label lblContenido, TextArea txtContenido) {
+    private void addSeccionDatosVariablesCodigo(VBox box, ElementoCodigo codigo, Label lblContenido, TextField txtContenido) {
         Label lblSeccion = new Label("Vincular Columna");
         lblSeccion.getStyleClass().add("prop-label-small");
 
