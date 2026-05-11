@@ -481,22 +481,22 @@ public class ProjectManager {
     }
 
     /**
-     * Crea un ElementoQR por defecto y lo añade al proyecto actual.
-     * El QR se coloca centrado en la tarjeta (aprox. 170×170 px / 2).
+     * Crea un ElementoCodigo (QR o Barras) por defecto y lo añade al proyecto actual.
      */
-    public com.tpsstudio.model.elements.ElementoQR añadirQR() {
+    public com.tpsstudio.model.elements.ElementoCodigo añadirCodigo(com.tpsstudio.model.enums.TipoCodigo tipo) {
         if (proyectoActual == null) return null;
 
         int num = proyectoActual.getElementosActuales().size() + 1;
+        String nombre = tipo.getNombre() + " " + num;
 
         // Posición aproximada al centro de la tarjeta CR80 (342 × 216 px)
-        com.tpsstudio.model.elements.ElementoQR qr =
-                new com.tpsstudio.model.elements.ElementoQR("QR " + num, 141, 78);
+        com.tpsstudio.model.elements.ElementoCodigo codigo =
+                new com.tpsstudio.model.elements.ElementoCodigo(nombre, 131, 88, tipo);
 
-        proyectoActual.getElementosActuales().add(qr);
+        proyectoActual.getElementosActuales().add(codigo);
         avisarElementoAñadido();
 
-        return qr;
+        return codigo;
     }
 
     /**

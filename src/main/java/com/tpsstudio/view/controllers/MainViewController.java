@@ -364,7 +364,7 @@ public class MainViewController {
         modeManager.setOnAddImage(this::onAñadirImagen);
         modeManager.setOnAddBackground(this::onAñadirFondo);
         modeManager.setOnAddShape(this::onAñadirForma);
-        modeManager.setOnAddQR(this::onAñadirQR);
+        modeManager.setOnAddCode(this::onAñadirCodigo);
 
         modeManager.setOnValidateDesign(this::onValidarDiseno);
 
@@ -1382,8 +1382,8 @@ public class MainViewController {
         elementActionsController.añadirForma(tipo);
     }
 
-    private void onAñadirQR() {
-        elementActionsController.añadirQR();
+    private void onAñadirCodigo(TipoCodigo tipo) {
+        elementActionsController.añadirCodigo(tipo);
     }
 
     private void onEliminarElemento() {

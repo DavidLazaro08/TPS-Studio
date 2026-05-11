@@ -1,55 +1,35 @@
-# Documentación Técnica: Sistema de Códigos QR en TPS Studio
+# Documentación del Sistema de Códigos (Universal)
 
-Esta documentación detalla la implementación, arquitectura y uso del sistema de generación de códigos QR integrado en **TPS Studio**.
+Este módulo gestiona la generación y renderizado de códigos QR y de barras dentro de TPS Studio.
 
-## 1. Arquitectura del Sistema
+## 1. Arquitectura
+El sistema se basa en la clase genérica `ElementoCodigo`, que centraliza la lógica para múltiples formatos.
 
-El sistema sigue el patrón **MVVM (Model-View-ViewModel)** del proyecto, integrándose en las capas existentes de la siguiente manera:
+### Clase `ElementoCodigo`
+Hereda de `Elemento` y gestiona:
+- **Tipos soportados:** QR, Code 128, Code 39, EAN-13, UPC-A.
+- **Modos:** Estático (texto fijo) y Dinámico (vinculado a base de datos).
+- **Estética:** Colores personalizables (código y fondo), márgenes (Quiet Zone) y visualización de texto human-readable.
 
-### Modelo (`ElementoQR.java`)
-- **Herencia:** Extiende de la clase base `Elemento`.
-- **Motor de Generación:** Utiliza la librería **Google ZXing** (v3.5.3).
-- **Propiedades Clave:**
-  - `contenido`: Texto estático (URL, texto, etc.).
-  - `columnaVinculada`: Nombre de la columna de la base de datos para modo dinámico.
-  - `colorQR` y `colorFondo`: Personalización cromática en formato Hexadecimal.
-  - `nivelCorreccion`: Niveles L, M, Q, H para redundancia de datos.
-  - `margen`: Tamaño de la "quiet zone" alrededor del código.
+## 2. Generación (ZXing)
+Se utiliza la librería **Google ZXing (3.5.3)**.
+- **Motor:** `MultiFormatWriter` para soportar tanto códigos 2D (QR) como 1D (Barras).
+- **Caché:** Las imágenes se generan en una resolución interna de 400px y se cachean para optimizar el rendimiento. El caché se invalida automáticamente si cambia el contenido, el tipo o los colores.
 
-### Vista y Controladores
-- **`EditorCanvasManager.java`**: Gestiona el renderizado en tiempo real. Utiliza un sistema de **caché transitorio** (`transient Image`) para evitar regenerar el QR en cada frame del canvas, invalidándolo solo cuando cambian las propiedades.
-- **`PropertiesPanelController.java`**: Proporciona la interfaz de edición en el panel derecho, incluyendo `ColorPickers` y lógica de vinculación de datos.
-- **`ModeManager.java`**: Registra el elemento en la `Toolbox` (icono `⦀`) y gestiona su visualización en la lista de capas.
+## 3. Interfaz de Usuario
+### Toolbox (Caja de Herramientas)
+- **Código QR:** Botón independiente para acceso rápido.
+- **Códigos de Barras:** Menú tipo acordeón que agrupa los formatos lineales.
 
-## 2. Integración de Datos (Modo Dinámico)
+### Panel de Propiedades
+- **Selector de Tipo:** Permite cambiar el formato de un código ya existente.
+- **Configuración QR:** Control de nivel de corrección de errores (L, M, Q, H).
+- **Configuración Barras:** 
+    - Checkbox para mostrar/ocultar el texto (número) inferior.
+    - Spinner para ajustar el tamaño de fuente del texto.
 
-El `ElementoQR` soporta vinculación automática con fuentes de datos (Excel/Access):
-1. Si `columnaVinculada` no es nula, el motor ignora el campo `contenido` estático.
-2. Durante la navegación de registros o exportación, el sistema extrae el valor de la celda correspondiente y regenera el QR al vuelo.
-3. Se incluye un placeholder visual ("QR DATOS") cuando no hay una base de datos cargada para facilitar el diseño.
-
-## 3. Dependencias (Maven)
-
-Se han añadido las siguientes dependencias en el `pom.xml`:
-```xml
-<dependency>
-    <groupId>com.google.zxing</groupId>
-    <artifactId>core</artifactId>
-    <version>3.5.3</version>
-</dependency>
-<dependency>
-    <groupId>com.google.zxing</groupId>
-    <artifactId>javase</artifactId>
-    <version>3.5.3</version>
-</dependency>
-```
-
-## 4. Guía de Uso para el Usuario
-
-1. **Añadir:** Pulsar el botón "Código QR" en la barra de herramientas izquierda.
-2. **Personalizar:** Desde el panel de la derecha, se pueden cambiar los colores para que coincidan con la identidad corporativa.
-3. **Vincular:** Seleccionar una columna del Excel en la sección "Datos Variables" para generar QRs únicos por cada tarjeta (ej. para carnets de socio con URL de perfil).
-4. **Optimizar:** Si el QR va a ser impreso en un tamaño muy pequeño, se recomienda subir el **Nivel de Corrección** a "H (30%)" para asegurar la legibilidad.
+## 4. Renderizado en Canvas
+El `EditorCanvasManager` se encarga de dibujar la imagen generada. Para códigos de barras 1D, si la opción está activa, el canvas dibuja manualmente el texto centrado debajo del elemento utilizando las propiedades de estilo configuradas.
 
 ---
-*Documentación generada para el Proyecto Final de Grado - TPS Studio.*
+*Nota: Para códigos EAN-13 y UPC-A, el sistema valida automáticamente la longitud de los datos antes de intentar la generación.*

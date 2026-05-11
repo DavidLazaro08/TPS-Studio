@@ -1,7 +1,7 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
-import com.tpsstudio.model.elements.ElementoQR;
+import com.tpsstudio.model.elements.ElementoCodigo;
 import com.tpsstudio.model.elements.FormaElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
@@ -22,6 +22,8 @@ import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -469,22 +471,27 @@ public class EditorCanvasManager {
             } else if (elem instanceof FormaElemento forma) {
                 dibujarForma(gc, forma, ex, ey, ew, eh);
 
-            } else if (elem instanceof ElementoQR qr) {
-                // Resolver texto: dinámico (fuente de datos) o estático
-                String textoQR = qr.getContenido();
-                if (qr.esDinamico() && fuenteDatos != null) {
-                    String valorVariable = fuenteDatos.getValor(qr.getColumnaVinculada());
-                    if (valorVariable != null && !valorVariable.isBlank()) {
-                        textoQR = valorVariable;
-                    }
+            } else if (elem instanceof ElementoCodigo codigo) {
+                // Dibujar el código (QR o Barras)
+                String texto = codigo.getContenido();
+                if (codigo.esDinamico() && fuenteDatos != null) {
+                    String valor = fuenteDatos.getValor(codigo.getColumnaVinculada());
+                    if (valor != null) texto = valor;
                 }
-
-                javafx.scene.image.Image imgQR = qr.getImagenQR(textoQR);
-
-                if (imgQR != null) {
-                    gc.drawImage(imgQR, ex, ey, ew, eh);
+                
+                Image img = codigo.getImagen(texto);
+                if (img != null) {
+                    gc.drawImage(img, ex, ey, ew, eh);
+                    
+                    // Dibujar texto human-readable si es 1D y está activo
+                    if (!codigo.getTipo().isEs2D() && codigo.isMostrarTexto()) {
+                        gc.setFill(Color.web(codigo.getColorCodigo()));
+                        gc.setFont(Font.font("Arial", FontWeight.BOLD, codigo.getFontSize()));
+                        gc.setTextAlign(TextAlignment.CENTER);
+                        gc.fillText(texto, ex + ew / 2, ey + eh + codigo.getFontSize() + 2);
+                    }
                 } else {
-                    // Placeholder cuando el texto está vacío o falla ZXing
+                    // Placeholder visual si falla la generación
                     gc.setFill(Color.web("#2c2a2b"));
                     gc.fillRect(ex, ey, ew, eh);
                     gc.setStroke(Color.web("#5a5758"));
@@ -494,7 +501,7 @@ public class EditorCanvasManager {
                     gc.setLineDashes();
                     gc.setFill(Color.web("#7a7578"));
                     gc.setFont(Font.font("Arial", Math.max(9, ew * 0.15)));
-                    gc.fillText("QR", ex + ew * 0.3, ey + eh * 0.6);
+                    gc.fillText(codigo.getTipo().toString(), ex + ew * 0.2, ey + eh * 0.6);
                 }
             }
 

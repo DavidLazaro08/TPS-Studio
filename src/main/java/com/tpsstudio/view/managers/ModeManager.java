@@ -1,12 +1,13 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
-import com.tpsstudio.model.elements.ElementoQR;
+import com.tpsstudio.model.elements.ElementoCodigo;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
 import com.tpsstudio.model.elements.TextoElemento;
 import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.enums.AppMode;
 import com.tpsstudio.model.enums.FondoFitMode;
+import com.tpsstudio.model.enums.TipoCodigo;
 import com.tpsstudio.model.project.Etiqueta;
 import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
@@ -118,10 +119,8 @@ public class ModeManager {
     private Runnable onCanvasRedraw;
 
     // Nuevo callback para añadir formas
-    private java.util.function.Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> onAddShape;
-
-    // Callback para añadir código QR
-    private Runnable onAddQR;
+    private Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> onAddShape;
+    private Consumer<TipoCodigo> onAddCode;
 
     // Se guarda para poder refrescar solo la parte de "Capas" sin rehacer todo el
     // panel izquierdo
@@ -137,8 +136,9 @@ public class ModeManager {
     private javafx.scene.Node propertiesNode;
     private javafx.scene.Node datosNode;
 
-    // Estado de expansión del submenú de formas
+    // Estado de expansión de submenús
     private boolean shapesExpanded = false;
+    private boolean barcodesExpanded = false;
 
     // Botón de validación para aplicar animaciones
     private Button btnValidar;
@@ -261,18 +261,9 @@ public class ModeManager {
         this.onToggleLock = callback;
     }
 
-    public void setOnValidateDesign(Runnable callback) {
-        this.onValidateDesign = callback;
-    }
-
-    public void setOnAddShape(java.util.function.Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> callback) {
-        this.onAddShape = callback;
-    }
-
-    public void setOnAddQR(Runnable callback) {
-        this.onAddQR = callback;
-    }
-
+    public void setOnAddShape(Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> callback) { this.onAddShape = callback; }
+    public void setOnAddCode(Consumer<TipoCodigo> callback) { this.onAddCode = callback; }
+    public void setOnValidateDesign(Runnable callback) { this.onValidateDesign = callback; }
     public void setOnCanvasRedraw(Runnable callback) {
         this.onCanvasRedraw = callback;
     }
@@ -487,9 +478,55 @@ public class ModeManager {
         Button btnFondo = makeToolButton("⬚", "tool-icon", "Fondo", "tool-label", "tool-button");
         btnFondo.setOnAction(e -> { if (onAddBackground != null) onAddBackground.run(); });
 
-        // ---- Código QR ----
-        Button btnQR = makeToolButton("⦀", "tool-icon", "Código QR", "tool-label", "tool-button");
-        btnQR.setOnAction(e -> { if (onAddQR != null) onAddQR.run(); });
+        // ---- Acordeón de Códigos (QR + Barras) ----
+        VBox codesContainer = new VBox(0);
+        
+        Button btnToggleCodes = makeToolButton("⦀", "tool-icon", "Códigos", "tool-label", "tool-button");
+        btnToggleCodes.setPrefWidth(200);
+        
+        Label iconExpanderC = new Label(barcodesExpanded ? "\u25BE" : "\u25B8");
+        iconExpanderC.setStyle("-fx-text-fill: #a0a5cc; -fx-font-size: 10px;");
+        Region spacerC = new Region();
+        HBox.setHgrow(spacerC, Priority.ALWAYS);
+        
+        btnToggleCodes.setGraphic(new HBox(10, btnToggleCodes.getGraphic(), spacerC, iconExpanderC));
+        ((HBox)btnToggleCodes.getGraphic()).setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        ((HBox)btnToggleCodes.getGraphic()).setMinWidth(180);
+
+        VBox codesSubMenu = new VBox(1);
+        codesSubMenu.getStyleClass().add("tool-subtools");
+        codesSubMenu.setVisible(barcodesExpanded);
+        codesSubMenu.setManaged(barcodesExpanded);
+
+        // 1. Añadir el QR primero (especial)
+        Button btnQR = makeSubToolButton("⦀", "Código QR");
+        btnQR.setOnAction(e -> { if (onAddCode != null) onAddCode.accept(TipoCodigo.QR); });
+        codesSubMenu.getChildren().add(btnQR);
+
+        // 2. Separador sutil
+        Region separator = new Region();
+        separator.setPrefHeight(1);
+        separator.setMinHeight(1);
+        separator.setMaxHeight(1);
+        separator.setStyle("-fx-background-color: #ffffff22;"); // Blanco con mucha transparencia
+        VBox.setMargin(separator, new Insets(4, 15, 4, 15));
+        codesSubMenu.getChildren().add(separator);
+
+        // 3. El resto de códigos de barras
+        for (TipoCodigo tipo : TipoCodigo.values()) {
+            if (tipo == TipoCodigo.QR) continue; 
+            Button btnSub = makeSubToolButton("‖", tipo.getNombre());
+            btnSub.setOnAction(e -> { if (onAddCode != null) onAddCode.accept(tipo); });
+            codesSubMenu.getChildren().add(btnSub);
+        }
+
+        btnToggleCodes.setOnAction(e -> {
+            barcodesExpanded = !barcodesExpanded;
+            iconExpanderC.setText(barcodesExpanded ? "\u25BE" : "\u25B8");
+            AnimationHelper.animateAccordion(codesSubMenu, barcodesExpanded);
+        });
+
+        codesContainer.getChildren().addAll(btnToggleCodes, codesSubMenu);
 
         // ---- Subherramientas de forma ----
         VBox shapesSubMenu = new VBox(1);
@@ -549,7 +586,7 @@ public class ModeManager {
                 btnTexto,
                 btnImagen,
                 btnFondo,
-                btnQR,
+                codesContainer,
                 btnToggleFormas,
                 shapesSubMenu,
                 new Separator(),
@@ -779,7 +816,7 @@ public class ModeManager {
                         if (item instanceof ImagenFondoElemento) iconStr = "⬚";
                         else if (item instanceof TextoElemento)  iconStr = "T";
                         else if (item instanceof ImagenElemento) iconStr = "▣";
-                        else if (item instanceof ElementoQR)     iconStr = "⦀";
+                        else if (item instanceof ElementoCodigo) iconStr = "⦀";
                         else iconStr = "⬒";
                         
                         lblIcon.setText(iconStr);
