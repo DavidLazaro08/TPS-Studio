@@ -117,6 +117,11 @@ public class ProductionViewManager {
         proyectosFiltrados = FXCollections.observableArrayList();
         actualizarListaFiltrada(projects);
 
+        // Escuchar cambios en la lista original para refrescar automáticamente (ej: al crear nuevo proyecto)
+        projects.addListener((javafx.collections.ListChangeListener<Proyecto>) c -> {
+            actualizarListaFiltrada(projects);
+        });
+
         // --- Campo de búsqueda por texto ---
         TextField txtBusqueda = new TextField();
         txtBusqueda.setPromptText("Buscar por nombre, cliente...");
