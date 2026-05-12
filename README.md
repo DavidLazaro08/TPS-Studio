@@ -1,67 +1,74 @@
-# TPS Studio
+# 🪪 TPS Studio — Diseño y Producción de Tarjetas
 
-Aplicación de escritorio especializada en el diseño y preimpresión de tarjetas plásticas CR80 (85.60 × 53.98 mm) y acreditaciones profesionales.
+¡Bienvenido a **TPS Studio**! Esta es una herramienta profesional diseñada para simplificar la creación de tarjetas de identificación, carnets y acreditaciones. Olvídate de pelearte con medidas milimétricas en programas de diseño genéricos; aquí todo está pensado para el formato estándar **CR80** (85.6 × 54 mm).
 
-## Objetivo
+---
 
-Proporcionar una herramienta específica para técnicos de preimpresión y diseñadores que trabajan con tarjetas plásticas, automatizando el control de medidas precisas, márgenes de seguridad (3mm) y sangrado de corte (2mm).
+## 🚀 ¿Qué puedes hacer con TPS Studio?
 
-## Características Implementadas
+Este programa no solo sirve para diseñar, sino para **producir en masa**. Si tienes un diseño y un listado de 500 personas en un Excel, TPS Studio hace el trabajo sucio por ti.
 
-- **Gestión de Proyectos**: Crear, abrir y guardar proyectos con metadatos de cliente
-- **Editor Visual CR80**: Lienzo con medidas exactas y zoom configurable
-- **Elementos de Diseño**: 
-  - Fondos con ajuste automático (sangrado/exacto)
-  - Textos con fuentes, colores y estilos personalizables
-  - Imágenes flotantes con control de opacidad
-- **Sistema de Capas**: Visualización, selección y bloqueo de elementos
-- **Panel de Propiedades**: Edición dinámica según elemento seleccionado
-- **Guías Visuales**: Márgenes de seguridad y zona de sangrado
-- **Integración Externa**: Edición de fondos en Photoshop u otros editores
-- **Frente/Dorso**: Diseño independiente para ambas caras
+### ✨ Características Estrella:
+*   **🎨 Editor Visual Inteligente**: Diseña con guías de sangrado y seguridad para que la imprenta no te devuelva los archivos.
+*   **📊 Datos Variables (Mail-Merge)**: Vincula tus diseños a archivos **Excel** o **Access**. ¡Cambia de registro y mira cómo se actualiza la tarjeta al instante!
+*   **🖼️ Gestión de Fotos**: Vincula una carpeta de imágenes y asócialas a tus registros automáticamente.
+*   **🔳 Códigos QR y de Barras**: Genera códigos dinámicos basados en la información de tu base de datos.
+*   **📄 Exportación Profesional**:
+    *   **PDF Individuales**: Un archivo por persona listo para enviar.
+    *   **Muestra A4**: Para que el cliente te firme el visto bueno.
+    *   **PDF para Imprenta**: Con sangrado y alta resolución.
+*   **🖨️ Impresión Directa**: Imprime directamente en tu impresora de tarjetas (Frente o Frente+Dorso).
 
-## Tecnologías
+---
 
-- **Java 21** + **JavaFX 21.0.4**
-- **Arquitectura MVVM** con separación de responsabilidades
-- **Maven** para gestión de dependencias
-- **Gson** para persistencia JSON
-- **Gestión de imágenes** sin bloqueo de archivos (proxy pattern)
+## 🛠️ Tecnologías utilizadas
 
-## 📁 Estructura del Proyecto
+Este proyecto es una aplicación de escritorio robusta construida con:
+*   **Java 21 LTS** (El corazón del programa).
+*   **JavaFX 21** (Para una interfaz moderna y fluida).
+*   **Maven** (Gestión de dependencias).
+*   **PDFBox** (Para la generación de PDFs de alta calidad).
+*   **ZXing** (Para los códigos QR).
+*   **Apache POI & Ucanaccess** (Para leer tus Excels y bases de datos).
 
-```
-com.tpsstudio/
-├── app/           # Punto de entrada (TPSStudio.java)
-├── model/         # Entidades (Proyecto, Elemento, Cliente)
-├── view/          # Controladores y managers (Canvas, Propiedades, Modos)
-├── viewmodel/     # Estado de la vista
-├── service/       # Lógica de negocio (ProjectManager, FileManager)
-└── util/          # Utilidades (ImageUtils, caché)
-```
+---
 
-## Ejecución
+## 📂 Estructura del Proyecto
+
+Si eres programador y quieres echar un ojo al código, así es como nos organizamos:
+*   `app/`: El arranque del programa.
+*   `model/`: La definición de los objetos (Tarjetas, Elementos, Clientes...).
+*   `view/`: Toda la magia visual y los controladores de la interfaz.
+*   `viewmodel/`: El estado de la aplicación (siguiendo el patrón **MVVM**).
+*   `service/`: Los "músculos" (gestión de archivos, lógica de proyectos, exportación).
+*   `util/`: Herramientas de apoyo (carga de imágenes, textos, etc.).
+
+---
+
+## 🏃 Cómo ponerlo en marcha
+
+Para ejecutar el proyecto en modo desarrollo, asegúrate de tener **Maven** y **JDK 21** instalados, y lanza:
 
 ```bash
 mvn clean javafx:run
 ```
 
-## Documentación
+Para generar un instalador **.exe** para Windows, utiliza `jpackage` apuntando al JAR generado en la carpeta `target/`.
 
-Para más detalles sobre requisitos, casos de uso y arquitectura, consulta la [documentación inicial](../DOCUMENTACIÓN%20PROYECTO/TPS_STUDIO-%20Documentación_InicialV2.pdf).
+---
 
-## Estado Actual
+## 📝 Documentación adicional
 
-**Versión:** 0.1.0 (Primera Iteración)  
-**Fase:** Desarrollo activo - Core funcional implementado
+¿Necesitas ayuda? Hemos preparado un **Manual de Usuario** detallado en la carpeta `docs/`:
+*   [Manual Parte 1 - Inicio y Proyectos](docs/manual_tps_studio_parte1.html)
+*   [Manual Parte 2 - Diseño y Exportación](docs/manual_tps_studio_parte2.html)
 
-### Próximas Funcionalidades
-- Exportación a PDF con especificaciones de impresión
-- Campos variables conectados a datos externos
-- Historial de cambios (undo/redo)
-- Biblioteca de plantillas predefinidas
+---
 
 ## 👤 Autor
 
 **David Gutiérrez Ortiz**  
-Proyecto Intermodular - DAM 2º Curso
+*Proyecto Final - Grado Superior de Programación (DAM)*
+
+---
+> *Diseñado con ❤️ para que hacer carnets deje de ser una pesadilla.*
