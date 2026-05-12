@@ -54,7 +54,9 @@ com.tpsstudio
 | `CanvasInteractionHandler` | `managers/design/CanvasInteractionHandler.java` | Gestiona drag, resize y selección con ratón sobre el canvas. |
 | `CanvasAnimationManager` | `managers/design/CanvasAnimationManager.java` | Animaciones de flip frente/dorso y transiciones del canvas. |
 | `LayersPanelManager` | `managers/design/LayersPanelManager.java` | Lógica del panel lateral de capas: orden Z, visibilidad, bloqueo, arrastrar para reordenar. |
-| `ProductionViewManager` | `managers/design/ProductionViewManager.java` | ⚠️ **Candidato a refactorizar (668 líneas).** Vista de previsualización con datos reales de producción. |
+| `ProductionViewManager` | `managers/design/ProductionViewManager.java` | Orquestador de la vista de producción. Gestiona estado de filtrado y acciones CRUD. |
+| `ProjectListCellFactory` | `managers/design/ProjectListCellFactory.java` | Fábrica de celdas: construye el layout visual, animaciones y botones de cada proyecto en la lista. |
+| `FiltroPopupManager` | `managers/design/FiltroPopupManager.java` | Gestiona el botón de categorías y el popup desplegable de filtros. |
 | `VariableDataManager` | `managers/design/VariableDataManager.java` | Gestiona la barra de navegación de registros y la vinculación de columnas a elementos en la vista de producción. |
 | `ToolboxManager` | `managers/ToolboxManager.java` | Panel de herramientas lateral: botones para añadir texto, imagen, forma y código. |
 | `ModeManager` | `managers/ModeManager.java` | Controla el modo activo (diseño/previsualización) y actualiza el panel de capas (ListView). |
@@ -178,7 +180,7 @@ com.tpsstudio
 
 | # | Clase | Tamaño | Razón |
 |---|---|---|---|
-| 1 | `ProductionViewManager` | ~668 líneas | Monolítico; siguiente objetivo de refactorización |
+| 1 | `ProductionViewManager` | ~240 líneas | ✅ Refactorizado (2026-05-12). Dividido en 3 clases. |
 | 2 | `CanvasRenderer` | ~700 líneas | Core del renderizado; documentar bien |
 | 3 | `ProyectoFileManager` | ~740 líneas | Persistencia crítica; separar DTOs a su propio archivo |
 | 4 | `ProjectManager` | ~771 líneas | Orquestador; separar lógica de alertas/UI |
