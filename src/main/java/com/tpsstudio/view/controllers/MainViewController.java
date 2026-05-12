@@ -12,7 +12,6 @@ import com.tpsstudio.view.dialogs.EditarProyectoDialog;
 import com.tpsstudio.view.dialogs.NuevoProyectoDialog;
 import com.tpsstudio.service.SettingsManager;
 import com.tpsstudio.util.AnimationHelper;
-import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.service.DesignValidatorService;
 import com.tpsstudio.service.ImpresionService;
 import com.tpsstudio.model.print.SalidaImpresion;
@@ -28,10 +27,8 @@ import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -41,15 +38,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 
 import com.tpsstudio.view.managers.ShortcutManager;
-import java.io.File;
 import javafx.animation.Interpolator;
 import javafx.animation.PauseTransition;
 import javafx.scene.Scene;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.layout.HBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Duration;
 
@@ -277,8 +269,7 @@ public class MainViewController {
         elementActionsController = new ElementActionsController(
                 viewModel, projectManager, canvasManager, canvas,
                 this::dibujarCanvas,
-                this::ensurePropertiesPanelVisible,
-                this::mostrarDialogoFitMode);
+                this::ensurePropertiesPanelVisible);
 
         // -------------------------------------------------
         // Panel de propiedades (edición del elemento seleccionado)
@@ -301,8 +292,8 @@ public class MainViewController {
             dibujarCanvas();
         });
 
-        propertiesPanelController.setOnEditExternal(this::abrirEditorExterno);
-        propertiesPanelController.setOnReload(this::recargarFondo);
+        propertiesPanelController.setOnEditExternal(elementActionsController::abrirEditorExterno);
+        propertiesPanelController.setOnReload(elementActionsController::recargarFondo);
         propertiesPanelController.setOnDownloadTemplate(this::onDescargarPlantilla);
 
         // -------------------------------------------------
@@ -372,8 +363,8 @@ public class MainViewController {
             }, proyecto);
         });
 
-        modeManager.setOnEditExternal(this::abrirEditorExterno);
-        modeManager.setOnReload(this::recargarFondo);
+        modeManager.setOnEditExternal(elementActionsController::abrirEditorExterno);
+        modeManager.setOnReload(elementActionsController::recargarFondo);
 
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
@@ -750,176 +741,6 @@ public class MainViewController {
         }
     }
 
-    /*
-     * Muestra un diálogo para elegir cómo se ajusta el fondo a la tarjeta:
-     * - Con sangre (BLEED): cubre CR80 + sangrado (2mm por lado)
-     * - Sin sangre (FINAL): cubre solo el tamaño final CR80
-     *
-     * Si el usuario marca "No volver a preguntar", se guarda la preferencia en el
-     * proyecto.
-     */
-    private FondoFitMode mostrarDialogoFitMode() {
-
-        Dialog<FondoFitMode> dialog = new Dialog<>();
-        dialog.setTitle("Modo de Ajuste del Fondo");
-        dialog.setHeaderText("¿Cómo desea ajustar el fondo a la tarjeta?");
-        dialog.initOwner(canvas.getScene().getWindow());
-        dialog.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/dialogs.css").toExternalForm());
-
-        // -------------------------------------------------
-        // Botones
-        // -------------------------------------------------
-        ButtonType btnBleed = new ButtonType("Con sangre", ButtonBar.ButtonData.OK_DONE);
-        ButtonType btnFinal = new ButtonType("Sin sangre", ButtonBar.ButtonData.OK_DONE);
-        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnBleed, btnFinal, btnCancelar);
-
-        // -------------------------------------------------
-        // Contenido visual
-        // -------------------------------------------------
-        VBox content = new VBox(15);
-        content.setPadding(new Insets(20));
-
-        Label lblExplicacion = new Label("El fondo puede ajustarse de dos formas:");
-        lblExplicacion.getStyleClass().add("lbl-section");
-
-        VBox opcionBleed = new VBox(5);
-        Label lblBleedTitulo = new Label("✓ Con sangre (CR80 + 2mm por lado)");
-        lblBleedTitulo.getStyleClass().add("lbl-section");
-        Label lblBleedDesc = new Label("Cubre el área completa incluyendo 2mm de sangrado por lado (89.60 × 57.98 mm)");
-        lblBleedDesc.getStyleClass().add("lbl-hint");
-        Label lblBleedUso = new Label("Recomendado para fondos que se extienden hasta el borde");
-        lblBleedUso.getStyleClass().add("lbl-hint");
-        opcionBleed.getChildren().addAll(lblBleedTitulo, lblBleedDesc, lblBleedUso);
-
-        VBox opcionFinal = new VBox(5);
-        Label lblFinalTitulo = new Label("✓ Sin sangre (CR80 final)");
-        lblFinalTitulo.getStyleClass().add("lbl-section");
-        Label lblFinalDesc = new Label("Cubre solo el área final de la tarjeta (85.60 × 53.98 mm)");
-        lblFinalDesc.getStyleClass().add("lbl-hint");
-        Label lblFinalUso = new Label("Útil para fondos que no deben llegar al borde");
-        lblFinalUso.getStyleClass().add("lbl-hint");
-        opcionFinal.getChildren().addAll(lblFinalTitulo, lblFinalDesc, lblFinalUso);
-
-        CheckBox chkNoPreguntar = new CheckBox("No volver a preguntar en este proyecto");
-        chkNoPreguntar.getStyleClass().add("lbl-hint");
-
-        content.getChildren().addAll(
-                lblExplicacion, new Separator(),
-                opcionBleed, new Separator(),
-                opcionFinal, new Separator(),
-                chkNoPreguntar);
-
-        dialog.getDialogPane().setContent(content);
-
-        // -------------------------------------------------
-        // Conversión de resultado + guardado de preferencia
-        // -------------------------------------------------
-        dialog.setResultConverter(buttonType -> {
-
-            if (chkNoPreguntar.isSelected() && viewModel.getProyectoActual() != null) {
-                viewModel.getProyectoActual().setNoVolverAPreguntarFondo(true);
-
-                if (buttonType == btnBleed) {
-                    viewModel.getProyectoActual().setFondoFitModePreferido(FondoFitMode.BLEED);
-                } else if (buttonType == btnFinal) {
-                    viewModel.getProyectoActual().setFondoFitModePreferido(FondoFitMode.FINAL);
-                }
-            }
-
-            if (buttonType == btnBleed)
-                return FondoFitMode.BLEED;
-            if (buttonType == btnFinal)
-                return FondoFitMode.FINAL;
-
-            return null;
-        });
-
-        return dialog.showAndWait().orElse(null);
-    }
-
-    /*
-     * Abre el archivo del fondo en el editor externo configurado (si existe),
-     * o en el editor predeterminado del sistema.
-     *
-     * Nota: el lanzamiento se hace desacoplado para evitar problemas al guardar
-     * (por ejemplo, Photoshop "bloqueado" por herencias de handles del proceso
-     * Java).
-     */
-    private void abrirEditorExterno(ImagenFondoElemento fondo) {
-        new com.tpsstudio.service.ExternalEditorService(viewModel.getProyectoActual()).abrirEditor(fondo);
-    }
-
-    /*
-     * Recarga la imagen del fondo desde el disco.
-     * Se usa tras editar el archivo en un programa externo (Photoshop, etc.).
-     */
-    private void recargarFondo(ImagenFondoElemento fondo) {
-
-        if (fondo == null || fondo.getRutaArchivo() == null) {
-            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.WARNING);
-            alert.setTitle("Advertencia");
-            alert.setHeaderText("No se puede recargar");
-            alert.setContentText("El fondo no tiene una ruta de archivo asociada.");
-            alert.showAndWait();
-            return;
-        }
-
-        File file = new File(fondo.getRutaArchivo());
-        if (!file.exists()) {
-            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText("Archivo no encontrado");
-            alert.setContentText(
-                    "El archivo " + file.getName() + " no existe en el disco.\n" +
-                            "Se mantendrá la versión anterior en memoria.");
-            alert.showAndWait();
-            return;
-        }
-
-        try {
-            // Cargar sin bloquear el archivo (evita problemas tras editar con apps
-            // externas)
-            Image nuevaImagen = ImageUtils.cargarImagenSinBloqueo(file.getAbsolutePath());
-            if (nuevaImagen == null) {
-                throw new Exception("No se pudo cargar la imagen (resultado null)");
-            }
-
-            fondo.setImagen(nuevaImagen);
-
-            // Preguntar modo de ajuste (sangre vs final).
-            // Esto es útil si el usuario cambió el tamaño / recortó en el editor externo.
-            FondoFitMode nuevoModo = mostrarDialogoFitMode();
-            if (nuevoModo != null) {
-                fondo.setFitMode(nuevoModo);
-            }
-
-            fondo.ajustarATamaño(
-                    EditorCanvasManager.CARD_WIDTH,
-                    EditorCanvasManager.CARD_HEIGHT,
-                    EditorCanvasManager.BLEED_MARGIN);
-
-            dibujarCanvas();
-
-            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Éxito");
-            alert.setHeaderText("Fondo recargado");
-            alert.setContentText("La imagen se ha recargado y ajustado correctamente.");
-            alert.showAndWait();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-
-            Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText("No se pudo recargar la imagen");
-            alert.setContentText(
-                    "Error al cargar el archivo: " + ex.getMessage() + "\n" +
-                            "Se mantendrá la versión anterior en memoria.");
-            alert.showAndWait();
-        }
-    }
 
     // =====================================================
     // Acciones de barra superior (Proyectos / exportación)
