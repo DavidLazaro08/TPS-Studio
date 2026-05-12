@@ -9,17 +9,20 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
+
 import java.util.function.Consumer;
 
 /**
- * Controlador simplificado del panel de propiedades.
- * Actúa como un orquestador que delega la construcción de la UI a Handlers especializados.
+ * Controlador del panel de propiedades.
+ *
+ * Actúa como punto intermedio entre la interfaz principal y los handlers
+ * específicos de cada tipo de elemento.
  */
 public class PropertiesPanelController {
 
     private final Canvas canvas;
     private final EditorCanvasManager canvasManager;
-    
+
     // Callbacks
     private Runnable onPropertyChanged;
     private Runnable onCanvasRedrawNeeded;
@@ -35,7 +38,10 @@ public class PropertiesPanelController {
         this.canvasManager = canvasManager;
     }
 
-    // ===================== SETTERS DE CALLBACKS =====================
+    // =====================================================
+    // Setters de callbacks
+    // =====================================================
+
     public void setOnPropertyChanged(Runnable cb) { this.onPropertyChanged = cb; }
     public void setOnCanvasRedrawNeeded(Runnable cb) { this.onCanvasRedrawNeeded = cb; }
     public void setOnEditExternal(Consumer<ImagenFondoElemento> cb) { this.onEditExternal = cb; }
@@ -43,9 +49,10 @@ public class PropertiesPanelController {
     public void setOnDownloadTemplate(Runnable cb) { this.onDownloadTemplate = cb; }
     public void setFuenteDatos(FuenteDatos fuenteDatos) { this.fuenteDatos = fuenteDatos; }
 
-    /**
-     * Construye el panel delegando en el Handler específico para el tipo de elemento.
-     */
+    // =====================================================
+    // Construcción del panel
+    // =====================================================
+
     public VBox buildPanel(Elemento elemento, Proyecto proyecto) {
         VBox container = new VBox(10);
         container.setPadding(new Insets(16));
@@ -64,9 +71,8 @@ public class PropertiesPanelController {
             return container;
         }
 
-        // Seleccionar el Handler adecuado
         this.activeHandler = selectHandler(elemento);
-        
+
         if (activeHandler != null) {
             activeHandler.setFuenteDatos(fuenteDatos);
             activeHandler.buildPanel(container, elemento);
@@ -78,21 +84,26 @@ public class PropertiesPanelController {
     private BasePropertyHandler selectHandler(Elemento elemento) {
         if (elemento instanceof TextoElemento) {
             return new TextPropertyHandler(canvas, canvasManager, onCanvasRedrawNeeded, onPropertyChanged);
+
         } else if (elemento instanceof ImagenElemento || elemento instanceof ImagenFondoElemento) {
             ImagePropertyHandler handler = new ImagePropertyHandler(canvas, canvasManager, onCanvasRedrawNeeded, onPropertyChanged);
             handler.setCallbacks(onEditExternal, onReload, onDownloadTemplate);
             return handler;
+
         } else if (elemento instanceof ElementoCodigo) {
             return new CodePropertyHandler(canvas, canvasManager, onCanvasRedrawNeeded, onPropertyChanged);
+
         } else if (elemento instanceof FormaElemento) {
             return new ShapePropertyHandler(canvas, canvasManager, onCanvasRedrawNeeded, onPropertyChanged);
         }
+
         return null;
     }
 
-    /**
-     * Actualiza los campos de posición si el elemento se mueve en el canvas.
-     */
+    // =====================================================
+    // Actualización desde el canvas
+    // =====================================================
+
     public void updatePositionFields(Elemento elemento) {
         if (activeHandler != null) {
             activeHandler.updatePositionFields(elemento);

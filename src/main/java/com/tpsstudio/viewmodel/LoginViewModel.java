@@ -1,10 +1,16 @@
 package com.tpsstudio.viewmodel;
 
+import com.tpsstudio.service.AuthService;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
+/**
+ * ViewModel de la pantalla de login.
+ *
+ * Mantiene usuario, contraseña y resultado de validación.
+ */
 public class LoginViewModel {
 
     private final StringProperty user;
@@ -17,7 +23,10 @@ public class LoginViewModel {
         this.loginOk = new SimpleBooleanProperty(false);
     }
 
-    // Getters para las propiedades
+    // =====================================================
+    // Usuario
+    // =====================================================
+
     public StringProperty userProperty() {
         return user;
     }
@@ -29,6 +38,10 @@ public class LoginViewModel {
     public void setUser(String user) {
         this.user.set(user);
     }
+
+    // =====================================================
+    // Contraseña
+    // =====================================================
 
     public StringProperty passProperty() {
         return pass;
@@ -42,6 +55,10 @@ public class LoginViewModel {
         this.pass.set(pass);
     }
 
+    // =====================================================
+    // Estado de login
+    // =====================================================
+
     public BooleanProperty loginOkProperty() {
         return loginOk;
     }
@@ -50,9 +67,8 @@ public class LoginViewModel {
         return loginOk.get();
     }
 
-    // Método de validación
     public boolean validateLogin() {
-        boolean isValid = com.tpsstudio.service.AuthService.getInstance().login(user.get(), pass.get());
+        boolean isValid = AuthService.getInstance().login(user.get(), pass.get());
         loginOk.set(isValid);
         return isValid;
     }

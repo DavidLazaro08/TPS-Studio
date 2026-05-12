@@ -15,11 +15,12 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
+
 import java.util.function.Consumer;
 
 /**
- * Gestor de la interacción del usuario con el canvas.
- * Maneja eventos de ratón, selección, drag & drop y redimensionado.
+ * Gestiona la interacción del usuario con el canvas:
+ * selección de elementos, movimiento, redimensionado, tooltips de guías y cuentagotas.
  */
 public class CanvasInteractionHandler {
 
@@ -28,13 +29,13 @@ public class CanvasInteractionHandler {
     private final Canvas canvas;
     private final EditorCanvasManager manager;
 
-    // Estado interno de drag
+    // Estado del arrastre/redimensionado
     private DragMode currentDragMode = DragMode.NONE;
     private double dragStartX, dragStartY;
     private double elementStartX, elementStartY, elementStartW, elementStartH;
     private boolean wasDragged = false;
 
-    // Tooltips UX
+    // Tooltips de guías
     private final Tooltip guideTooltip;
     private final PauseTransition tooltipDelay;
     private String currentTooltipTarget = null;
@@ -50,6 +51,7 @@ public class CanvasInteractionHandler {
 
         this.guideTooltip = new Tooltip();
         this.guideTooltip.getStyleClass().add("canvas-guide-tooltip");
+
         this.tooltipDelay = new PauseTransition(Duration.millis(400));
         this.tooltipDelay.setOnFinished(ev -> {
             if (currentTooltipTarget != null) guideTooltip.show(canvas, lastScreenX + 15, lastScreenY + 15);
@@ -58,22 +60,32 @@ public class CanvasInteractionHandler {
         setupHandlers();
     }
 
+    // =====================================================
+    // Eventos de ratón
+    // =====================================================
+
     private void setupHandlers() {
         canvas.setOnMousePressed(this::handleMousePressed);
         canvas.setOnMouseDragged(this::handleMouseDragged);
         canvas.setOnMouseMoved(this::handleMouseMoved);
         canvas.setOnMouseReleased(this::handleMouseReleased);
-        canvas.setOnMouseExited(e -> { tooltipDelay.stop(); guideTooltip.hide(); });
+        canvas.setOnMouseExited(e -> {
+            tooltipDelay.stop();
+            guideTooltip.hide();
+        });
     }
 
     private void handleMousePressed(MouseEvent e) {
-        if (eyedropperActive) { pickColorAt(e.getX(), e.getY()); return; }
-        
+        if (eyedropperActive) {
+            pickColorAt(e.getX(), e.getY());
+            return;
+        }
+
         wasDragged = false;
         Proyecto p = manager.getProyectoActual();
         if (p == null) return;
 
-        // Hitbox del botón del HUD (Editar datos)
+        // Botón del HUD para editar datos del cliente.
         BoundingBox btnHud = manager.getBtnClienteHitbox();
         if (btnHud != null && btnHud.contains(e.getX(), e.getY())) {
             manager.notifyClientDataRequested();
@@ -86,7 +98,7 @@ public class CanvasInteractionHandler {
         double cardY = manager.getCardY();
         double zoom = manager.getZoomLevel();
 
-        // 1. Mirar si pulsamos un handle de redimensionado del elemento seleccionado
+        // Primero se comprueba si se ha pulsado un handle del elemento seleccionado.
         Elemento sel = manager.getElementoSeleccionado();
         if (sel != null) {
             DragMode mode = getDragMode(e, sel, cardX, cardY, zoom);
@@ -97,13 +109,17 @@ public class CanvasInteractionHandler {
             }
         }
 
-        // 2. Intentar seleccionar un nuevo elemento
+        // Si no hay handle, se intenta seleccionar un elemento del diseño.
         double relX = (e.getX() - cardX) / zoom;
         double relY = (e.getY() - cardY) / zoom;
         Elemento hit = null;
+
         for (int i = p.getElementosActuales().size() - 1; i >= 0; i--) {
             Elemento elem = p.getElementosActuales().get(i);
-            if (elem.contains(relX, relY)) { hit = elem; break; }
+            if (elem.contains(relX, relY)) {
+                hit = elem;
+                break;
+            }
         }
 
         if (hit != null) {
@@ -113,6 +129,7 @@ public class CanvasInteractionHandler {
             manager.setElementoSeleccionado(null);
             currentDragMode = DragMode.NONE;
         }
+
         manager.dibujarCanvas();
         canvas.requestFocus();
     }
@@ -120,8 +137,9 @@ public class CanvasInteractionHandler {
     private void handleMouseDragged(MouseEvent e) {
         Elemento sel = manager.getElementoSeleccionado();
         if (sel == null || currentDragMode == DragMode.NONE || sel.isLocked()) return;
-        
+
         wasDragged = true;
+
         double zoom = manager.getZoomLevel();
         double dx = (e.getX() - dragStartX) / zoom;
         double dy = (e.getY() - dragStartY) / zoom;
@@ -132,13 +150,15 @@ public class CanvasInteractionHandler {
         } else {
             handleResize(sel, dx, dy);
         }
-        
+
         manager.notifyElementTransformed();
         manager.dibujarCanvas();
     }
 
     private void handleMouseMoved(MouseEvent e) {
-        lastScreenX = e.getScreenX(); lastScreenY = e.getScreenY();
+        lastScreenX = e.getScreenX();
+        lastScreenY = e.getScreenY();
+
         gestionarHoverGuias(e);
 
         if (eyedropperActive) {
@@ -147,11 +167,15 @@ public class CanvasInteractionHandler {
         }
 
         if (manager.getProyectoActual() == null || manager.getCurrentMode() != AppMode.DESIGN) {
-            canvas.setCursor(Cursor.DEFAULT); return;
+            canvas.setCursor(Cursor.DEFAULT);
+            return;
         }
 
         Elemento sel = manager.getElementoSeleccionado();
-        if (sel == null || sel.isLocked()) { canvas.setCursor(Cursor.DEFAULT); return; }
+        if (sel == null || sel.isLocked()) {
+            canvas.setCursor(Cursor.DEFAULT);
+            return;
+        }
 
         DragMode mode = getDragMode(e, sel, manager.getCardX(), manager.getCardY(), manager.getZoomLevel());
         canvas.setCursor(getCursorForMode(mode));
@@ -159,15 +183,23 @@ public class CanvasInteractionHandler {
 
     private void handleMouseReleased(MouseEvent e) {
         if (wasDragged) manager.notifyCanvasChanged();
+
         currentDragMode = DragMode.NONE;
         wasDragged = false;
     }
 
+    // =====================================================
+    // Movimiento y redimensionado
+    // =====================================================
+
     private void initDrag(MouseEvent e, DragMode mode, Elemento el) {
         currentDragMode = mode;
-        dragStartX = e.getX(); dragStartY = e.getY();
-        elementStartX = el.getX(); elementStartY = el.getY();
-        elementStartW = el.getWidth(); elementStartH = el.getHeight();
+        dragStartX = e.getX();
+        dragStartY = e.getY();
+        elementStartX = el.getX();
+        elementStartY = el.getY();
+        elementStartW = el.getWidth();
+        elementStartH = el.getHeight();
     }
 
     private void handleResize(Elemento sel, double dx, double dy) {
@@ -183,11 +215,25 @@ public class CanvasInteractionHandler {
             case RESIZE_NW -> { newW = elementStartW - dx; newH = elementStartH - dy; if (keepProp) newH = newW / ratio; newX = elementStartX + (elementStartW - newW); newY = elementStartY + (elementStartH - newH); }
         }
 
-        // Límites mínimos
-        if (newW < 10) { newW = 10; if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) newX = elementStartX + (elementStartW - 10); if (keepProp) newH = 10 / ratio; }
-        if (newH < 10) { newH = 10; if (keepProp) { newW = 10 * ratio; if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) newX = elementStartX + (elementStartW - newW); } if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE) newY = elementStartY + (elementStartH - 10); }
+        // Tamaño mínimo para evitar elementos invisibles o difíciles de seleccionar.
+        if (newW < 10) {
+            newW = 10;
+            if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) newX = elementStartX + (elementStartW - 10);
+            if (keepProp) newH = 10 / ratio;
+        }
 
-        sel.setWidth(newW); sel.setHeight(newH);
+        if (newH < 10) {
+            newH = 10;
+            if (keepProp) {
+                newW = 10 * ratio;
+                if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) newX = elementStartX + (elementStartW - newW);
+            }
+            if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE) newY = elementStartY + (elementStartH - 10);
+        }
+
+        sel.setWidth(newW);
+        sel.setHeight(newH);
+
         if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_SW) sel.setX(newX);
         if (currentDragMode == DragMode.RESIZE_NW || currentDragMode == DragMode.RESIZE_NE) sel.setY(newY);
     }
@@ -199,28 +245,41 @@ public class CanvasInteractionHandler {
         double hit = EditorCanvasManager.HANDLE_SIZE + 4;
 
         if (el instanceof TextoElemento) {
-            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - (ey + eh/2)) <= hit) return DragMode.RESIZE_E;
+            if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - (ey + eh / 2)) <= hit) return DragMode.RESIZE_E;
             return DragMode.NONE;
         }
+
         if (Math.abs(mx - ex) <= hit && Math.abs(my - ey) <= hit) return DragMode.RESIZE_NW;
         if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - ey) <= hit) return DragMode.RESIZE_NE;
         if (Math.abs(mx - ex) <= hit && Math.abs(my - (ey + eh)) <= hit) return DragMode.RESIZE_SW;
         if (Math.abs(mx - (ex + ew)) <= hit && Math.abs(my - (ey + eh)) <= hit) return DragMode.RESIZE_SE;
+
         return DragMode.NONE;
     }
 
     private Cursor getCursorForMode(DragMode mode) {
         return switch (mode) {
-            case RESIZE_NW -> Cursor.NW_RESIZE; case RESIZE_NE -> Cursor.NE_RESIZE;
-            case RESIZE_SW -> Cursor.SW_RESIZE; case RESIZE_SE -> Cursor.SE_RESIZE;
-            case RESIZE_E -> Cursor.E_RESIZE; default -> Cursor.DEFAULT;
+            case RESIZE_NW -> Cursor.NW_RESIZE;
+            case RESIZE_NE -> Cursor.NE_RESIZE;
+            case RESIZE_SW -> Cursor.SW_RESIZE;
+            case RESIZE_SE -> Cursor.SE_RESIZE;
+            case RESIZE_E -> Cursor.E_RESIZE;
+            default -> Cursor.DEFAULT;
         };
     }
 
+    // =====================================================
+    // Tooltips de guías
+    // =====================================================
+
     private void gestionarHoverGuias(MouseEvent e) {
         if (!manager.isMostrarGuias() || manager.getCurrentMode() != AppMode.DESIGN || currentDragMode != DragMode.NONE) {
-            currentTooltipTarget = null; tooltipDelay.stop(); guideTooltip.hide(); return;
+            currentTooltipTarget = null;
+            tooltipDelay.stop();
+            guideTooltip.hide();
+            return;
         }
+
         double zoom = manager.getZoomLevel();
         double sw = EditorCanvasManager.getScaledWidth(manager.getProyectoActual()) * zoom;
         double sh = EditorCanvasManager.getScaledHeight(manager.getProyectoActual()) * zoom;
@@ -229,13 +288,22 @@ public class CanvasInteractionHandler {
         double bleed = EditorCanvasManager.BLEED_MARGIN * zoom, safety = EditorCanvasManager.SAFETY_MARGIN * zoom;
 
         String hover = null;
+
         if (isNear(mx, my, cardX - bleed, cardY - bleed, sw + bleed * 2, sh + bleed * 2, hit)) hover = "Zona de sangrado (área que será recortada)";
         else if (isNear(mx, my, cardX, cardY, sw, sh, hit)) hover = "Corte final";
         else if (isNear(mx, my, cardX + safety, cardY + safety, sw - safety * 2, sh - safety * 2, hit)) hover = "Margen de seguridad";
 
         if (hover != null) {
-            if (!hover.equals(currentTooltipTarget)) { currentTooltipTarget = hover; guideTooltip.setText(hover); tooltipDelay.playFromStart(); }
-        } else { currentTooltipTarget = null; tooltipDelay.stop(); guideTooltip.hide(); }
+            if (!hover.equals(currentTooltipTarget)) {
+                currentTooltipTarget = hover;
+                guideTooltip.setText(hover);
+                tooltipDelay.playFromStart();
+            }
+        } else {
+            currentTooltipTarget = null;
+            tooltipDelay.stop();
+            guideTooltip.hide();
+        }
     }
 
     private boolean isNear(double mx, double my, double rx, double ry, double rw, double rh, double e) {
@@ -246,10 +314,22 @@ public class CanvasInteractionHandler {
         return L || R || T || B;
     }
 
+    // =====================================================
+    // Cuentagotas
+    // =====================================================
+
     public void activateEyedropper(Consumer<Color> callback) {
-        this.eyedropperActive = true; this.onColorPickedCallback = callback;
+        this.eyedropperActive = true;
+        this.onColorPickedCallback = callback;
+
         canvas.setCursor(Cursor.CROSSHAIR);
-        if (canvas.getScene() != null) TPSToast.mostrar(canvas.getScene().getWindow(), "Modo Cuentagotas Activado", "Haz clic en un color para capturarlo", TPSToast.Tipo.EXITO);
+
+        if (canvas.getScene() != null) {
+            TPSToast.mostrar(canvas.getScene().getWindow(),
+                    "Modo Cuentagotas Activado",
+                    "Haz clic en un color para capturarlo",
+                    TPSToast.Tipo.EXITO);
+        }
     }
 
     public void deactivateEyedropper() {
@@ -264,9 +344,12 @@ public class CanvasInteractionHandler {
     private void pickColorAt(double x, double y) {
         javafx.scene.image.Image snap = canvas.snapshot(null, null);
         javafx.scene.image.PixelReader pr = snap.getPixelReader();
+
         int ix = (int) Math.max(0, Math.min(snap.getWidth() - 1, x));
         int iy = (int) Math.max(0, Math.min(snap.getHeight() - 1, y));
+
         if (onColorPickedCallback != null) onColorPickedCallback.accept(pr.getColor(ix, iy));
+
         manager.deactivateEyedropper();
     }
 }

@@ -23,26 +23,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Implementación del patrón DAO para la persistencia de proyectos en disco.
+ * Gestiona la persistencia de los proyectos de TPS Studio.
  *
- * <p>Implementa {@link ProyectoDAO} mediante serialización JSON (Gson) a archivos
- * con extensión {@code .tps}. Cada proyecto se almacena en su propia carpeta con
- * subcarpetas dedicadas a recursos (Fotos, Fondos, Base de Datos).</p>
- *
- * <p><b>Responsabilidades:</b></p>
- * <ul>
- *   <li>Crear y mantener la estructura de carpetas del proyecto.</li>
- *   <li>Serializar/deserializar el modelo {@link Proyecto} completo.</li>
- *   <li>Copiar recursos externos (imágenes) al directorio del proyecto.</li>
- *   <li>Rehidratar rutas al cargar proyectos movidos de ubicación.</li>
- * </ul>
- *
- * @see ProyectoDAO
- * @see com.tpsstudio.service.ProjectManager
+ * Se encarga de crear la estructura de carpetas, guardar y cargar el archivo .tps,
+ * copiar recursos al proyecto y reconstruir los elementos al abrir un proyecto guardado.
  */
 public class ProyectoFileManager implements ProyectoDAO {
 
-    // Adaptador personalizado para LocalDateTime
+    /**
+     * Adaptador para guardar y leer fechas LocalDateTime con Gson.
+     */
     private static class LocalDateTimeAdapter extends TypeAdapter<LocalDateTime> {
         private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -61,6 +51,7 @@ public class ProyectoFileManager implements ProyectoDAO {
                 in.nextNull();
                 return null;
             }
+
             return LocalDateTime.parse(in.nextString(), formatter);
         }
     }
@@ -73,51 +64,43 @@ public class ProyectoFileManager implements ProyectoDAO {
     private static final DateTimeFormatter CLIENTE_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    /* Crea la estructura de carpetas del proyecto
-     *
-     * @param metadata Metadatos del proyecto
-     * @return true si se creó correctamente */
-
+    /**
+     * Crea la carpeta principal del proyecto y sus subcarpetas internas.
+     */
     public boolean crearEstructuraCarpetas(ProyectoMetadata metadata) {
         try {
-            // Normalizar nombre (quitar caracteres especiales)
             String nombreCarpeta = "TPS_" + normalizarNombre(metadata.getNombre());
 
-            // Crear carpeta principal
             Path carpetaProyecto = Paths.get(metadata.getUbicacion(), nombreCarpeta);
             Files.createDirectories(carpetaProyecto);
 
-            // Crear subcarpetas
-            Path carpetaFotos  = carpetaProyecto.resolve("Fotos");
+            Path carpetaFotos = carpetaProyecto.resolve("Fotos");
             Path carpetaFondos = carpetaProyecto.resolve("Fondos");
-            Path carpetaBBDD   = carpetaProyecto.resolve("Base de Datos (BBDD)");
+            Path carpetaBBDD = carpetaProyecto.resolve("Base de Datos (BBDD)");
 
             Files.createDirectories(carpetaFotos);
             Files.createDirectories(carpetaFondos);
             Files.createDirectories(carpetaBBDD);
 
-            // Actualizar metadata con rutas
             String nombreArchivo = normalizarNombre(metadata.getNombre()) + ".tps";
             metadata.setRutaTPS(carpetaProyecto.resolve(nombreArchivo).toString());
             metadata.setRutaFotos(carpetaFotos.toString());
             metadata.setRutaFondos(carpetaFondos.toString());
 
-            // Inicializar fecha de creación si no existe
             if (metadata.getFechaCreacion() == null) {
                 metadata.setFechaCreacion(LocalDateTime.now());
             }
 
-            // Si hay BD, copiarla a la carpeta del proyecto con nombre normalizado
             if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
                 Path bdOrigen = Paths.get(metadata.getRutaBBDD());
                 String ext = obtenerExtension(bdOrigen.getFileName().toString());
                 String nombreBD = "BD_" + normalizarNombre(metadata.getNombre()) + ext;
                 Path bdDestino = carpetaBBDD.resolve(nombreBD);
+
                 Files.copy(bdOrigen, bdDestino, StandardCopyOption.REPLACE_EXISTING);
                 metadata.setRutaBBDD(bdDestino.toString());
             }
 
-            // Exportar datos del cliente si existen
             if (metadata.getClienteInfo() != null && metadata.getClienteInfo().tieneInformacion()) {
                 exportarDatosCliente(carpetaProyecto, metadata.getClienteInfo());
             }
@@ -130,24 +113,19 @@ public class ProyectoFileManager implements ProyectoDAO {
         }
     }
 
-    /* Copia una imagen al proyecto y devuelve la ruta relativa
-     *
-     * @param imagenOrigen Archivo de imagen original
-     * @param metadata     Metadatos del proyecto
-     * @param esFondo      true si es un fondo, false si es una imagen normal
-     * @param sufijo       Sufijo opcional para el nombre (ej: "FRENTE", "DORSO")
-     * @return Ruta relativa (ej: "Fotos/logo.png") o null si falla */
-
+    /**
+     * Copia una imagen dentro del proyecto y devuelve su ruta relativa.
+     */
     public String copiarImagenAProyecto(File imagenOrigen, ProyectoMetadata metadata, boolean esFondo, String sufijo) {
         try {
             String carpetaDestino = esFondo ? metadata.getRutaFondos() : metadata.getRutaFotos();
 
-            // Construir nombre de archivo con sufijo si se proporciona
             String nombreOriginal = imagenOrigen.getName();
             String nombreFinal;
 
             if (sufijo != null && !sufijo.isEmpty()) {
                 int puntoIndex = nombreOriginal.lastIndexOf('.');
+
                 if (puntoIndex > 0) {
                     String nombre = nombreOriginal.substring(0, puntoIndex);
                     String extension = nombreOriginal.substring(puntoIndex);
@@ -155,12 +133,12 @@ public class ProyectoFileManager implements ProyectoDAO {
                 } else {
                     nombreFinal = nombreOriginal + "_" + sufijo;
                 }
+
             } else {
                 nombreFinal = nombreOriginal;
             }
 
             Path destino = Paths.get(carpetaDestino, nombreFinal);
-
             Files.copy(imagenOrigen.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
 
             String subcarpeta = esFondo ? "Fondos" : "Fotos";
@@ -172,32 +150,25 @@ public class ProyectoFileManager implements ProyectoDAO {
         }
     }
 
-    /* Versión simplificada sin sufijo (para compatibilidad) */
-
+    /**
+     * Versión sin sufijo para imágenes normales.
+     */
     public String copiarImagenAProyecto(File imagenOrigen, ProyectoMetadata metadata, boolean esFondo) {
         return copiarImagenAProyecto(imagenOrigen, metadata, esFondo, null);
     }
 
-    /* Guarda el proyecto en formato JSON
-     *
-     * @param proyecto Proyecto a guardar
-     * @param metadata Metadatos del proyecto
-     * @return true si se guardó correctamente */
-
+    /**
+     * Guarda el proyecto en su archivo .tps.
+     */
     public boolean guardarProyecto(Proyecto proyecto, ProyectoMetadata metadata) {
         try {
-            System.out.println("[DEBUG] Guardando proyecto: " + proyecto.getNombre());
-            System.out.println("[DEBUG] Ruta TPS: " + metadata.getRutaTPS());
-
             metadata.setFechaModificacion(LocalDateTime.now());
 
-            // Re-exportar datos del cliente (para asegurar que no se borre)
             if (metadata.getClienteInfo() != null && metadata.getClienteInfo().tieneInformacion()) {
                 Path carpetaProyecto = Paths.get(metadata.getCarpetaProyecto());
                 exportarDatosCliente(carpetaProyecto, metadata.getClienteInfo());
             }
 
-            // Crear DTO para serialización
             ProyectoDTO dto = new ProyectoDTO();
             dto.setNombre(proyecto.getNombre());
             dto.setMetadata(metadata);
@@ -212,6 +183,7 @@ public class ProyectoFileManager implements ProyectoDAO {
             if (proyecto.getFondoFrente() != null) {
                 dto.setFondoFrente(convertirFondoADTO(proyecto.getFondoFrente()));
             }
+
             if (proyecto.getFondoDorso() != null) {
                 dto.setFondoDorso(convertirFondoADTO(proyecto.getFondoDorso()));
             }
@@ -222,25 +194,21 @@ public class ProyectoFileManager implements ProyectoDAO {
             Path archivoTPS = Paths.get(metadata.getRutaTPS());
             Files.writeString(archivoTPS, json);
 
-            System.out.println("[DEBUG] ✓ Proyecto guardado exitosamente en: " + archivoTPS);
             return true;
 
         } catch (IOException e) {
-            System.err.println("[ERROR] No se pudo guardar el proyecto:");
             e.printStackTrace();
             return false;
+
         } catch (Exception e) {
-            System.err.println("[ERROR] Error inesperado al guardar:");
             e.printStackTrace();
             return false;
         }
     }
 
-    /* Carga un proyecto desde archivo .tps
-     *
-     * @param archivoTPS Archivo .tps a cargar
-     * @return Proyecto cargado o null si falla */
-
+    /**
+     * Carga un proyecto desde un archivo .tps.
+     */
     public Proyecto cargarProyecto(File archivoTPS) {
         try {
             String json = Files.readString(archivoTPS.toPath());
@@ -248,14 +216,13 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             Proyecto proyecto = new Proyecto(dto.getNombre());
             proyecto.setMetadata(dto.getMetadata());
-            proyecto.setMostrandoFrente(true); // Siempre abrir mostrando el frente
+            proyecto.setMostrandoFrente(true);
             proyecto.setFondoFitModePreferido(dto.getFondoFitModePreferido());
             proyecto.setNoVolverAPreguntarFondo(dto.isNoVolverAPreguntarFondo());
-            
+
             if (dto.getOrientacion() != null) {
                 proyecto.setOrientacion(dto.getOrientacion());
             } else if (proyecto.getMetadata() != null) {
-                // Fallback a metadata por si se guardó ahí en versiones previas
                 proyecto.setOrientacion(proyecto.getMetadata().getOrientacion());
             }
 
@@ -265,21 +232,17 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             Path carpetaProyecto = archivoTPS.toPath().getParent();
 
-            // --- REHIDRATAR METADATA (por si el proyecto se movió de sitio) ---
             ProyectoMetadata metadata = proyecto.getMetadata();
-            if (metadata != null && carpetaProyecto != null) {
 
+            if (metadata != null && carpetaProyecto != null) {
                 metadata.setRutaTPS(archivoTPS.getAbsolutePath());
                 metadata.setRutaFotos(carpetaProyecto.resolve("Fotos").toString());
                 metadata.setRutaFondos(carpetaProyecto.resolve("Fondos").toString());
 
-                // Rehidratar ruta BBDD (nueva carpeta "Base de Datos (BBDD)", fallback a "BBDD")
                 if (metadata.getRutaBBDD() != null && !metadata.getRutaBBDD().isEmpty()) {
                     String nombreArchivoGuardado = Paths.get(metadata.getRutaBBDD()).getFileName().toString();
 
-                    // Primero buscamos en la carpeta nueva
                     Path bbddNueva = carpetaProyecto.resolve("Base de Datos (BBDD)").resolve(nombreArchivoGuardado);
-                    // Fallback: carpeta antigua (proyectos creados antes del cambio)
                     Path bbddLegacy = carpetaProyecto.resolve("BBDD").resolve(nombreArchivoGuardado);
 
                     if (Files.exists(bbddNueva)) {
@@ -287,20 +250,21 @@ public class ProyectoFileManager implements ProyectoDAO {
                     } else if (Files.exists(bbddLegacy)) {
                         metadata.setRutaBBDD(bbddLegacy.toString());
                     }
-                    // Si no existe en ninguna, se mantiene la ruta guardada (el usuario la buscará)
                 }
             }
 
-            // Reconstruir elementos
             proyecto.getElementosFrente().addAll(
-                    convertirDTOAElementos(dto.getElementosFrente(), carpetaProyecto));
-            proyecto.getElementosDorso().addAll(
-                    convertirDTOAElementos(dto.getElementosDorso(), carpetaProyecto));
+                    convertirDTOAElementos(dto.getElementosFrente(), carpetaProyecto)
+            );
 
-            // Reconstruir fondos
+            proyecto.getElementosDorso().addAll(
+                    convertirDTOAElementos(dto.getElementosDorso(), carpetaProyecto)
+            );
+
             if (dto.getFondoFrente() != null) {
                 proyecto.setFondoFrente(convertirDTOAFondo(dto.getFondoFrente(), carpetaProyecto));
             }
+
             if (dto.getFondoDorso() != null) {
                 proyecto.setFondoDorso(convertirDTOAFondo(dto.getFondoDorso(), carpetaProyecto));
             }
@@ -315,12 +279,16 @@ public class ProyectoFileManager implements ProyectoDAO {
         }
     }
 
-    // ===== MÉTODOS PRIVADOS DE CONVERSIÓN =====
+    // =====================================================
+    // Conversión entre modelo y DTO
+    // =====================================================
 
     private List<ElementoDTO> convertirElementosADTO(List<Elemento> elementos) {
         List<ElementoDTO> dtos = new ArrayList<>();
+
         for (Elemento elem : elementos) {
             ElementoDTO dto = new ElementoDTO();
+
             dto.setNombre(elem.getNombre());
             dto.setEtiqueta(elem.getEtiqueta());
             dto.setX(elem.getX());
@@ -329,6 +297,7 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             if (elem instanceof TextoElemento) {
                 TextoElemento texto = (TextoElemento) elem;
+
                 dto.setTipo("texto");
                 dto.setContenido(texto.getContenido());
                 dto.setFuente(texto.getFontFamily());
@@ -339,12 +308,14 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             } else if (elem instanceof ImagenElemento) {
                 ImagenElemento imagen = (ImagenElemento) elem;
+
                 dto.setTipo("imagen");
                 dto.setRutaImagen(imagen.getRutaArchivo());
                 dto.setWidth(imagen.getWidth());
                 dto.setHeight(imagen.getHeight());
                 dto.setMantenerProporcion(imagen.isMantenerProporcion());
                 dto.setColumnaVinculada(imagen.getColumnaVinculada());
+
             } else if (elem instanceof FormaElemento forma) {
                 dto.setTipo("forma");
                 dto.setWidth(forma.getWidth());
@@ -358,19 +329,25 @@ public class ProyectoFileManager implements ProyectoDAO {
 
             dtos.add(dto);
         }
+
         return dtos;
     }
 
     private FondoDTO convertirFondoADTO(ImagenFondoElemento fondo) {
         FondoDTO dto = new FondoDTO();
+
         dto.setRutaImagen(fondo.getRutaArchivo());
         dto.setFitMode(fondo.getFitMode().name());
+
         return dto;
     }
 
     private List<Elemento> convertirDTOAElementos(List<ElementoDTO> dtos, Path carpetaProyecto) {
         List<Elemento> elementos = new ArrayList<>();
-        if (dtos == null || carpetaProyecto == null) return elementos;
+
+        if (dtos == null || carpetaProyecto == null) {
+            return elementos;
+        }
 
         for (ElementoDTO dto : dtos) {
             Elemento elem = null;
@@ -379,26 +356,31 @@ public class ProyectoFileManager implements ProyectoDAO {
                 TextoElemento texto = new TextoElemento(
                         dto.getNombre(),
                         dto.getX(),
-                        dto.getY());
+                        dto.getY()
+                );
+
                 texto.setContenido(dto.getContenido());
                 texto.setFontFamily(dto.getFuente());
                 texto.setFontSize(dto.getTamaño());
                 texto.setColor(dto.getColor());
                 texto.setWidth(dto.getWidth());
                 texto.setColumnaVinculada(dto.getColumnaVinculada());
+
                 elem = texto;
 
             } else if ("imagen".equals(dto.getTipo())) {
                 ImagenElemento imagen;
 
                 if (dto.getRutaImagen() == null || dto.getRutaImagen().isBlank()) {
-                    // Placeholder (sin imagen asignada todav\u00eda)
                     imagen = new ImagenElemento(dto.getNombre(), dto.getX(), dto.getY(), null, null);
+
                 } else {
                     Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
+
                     javafx.scene.image.Image img = Files.exists(rutaAbsoluta)
                             ? ImageUtils.cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString())
                             : null;
+
                     imagen = new ImagenElemento(dto.getNombre(), dto.getX(), dto.getY(), dto.getRutaImagen(), img);
                 }
 
@@ -406,25 +388,44 @@ public class ProyectoFileManager implements ProyectoDAO {
                 imagen.setHeight(dto.getHeight());
                 imagen.setMantenerProporcion(dto.isMantenerProporcion());
                 imagen.setColumnaVinculada(dto.getColumnaVinculada());
+
                 elem = imagen;
 
             } else if ("forma".equals(dto.getTipo())) {
                 FormaElemento.TipoForma tipo = FormaElemento.TipoForma.valueOf(
-                        dto.getTipoForma() != null ? dto.getTipoForma() : "RECTANGULO");
+                        dto.getTipoForma() != null ? dto.getTipoForma() : "RECTANGULO"
+                );
+
                 FormaElemento forma = new FormaElemento(
-                        dto.getNombre(), dto.getX(), dto.getY(), dto.getWidth(), dto.getHeight(), tipo);
-                if (dto.getColorRelleno() != null) forma.setColorRelleno(dto.getColorRelleno());
-                if (dto.getColorBorde()   != null) forma.setColorBorde(dto.getColorBorde());
+                        dto.getNombre(),
+                        dto.getX(),
+                        dto.getY(),
+                        dto.getWidth(),
+                        dto.getHeight(),
+                        tipo
+                );
+
+                if (dto.getColorRelleno() != null) {
+                    forma.setColorRelleno(dto.getColorRelleno());
+                }
+
+                if (dto.getColorBorde() != null) {
+                    forma.setColorBorde(dto.getColorBorde());
+                }
+
                 forma.setGrosorBorde(dto.getGrosorBorde());
                 forma.setConRelleno(dto.isConRelleno());
+
                 elem = forma;
             }
 
             if (elem != null) {
                 elem.setLocked(dto.isLocked());
+
                 if (dto.getEtiqueta() != null && !dto.getEtiqueta().isEmpty()) {
                     elem.setEtiqueta(dto.getEtiqueta());
                 }
+
                 elementos.add(elem);
             }
         }
@@ -433,9 +434,12 @@ public class ProyectoFileManager implements ProyectoDAO {
     }
 
     private ImagenFondoElemento convertirDTOAFondo(FondoDTO dto, Path carpetaProyecto) {
-        if (dto == null || carpetaProyecto == null) return null;
+        if (dto == null || carpetaProyecto == null) {
+            return null;
+        }
 
         Path rutaAbsoluta = carpetaProyecto.resolve(dto.getRutaImagen());
+
         if (!Files.exists(rutaAbsoluta)) {
             return null;
         }
@@ -444,28 +448,38 @@ public class ProyectoFileManager implements ProyectoDAO {
                 .cargarImagenSinBloqueo(rutaAbsoluta.toAbsolutePath().toString());
 
         FondoFitMode fitMode = FondoFitMode.valueOf(dto.getFitMode());
+
         ImagenFondoElemento fondo = new ImagenFondoElemento(
                 dto.getRutaImagen(),
                 img,
                 EditorCanvasManager.CARD_WIDTH,
                 EditorCanvasManager.CARD_HEIGHT,
-                fitMode);
+                fitMode
+        );
 
         fondo.ajustarATamaño(
                 EditorCanvasManager.CARD_WIDTH,
                 EditorCanvasManager.CARD_HEIGHT,
-                EditorCanvasManager.BLEED_MARGIN);
+                EditorCanvasManager.BLEED_MARGIN
+        );
 
         return fondo;
     }
 
-    /* Valida que todas las imágenes existan */
+    // =====================================================
+    // Validación de recursos
+    // =====================================================
 
     private void validarIntegridad(Proyecto proyecto, ProyectoMetadata metadata) {
-        if (metadata == null) return;
+        if (metadata == null) {
+            return;
+        }
 
         String carpeta = metadata.getCarpetaProyecto();
-        if (carpeta == null || carpeta.isEmpty()) return;
+
+        if (carpeta == null || carpeta.isEmpty()) {
+            return;
+        }
 
         List<String> imagenesFaltantes = new ArrayList<>();
         Path carpetaProyecto = Paths.get(carpeta);
@@ -476,6 +490,7 @@ public class ProyectoFileManager implements ProyectoDAO {
         if (proyecto.getFondoFrente() != null) {
             verificarImagen(proyecto.getFondoFrente().getRutaArchivo(), carpetaProyecto, imagenesFaltantes);
         }
+
         if (proyecto.getFondoDorso() != null) {
             verificarImagen(proyecto.getFondoDorso().getRutaArchivo(), carpetaProyecto, imagenesFaltantes);
         }
@@ -501,20 +516,24 @@ public class ProyectoFileManager implements ProyectoDAO {
     }
 
     private void verificarImagen(String rutaRelativa, Path carpetaProyecto, List<String> faltantes) {
-        if (rutaRelativa == null) return;
+        if (rutaRelativa == null) {
+            return;
+        }
+
         Path rutaAbsoluta = carpetaProyecto.resolve(rutaRelativa);
+
         if (!Files.exists(rutaAbsoluta)) {
             faltantes.add(rutaRelativa);
         }
     }
 
-    /* Normaliza el nombre del proyecto para usarlo como nombre de carpeta */
+    // =====================================================
+    // Utilidades de archivo
+    // =====================================================
 
     private String normalizarNombre(String nombre) {
         return nombre.replaceAll("[^a-zA-Z0-9_\\-\\s]", "_").replaceAll("\\s+", "_");
     }
-
-    /* Extrae la extensión de un nombre de archivo, incluyendo el punto. Ej: ".xlsx" */
 
     private String obtenerExtension(String nombreArchivo) {
         int idx = nombreArchivo.lastIndexOf('.');
@@ -522,25 +541,24 @@ public class ProyectoFileManager implements ProyectoDAO {
     }
 
     /**
-     * Copia un archivo de base de datos a la carpeta "Base de Datos (BBDD)" del proyecto
-     * y devuelve la ruta absoluta del archivo copiado.
-     * Se llama al editar el proyecto y cambiar la BD vinculada.
-     *
-     * @return ruta absoluta del archivo destino, o null si falla o si la BD ya estaba en ese sitio
+     * Copia un archivo de base de datos a la carpeta interna del proyecto.
      */
     public String copiarBDAlProyecto(File bdOrigen, ProyectoMetadata metadata) {
         try {
-            if (metadata == null || metadata.getCarpetaProyecto() == null) return null;
+            if (metadata == null || metadata.getCarpetaProyecto() == null) {
+                return null;
+            }
 
             Path carpetaBBDD = Paths.get(metadata.getCarpetaProyecto()).resolve("Base de Datos (BBDD)");
-            Files.createDirectories(carpetaBBDD); // por si acaso no existe (proyectos legacy)
+            Files.createDirectories(carpetaBBDD);
 
             String ext = obtenerExtension(bdOrigen.getName());
             String nombreBD = "BD_" + normalizarNombre(metadata.getNombre()) + ext;
             Path destino = carpetaBBDD.resolve(nombreBD);
 
-            // Si la BD ya está en la carpeta del proyecto, no la copiamos de nuevo
-            if (bdOrigen.toPath().equals(destino)) return destino.toString();
+            if (bdOrigen.toPath().equals(destino)) {
+                return destino.toString();
+            }
 
             Files.copy(bdOrigen.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
             return destino.toString();
@@ -550,8 +568,6 @@ public class ProyectoFileManager implements ProyectoDAO {
             return null;
         }
     }
-
-    /* Exporta los datos del cliente a un archivo de texto */
 
     private void exportarDatosCliente(Path carpetaProyecto, ClienteInfo cliente) {
         try {
@@ -593,7 +609,9 @@ public class ProyectoFileManager implements ProyectoDAO {
         }
     }
 
-    // ===== CLASES DTO PARA JSON =====
+    // =====================================================
+    // DTO para guardar el proyecto en JSON
+    // =====================================================
 
     public static class ProyectoDTO {
         private String nombre;
@@ -643,9 +661,9 @@ public class ProyectoFileManager implements ProyectoDAO {
     }
 
     public static class ElementoDTO {
-        private String tipo; // "texto" o "imagen"
+        private String tipo;
         private String nombre;
-        private String etiqueta; // Etiqueta opcional del elemento (e.g. "Foto", "Nombre")
+        private String etiqueta;
         private double x;
         private double y;
         private boolean locked;
@@ -660,6 +678,12 @@ public class ProyectoFileManager implements ProyectoDAO {
         private double height;
         private boolean mantenerProporcion;
         private String columnaVinculada;
+
+        private String tipoForma;
+        private String colorRelleno;
+        private String colorBorde;
+        private double grosorBorde;
+        private boolean conRelleno;
 
         public String getTipo() { return tipo; }
         public void setTipo(String tipo) { this.tipo = tipo; }
@@ -706,21 +730,18 @@ public class ProyectoFileManager implements ProyectoDAO {
         public String getColumnaVinculada() { return columnaVinculada; }
         public void setColumnaVinculada(String columnaVinculada) { this.columnaVinculada = columnaVinculada; }
 
-        // Campos de FormaElemento
-        private String tipoForma;
-        private String colorRelleno;
-        private String colorBorde;
-        private double grosorBorde;
-        private boolean conRelleno;
-
         public String getTipoForma() { return tipoForma; }
         public void setTipoForma(String tipoForma) { this.tipoForma = tipoForma; }
+
         public String getColorRelleno() { return colorRelleno; }
         public void setColorRelleno(String colorRelleno) { this.colorRelleno = colorRelleno; }
+
         public String getColorBorde() { return colorBorde; }
         public void setColorBorde(String colorBorde) { this.colorBorde = colorBorde; }
+
         public double getGrosorBorde() { return grosorBorde; }
         public void setGrosorBorde(double grosorBorde) { this.grosorBorde = grosorBorde; }
+
         public boolean isConRelleno() { return conRelleno; }
         public void setConRelleno(boolean conRelleno) { this.conRelleno = conRelleno; }
     }

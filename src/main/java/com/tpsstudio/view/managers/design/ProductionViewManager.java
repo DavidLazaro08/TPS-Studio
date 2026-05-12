@@ -19,16 +19,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Orquestador de la vista de Producción (panel lateral de lista de proyectos).
+ * Gestiona la vista de Producción del panel lateral.
  *
- * <p>Delega la construcción de celdas a {@link ProjectListCellFactory}
- * y la lógica del popup de filtro por categorías a {@link FiltroPopupManager}.
- * Su responsabilidad se limita a: ensamblar el panel, gestionar el estado de
- * filtrado, y exponer las acciones CRUD de proyectos (duplicar, eliminar).</p>
- *
- * <p>La interfaz pública ({@code buildProductionModePanels}, {@code setFiltroActivo},
- * {@code setEtiquetasManager}, {@code setProjectManager}) no ha cambiado
- * respecto a la versión anterior: ningún caller externo requiere modificaciones.</p>
+ * Construye la lista de proyectos, aplica búsqueda y filtros por etiquetas,
+ * y gestiona acciones como editar, duplicar o quitar proyectos del historial.
  */
 public class ProductionViewManager {
 
@@ -36,12 +30,12 @@ public class ProductionViewManager {
     private EtiquetasManager etiquetasManager;
     private ProjectManager projectManager;
 
-    // --- Estado de filtrado (compartido con FiltroPopupManager por referencia) ---
+    // Estado de filtrado
     private ObservableList<Proyecto> proyectosFiltrados;
     private String filtroTexto = "";
     private List<String> filtroActivo = new ArrayList<>();
 
-    // --- Referencias UI necesarias para actualizaciones posteriores ---
+    // Referencias de UI que se actualizan durante el filtrado
     private Button btnFiltro;
     private FiltroPopupManager filtroPopupManager;
     private HBox panelOcultos;
@@ -50,7 +44,7 @@ public class ProductionViewManager {
     private Label lblFiltroActual;
     private javafx.animation.Timeline recordatorioTimer;
 
-    // --- Callbacks hacia MainViewController ---
+    // Callbacks hacia MainViewController
     private final Consumer<Proyecto> onProjectSelected;
     private final Consumer<Proyecto> onEditProject;
     private final Runnable onNewCR80;
@@ -61,12 +55,12 @@ public class ProductionViewManager {
                                  Consumer<Proyecto> onProjectSelected,
                                  Consumer<Proyecto> onEditProject,
                                  Runnable onNewCR80) {
-        this.leftPanel          = leftPanel;
-        this.etiquetasManager   = etiquetasManager;
-        this.projectManager     = projectManager;
-        this.onProjectSelected  = onProjectSelected;
-        this.onEditProject      = onEditProject;
-        this.onNewCR80          = onNewCR80;
+        this.leftPanel = leftPanel;
+        this.etiquetasManager = etiquetasManager;
+        this.projectManager = projectManager;
+        this.onProjectSelected = onProjectSelected;
+        this.onEditProject = onEditProject;
+        this.onNewCR80 = onNewCR80;
     }
 
     public void setEtiquetasManager(EtiquetasManager etiquetasManager) {
@@ -77,52 +71,48 @@ public class ProductionViewManager {
         this.projectManager = projectManager;
     }
 
-    /** Permite sincronizar el filtro desde fuera (ej: al inyectar EtiquetasManager). */
     public void setFiltroActivo(List<String> ids) {
         this.filtroActivo = new ArrayList<>(ids);
     }
 
-    // =========================================================
-    // Punto de entrada público
-    // =========================================================
+    // =====================================================
+    // Construcción principal
+    // =====================================================
 
     public void buildProductionModePanels(ObservableList<Proyecto> projects, Proyecto currentProject) {
         leftPanel.getChildren().add(buildProjectListPanel(projects, currentProject));
     }
-
-    // =========================================================
-    // Construcción del panel
-    // =========================================================
 
     private VBox buildProjectListPanel(ObservableList<Proyecto> projects, Proyecto currentProject) {
         VBox projectPanel = new VBox(12);
         projectPanel.setPadding(new Insets(14, 12, 14, 12));
         VBox.setVgrow(projectPanel, Priority.ALWAYS);
 
-        // --- Header con título y botón de filtro ---
         Label lblTrabajos = new Label("Gestión de Trabajos");
         lblTrabajos.getStyleClass().add("panel-title");
+
         Label lblSubtitulo = new Label("Administración y exportación");
         lblSubtitulo.getStyleClass().add("panel-placeholder");
+
         VBox titulos = new VBox(2, lblTrabajos, lblSubtitulo);
         HBox.setHgrow(titulos, Priority.ALWAYS);
 
         filtroPopupManager = new FiltroPopupManager(
-                etiquetasManager, filtroActivo, () -> actualizarListaFiltrada(projects));
+                etiquetasManager,
+                filtroActivo,
+                () -> actualizarListaFiltrada(projects)
+        );
+
         btnFiltro = filtroPopupManager.crearBoton(projects);
+
         HBox header = new HBox(titulos, btnFiltro);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        // --- Inicializar lista filtrada ---
         proyectosFiltrados = FXCollections.observableArrayList();
         actualizarListaFiltrada(projects);
 
-        // Escuchar cambios en la lista original para refrescar automáticamente (ej: al crear nuevo proyecto)
-        projects.addListener((javafx.collections.ListChangeListener<Proyecto>) c -> {
-            actualizarListaFiltrada(projects);
-        });
+        projects.addListener((javafx.collections.ListChangeListener<Proyecto>) c -> actualizarListaFiltrada(projects));
 
-        // --- Campo de búsqueda por texto ---
         TextField txtBusqueda = new TextField();
         txtBusqueda.setPromptText("Buscar por nombre, cliente...");
         txtBusqueda.getStyleClass().add("search-field");
@@ -135,17 +125,16 @@ public class ProductionViewManager {
         });
         txtBusqueda.setText(filtroTexto);
 
-        // --- ListView de proyectos ---
         ListView<Proyecto> listProyectos = new ListView<>(proyectosFiltrados);
         listProyectos.getStyleClass().add("project-list");
         VBox.setVgrow(listProyectos, Priority.ALWAYS);
         listProyectos.maxHeightProperty().bind(leftPanel.heightProperty().subtract(200));
 
         var cellFactory = new ProjectListCellFactory(
-                (item, anchor) -> mostrarProjectOptionsMenu(item, anchor, projects));
+                (item, anchor) -> mostrarProjectOptionsMenu(item, anchor, projects)
+        );
         listProyectos.setCellFactory(cellFactory.build());
 
-        // Pre-seleccionar el proyecto activo
         if (currentProject != null) {
             proyectosFiltrados.stream()
                     .filter(p -> p.getId() == currentProject.getId())
@@ -157,43 +146,55 @@ public class ProductionViewManager {
         }
 
         listProyectos.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-            if (newVal != null && onProjectSelected != null) onProjectSelected.accept(newVal);
-        });
-        listProyectos.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                Proyecto sel = listProyectos.getSelectionModel().getSelectedItem();
-                if (sel != null && onEditProject != null) onEditProject.accept(sel);
+            if (newVal != null && onProjectSelected != null) {
+                onProjectSelected.accept(newVal);
             }
         });
 
-        // --- Botón nuevo proyecto ---
+        listProyectos.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Proyecto sel = listProyectos.getSelectionModel().getSelectedItem();
+                if (sel != null && onEditProject != null) {
+                    onEditProject.accept(sel);
+                }
+            }
+        });
+
         Button btnNuevoCR80 = new Button("+ NUEVO PROYECTO CR80");
         btnNuevoCR80.getStyleClass().add("new-project-btn");
         btnNuevoCR80.setStyle("-fx-font-size: 11.5px;");
         btnNuevoCR80.setMaxWidth(Double.MAX_VALUE);
-        btnNuevoCR80.setOnAction(e -> { if (onNewCR80 != null) onNewCR80.run(); });
+        btnNuevoCR80.setOnAction(e -> {
+            if (onNewCR80 != null) onNewCR80.run();
+        });
 
-        // --- Paneles de estado (ocultos y filtro activo) ---
-        panelOcultos  = buildPanelOcultos(projects);
+        panelOcultos = buildPanelOcultos(projects);
         filtroInfoBox = buildFiltroInfoBox();
         actualizarVisibilidadOcultos(projects);
 
         projectPanel.getChildren().addAll(
-                header, txtBusqueda, filtroInfoBox, listProyectos, panelOcultos, btnNuevoCR80);
+                header,
+                txtBusqueda,
+                filtroInfoBox,
+                listProyectos,
+                panelOcultos,
+                btnNuevoCR80
+        );
+
         actualizarListaFiltrada(projects);
         return projectPanel;
     }
 
-    // =========================================================
-    // Menú de opciones de proyecto (Editar / Duplicar / Eliminar)
-    // =========================================================
+    // =====================================================
+    // Menú de opciones de proyecto
+    // =====================================================
 
     private void mostrarProjectOptionsMenu(Proyecto item, Node anchor, ObservableList<Proyecto> projects) {
         javafx.stage.Popup popup = new javafx.stage.Popup();
         popup.setAutoHide(true);
 
         String[] labels = {"Editar", "Duplicar", "Eliminar"};
-        String[] icons  = {"✎", "❐", "✖"};
+        String[] icons = {"✎", "❐", "✖"};
         String[] colors = {"#c8cde8", "#c8cde8", "#ff6b6b"};
 
         VBox content = new VBox(0);
@@ -204,6 +205,7 @@ public class ProductionViewManager {
 
         for (int i = 0; i < labels.length; i++) {
             final String labelText = labels[i];
+
             HBox row = new HBox(12);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPadding(new Insets(8, 15, 8, 15));
@@ -219,19 +221,26 @@ public class ProductionViewManager {
             lblText.setStyle("-fx-text-fill: " + colors[i] + "; -fx-font-size: 13px; -fx-font-weight: 500;");
 
             row.getChildren().addAll(lblIcon, lblText);
+
             row.setOnMouseEntered(e -> row.setStyle(
                     "-fx-background-color: rgba(108, 99, 255, 0.15); -fx-cursor: hand; -fx-background-radius: 6;"));
             row.setOnMouseExited(e -> row.setStyle(
                     "-fx-background-color: transparent; -fx-background-radius: 6;"));
+
             row.setOnMouseClicked(e -> {
                 popup.hide();
+
                 switch (labelText) {
-                    case "Editar"    -> { if (onEditProject != null) onEditProject.accept(item); }
-                    case "Duplicar"  -> duplicarProyectoUI(item, projects);
-                    case "Eliminar"  -> eliminarProyectoUI(item, projects);
+                    case "Editar" -> {
+                        if (onEditProject != null) onEditProject.accept(item);
+                    }
+                    case "Duplicar" -> duplicarProyectoUI(item, projects);
+                    case "Eliminar" -> eliminarProyectoUI(item, projects);
                 }
             });
+
             content.getChildren().add(row);
+
             if (i == 1) {
                 Separator sep = new Separator();
                 sep.setPadding(new Insets(4, 0, 4, 0));
@@ -242,51 +251,62 @@ public class ProductionViewManager {
 
         popup.getContent().add(content);
         content.setOpacity(0);
+
         var ft = new javafx.animation.FadeTransition(
-                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), content);
+                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM),
+                content
+        );
         ft.setToValue(1);
         ft.play();
 
         javafx.geometry.Point2D sidebarEdge = leftPanel.localToScreen(leftPanel.getWidth(), 0);
-        javafx.geometry.Point2D anchorPos   = anchor.localToScreen(0, -40);
+        javafx.geometry.Point2D anchorPos = anchor.localToScreen(0, -40);
+
         if (sidebarEdge != null && anchorPos != null) {
             popup.show(anchor.getScene().getWindow(), sidebarEdge.getX(), anchorPos.getY());
         }
     }
 
-    // =========================================================
-    // Acciones CRUD de proyectos
-    // =========================================================
+    // =====================================================
+    // Acciones de proyecto
+    // =====================================================
 
     private void duplicarProyectoUI(Proyecto item, ObservableList<Proyecto> projects) {
         if (projectManager == null) return;
+
         Alert alert = AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Duplicar Proyecto");
         alert.setHeaderText("¿Quieres crear una copia de este proyecto?");
         alert.setContentText("Se creará una copia de '" + item.getNombre() + "'.");
+
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            if (projectManager.duplicarProyecto(item) != null) actualizarListaFiltrada(projects);
+            if (projectManager.duplicarProyecto(item) != null) {
+                actualizarListaFiltrada(projects);
+            }
         }
     }
 
     private void eliminarProyectoUI(Proyecto item, ObservableList<Proyecto> projects) {
         if (projectManager == null) return;
+
         Alert alert = AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Eliminar del Historial");
         alert.setHeaderText("¿Quitar '" + item.getNombre() + "' de la lista?");
         alert.setContentText("Solo ocultará el proyecto del historial.");
+
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             projectManager.eliminarProyecto(item);
             javafx.application.Platform.runLater(() -> actualizarListaFiltrada(projects));
         }
     }
 
-    // =========================================================
-    // Filtrado y estado de la lista
-    // =========================================================
+    // =====================================================
+    // Filtrado
+    // =====================================================
 
     private void actualizarListaFiltrada(ObservableList<Proyecto> todos) {
         if (proyectosFiltrados == null || todos == null) return;
+
         proyectosFiltrados.clear();
         String term = filtroTexto.toLowerCase().trim();
 
@@ -302,24 +322,34 @@ public class ProductionViewManager {
                 String nombre = p.getNombre().toLowerCase();
                 String cliente = (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null
                         && p.getMetadata().getClienteInfo().getNombreEmpresa() != null)
-                        ? p.getMetadata().getClienteInfo().getNombreEmpresa().toLowerCase() : "";
-                if (nombre.contains(term) || cliente.contains(term)) proyectosFiltrados.add(p);
+                        ? p.getMetadata().getClienteInfo().getNombreEmpresa().toLowerCase()
+                        : "";
+
+                if (nombre.contains(term) || cliente.contains(term)) {
+                    proyectosFiltrados.add(p);
+                }
             }
         }
 
         actualizarFiltroInfoBox();
         actualizarVisibilidadOcultos(todos);
-        if (filtroPopupManager != null) filtroPopupManager.actualizarIcono(btnFiltro);
+
+        if (filtroPopupManager != null) {
+            filtroPopupManager.actualizarIcono(btnFiltro);
+        }
     }
 
     private void actualizarFiltroInfoBox() {
         if (filtroInfoBox == null || lblFiltroActual == null || etiquetasManager == null) return;
+
         if (filtroActivo.isEmpty()) {
             filtroInfoBox.setVisible(false);
             filtroInfoBox.setManaged(false);
             return;
         }
+
         StringBuilder sb = new StringBuilder();
+
         for (String id : filtroActivo) {
             Etiqueta et = etiquetasManager.findById(id);
             if (et != null) {
@@ -327,6 +357,7 @@ public class ProductionViewManager {
                 sb.append(et.getNombre());
             }
         }
+
         lblFiltroActual.setText(sb.toString().toUpperCase());
         filtroInfoBox.setVisible(true);
         filtroInfoBox.setManaged(true);
@@ -334,7 +365,9 @@ public class ProductionViewManager {
 
     private void actualizarVisibilidadOcultos(ObservableList<Proyecto> todos) {
         if (panelOcultos == null || lblOcultosText == null) return;
+
         int ocultos = todos.size() - proyectosFiltrados.size();
+
         if (ocultos > 0) {
             lblOcultosText.setText(ocultos + (ocultos == 1 ? " proyecto oculto" : " proyectos ocultos"));
             panelOcultos.setStyle("-fx-background-color: rgba(108, 99, 255, 0.08); " +
@@ -342,8 +375,10 @@ public class ProductionViewManager {
             panelOcultos.setVisible(true);
             panelOcultos.setManaged(true);
             iniciarRecordatorioSutil();
+
         } else {
             if (recordatorioTimer != null) recordatorioTimer.stop();
+
             panelOcultos.setVisible(false);
             panelOcultos.setManaged(false);
         }
@@ -351,25 +386,30 @@ public class ProductionViewManager {
 
     private void iniciarRecordatorioSutil() {
         if (recordatorioTimer != null) recordatorioTimer.stop();
+
         recordatorioTimer = new javafx.animation.Timeline(
                 new javafx.animation.KeyFrame(javafx.util.Duration.minutes(3), ev -> {
                     if (panelOcultos != null && panelOcultos.isVisible()) {
                         var ft = new javafx.animation.FadeTransition(
-                                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), panelOcultos);
+                                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM),
+                                panelOcultos
+                        );
                         ft.setFromValue(1.0);
                         ft.setToValue(0.4);
                         ft.setCycleCount(4);
                         ft.setAutoReverse(true);
                         ft.play();
                     }
-                }));
+                })
+        );
+
         recordatorioTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
         recordatorioTimer.play();
     }
 
-    // =========================================================
-    // Construcción de paneles de estado auxiliares
-    // =========================================================
+    // =====================================================
+    // Paneles auxiliares
+    // =====================================================
 
     private HBox buildPanelOcultos(ObservableList<Proyecto> projects) {
         HBox panel = new HBox(5);
@@ -389,9 +429,16 @@ public class ProductionViewManager {
                 "-fx-border-color: transparent; -fx-underline: false;");
         linkVerTodos.setOnAction(e -> {
             filtroActivo.clear();
-            if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+
+            if (etiquetasManager != null) {
+                etiquetasManager.setFiltroActivo(filtroActivo);
+            }
+
             actualizarListaFiltrada(projects);
-            if (filtroPopupManager != null) filtroPopupManager.actualizarIcono(btnFiltro);
+
+            if (filtroPopupManager != null) {
+                filtroPopupManager.actualizarIcono(btnFiltro);
+            }
         });
 
         panel.getChildren().addAll(lblOcultosText, sep, linkVerTodos);

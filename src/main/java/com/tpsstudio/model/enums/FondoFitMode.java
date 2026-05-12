@@ -1,26 +1,31 @@
 package com.tpsstudio.model.enums;
 
 /**
- * Modo de ajuste para el fondo de la tarjeta CR80
+ * Modo de ajuste del fondo de la tarjeta.
+ *
+ * Define si la imagen de fondo cubre únicamente el tamaño final CR80
+ * o también la zona de sangrado.
  */
 public enum FondoFitMode {
-    /**
-     * Con sangrado (bleed): el fondo cubre CR80 + 2mm de sangrado por lado
-     */
-    BLEED("Con sangre (CR80 + 2mm sangrado)", "89.60 × 57.98 mm"),
 
-    /**
-     * Sin sangrado: el fondo cubre solo el área final CR80
-     */
+    BLEED("Con sangre (CR80 + 2mm sangrado)", "89.60 × 57.98 mm"),
     FINAL("Sin sangre (CR80 final)", "85.60 × 53.98 mm");
 
     private final String displayName;
     private final String dimensions;
 
+    // =====================================================
+    // Constructor
+    // =====================================================
+
     FondoFitMode(String displayName, String dimensions) {
         this.displayName = displayName;
         this.dimensions = dimensions;
     }
+
+    // =====================================================
+    // Getters
+    // =====================================================
 
     public String getDisplayName() {
         return displayName;

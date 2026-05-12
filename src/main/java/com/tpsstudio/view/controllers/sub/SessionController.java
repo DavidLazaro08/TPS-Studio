@@ -16,20 +16,22 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * Sub-controlador encargado de gestionar la sesión del usuario y las transiciones
- * de nivel superior (como la vuelta al Login).
+ * Sub-controlador encargado de gestionar la sesión del usuario.
+ *
+ * Controla el cierre de sesión y la transición de vuelta a la pantalla de login.
  */
 public class SessionController {
 
-    private final Parent rootNode; // Nodo para obtener la escena/ventana
+    private final Parent rootNode;
 
     public SessionController(Parent rootNode) {
         this.rootNode = rootNode;
     }
 
-    /**
-     * Ejecuta el proceso de cierre de sesión con confirmación y animación.
-     */
+    // =====================================================
+    // Cierre de sesión
+    // =====================================================
+
     public void logout() {
         Alert alert = AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Cerrar Sesión");
@@ -43,28 +45,25 @@ public class SessionController {
 
     private void ejecutarTransicionSalida() {
         try {
-            // 1. Limpiar sesión en el servicio
             AuthService.getInstance().logout();
 
-            // 2. Obtener Stage y Escena actual
             Stage stage = (Stage) rootNode.getScene().getWindow();
             Scene scene = rootNode.getScene();
             Parent mainView = scene.getRoot();
 
-            // 3. Cargar la vista de Login (invisible al inicio)
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login_view.fxml"));
             Parent loginView = loader.load();
+
             loginView.setOpacity(0);
             loginView.setScaleX(1.05);
             loginView.setScaleY(1.05);
 
-            // 4. Contenedor de transición
             StackPane transitionContainer = new StackPane();
             transitionContainer.getStyleClass().add("transition-overlay");
+
             scene.setRoot(transitionContainer);
             transitionContainer.getChildren().addAll(loginView, mainView);
 
-            // 5. Animación
             Platform.runLater(() -> {
                 Duration duration = Duration.millis(300);
 
@@ -74,21 +73,19 @@ public class SessionController {
 
                 fadeMain.setOnFinished(e -> {
                     transitionContainer.getChildren().clear();
-                    
-                    // Reset de ventana
+
                     stage.setMaximized(false);
                     stage.setMinWidth(0);
                     stage.setMinHeight(0);
 
                     scene.setRoot(loginView);
 
-                    // Reaplicar CSS
                     String css = getClass().getResource("/css/app.css").toExternalForm();
                     if (!scene.getStylesheets().contains(css)) {
                         scene.getStylesheets().add(css);
                     }
 
-                    stage.setWidth(776); 
+                    stage.setWidth(776);
                     stage.setHeight(619);
 
                     Platform.runLater(() -> {
@@ -96,7 +93,6 @@ public class SessionController {
                         stage.centerOnScreen();
                     });
 
-                    // Entrada del Login
                     FadeTransition fadeLogin = new FadeTransition(duration, loginView);
                     fadeLogin.setFromValue(0.0);
                     fadeLogin.setToValue(1.0);
@@ -119,16 +115,23 @@ public class SessionController {
         }
     }
 
+    // =====================================================
+    // Fallback
+    // =====================================================
+
     private void fallbackLogout() {
         try {
             Stage stage = (Stage) rootNode.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login_view.fxml"));
+
             Scene newScene = new Scene(root, 760, 580);
             newScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+
             stage.setScene(newScene);
             stage.setMaximized(false);
             stage.sizeToScene();
             stage.centerOnScreen();
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }

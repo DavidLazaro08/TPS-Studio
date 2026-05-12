@@ -11,77 +11,70 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entidad de dominio central de TPS Studio.
+ * Entidad principal de TPS Studio.
  *
- * <p>Representa un trabajo de diseño de tarjeta CR80 (tarjeta de crédito estándar).
- * Encapsula todos los datos necesarios para diseñar, editar y exportar una tarjeta:
- * los elementos gráficos de cada cara, los fondos y los metadatos del proyecto.</p>
- *
- * <p><b>Modelo de dos caras:</b><br/>
- * Cada proyecto contiene dos listas independientes de {@link com.tpsstudio.model.elements.Elemento}
- * (frente y dorso), así como un fondo opcional por cara ({@link com.tpsstudio.model.elements.ImagenFondoElemento}).
- * El atributo {@code mostrandoFrente} determina qué cara se está editando actualmente
- * en el canvas, y los métodos {@link #getElementosActuales()} y {@link #getFondoActual()}
- * abstraen esta dualidad para no duplicar lógica en los controladores.</p>
- *
- * <p><b>Persistencia:</b><br/>
- * Esta clase es serializable mediante Gson a archivos {@code .tps} a través del
- * {@link com.tpsstudio.dao.ProyectoDAO} y su implementación
- * {@link com.tpsstudio.service.ProyectoFileManager}.</p>
- *
- * @see com.tpsstudio.model.project.ProyectoMetadata
- * @see com.tpsstudio.dao.ProyectoDAO
+ * Representa un proyecto de diseño de tarjeta CR80, incluyendo sus dos caras,
+ * los elementos gráficos, los fondos, la orientación, el troquel y los metadatos
+ * asociados al trabajo.
  */
 public class Proyecto {
 
     private final int id;
     private String nombre;
-    private final String tipo; // "CR80"
-    private boolean mostrandoFrente; // true = frente, false = dorso
+    private final String tipo;
+    private boolean mostrandoFrente;
 
-    // Lista de elementos gráficos en la tarjeta
+    // Elementos gráficos por cara
     private final ObservableList<Elemento> elementosFrente;
     private final ObservableList<Elemento> elementosDorso;
 
-    // Fondos (uno por cara)
+    // Fondo independiente para frente y dorso
     private ImagenFondoElemento fondoFrente;
     private ImagenFondoElemento fondoDorso;
 
-    // Preferencia de modo de ajuste para fondos
+    // Preferencias de ajuste de fondo
     private FondoFitMode fondoFitModePreferido;
     private boolean noVolverAPreguntarFondo;
 
-    // Tipo de troquel físico
+    // Opciones físicas del soporte
     private TipoTroquel tipoTroquel;
-
-    // Categorías/Etiquetas asignadas al proyecto (IDs de Etiqueta)
-    // Null en proyectos antiguos → se inicializa a lista vacía en el getter
-    private List<String> etiquetaIds;
-
-    // Metadatos del proyecto (ubicación, cliente, etc.)
-    private ProyectoMetadata metadata;
-
-    // Orientación de la tarjeta
     private com.tpsstudio.model.enums.Orientacion orientacion;
 
+    // Etiquetas/categorías asignadas al proyecto
+    private List<String> etiquetaIds;
+
+    // Metadatos: cliente, rutas, ubicación, etc.
+    private ProyectoMetadata metadata;
+
     private static int contadorId = 1;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public Proyecto(String nombre) {
         this.id = contadorId++;
         this.nombre = nombre;
         this.tipo = "CR80";
         this.mostrandoFrente = true;
+
         this.elementosFrente = FXCollections.observableArrayList();
         this.elementosDorso = FXCollections.observableArrayList();
+
         this.fondoFrente = null;
         this.fondoDorso = null;
+
         this.fondoFitModePreferido = null;
         this.noVolverAPreguntarFondo = false;
+
         this.tipoTroquel = TipoTroquel.NINGUNO;
         this.orientacion = com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
-    // Getters y setters
+    // =====================================================
+    // Datos básicos
+    // =====================================================
+
     public int getId() {
         return id;
     }
@@ -98,6 +91,18 @@ public class Proyecto {
         return tipo;
     }
 
+    public ProyectoMetadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(ProyectoMetadata metadata) {
+        this.metadata = metadata;
+    }
+
+    // =====================================================
+    // Cara activa
+    // =====================================================
+
     public boolean isMostrandoFrente() {
         return mostrandoFrente;
     }
@@ -106,12 +111,25 @@ public class Proyecto {
         this.mostrandoFrente = mostrandoFrente;
     }
 
-    /**
-     * Obtiene la lista de elementos de la cara actual
-     */
     public ObservableList<Elemento> getElementosActuales() {
         return mostrandoFrente ? elementosFrente : elementosDorso;
     }
+
+    public ImagenFondoElemento getFondoActual() {
+        return mostrandoFrente ? fondoFrente : fondoDorso;
+    }
+
+    public void setFondoActual(ImagenFondoElemento fondo) {
+        if (mostrandoFrente) {
+            fondoFrente = fondo;
+        } else {
+            fondoDorso = fondo;
+        }
+    }
+
+    // =====================================================
+    // Elementos por cara
+    // =====================================================
 
     public ObservableList<Elemento> getElementosFrente() {
         return elementosFrente;
@@ -121,23 +139,9 @@ public class Proyecto {
         return elementosDorso;
     }
 
-    /**
-     * Obtiene el fondo de la cara actual
-     */
-    public ImagenFondoElemento getFondoActual() {
-        return mostrandoFrente ? fondoFrente : fondoDorso;
-    }
-
-    /**
-     * Establece el fondo de la cara actual
-     */
-    public void setFondoActual(ImagenFondoElemento fondo) {
-        if (mostrandoFrente) {
-            fondoFrente = fondo;
-        } else {
-            fondoDorso = fondo;
-        }
-    }
+    // =====================================================
+    // Fondos por cara
+    // =====================================================
 
     public ImagenFondoElemento getFondoFrente() {
         return fondoFrente;
@@ -155,6 +159,10 @@ public class Proyecto {
         this.fondoDorso = fondoDorso;
     }
 
+    // =====================================================
+    // Preferencias de fondo
+    // =====================================================
+
     public FondoFitMode getFondoFitModePreferido() {
         return fondoFitModePreferido;
     }
@@ -171,16 +179,11 @@ public class Proyecto {
         this.noVolverAPreguntarFondo = noVolverAPreguntarFondo;
     }
 
-    public ProyectoMetadata getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(ProyectoMetadata metadata) {
-        this.metadata = metadata;
-    }
+    // =====================================================
+    // Troquel y orientación
+    // =====================================================
 
     public TipoTroquel getTipoTroquel() {
-        // Por retrocompatibilidad con proyectos guardados antes del Enum
         return tipoTroquel != null ? tipoTroquel : TipoTroquel.NINGUNO;
     }
 
@@ -189,18 +192,24 @@ public class Proyecto {
     }
 
     public com.tpsstudio.model.enums.Orientacion getOrientacion() {
-        return orientacion != null ? orientacion : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+        return orientacion != null
+                ? orientacion
+                : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
     public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) {
         this.orientacion = orientacion;
     }
 
-    /** Devuelve las etiquetas asignadas. Nunca null (retrocompatible). */
+    // =====================================================
+    // Etiquetas
+    // =====================================================
+
     public List<String> getEtiquetaIds() {
         if (etiquetaIds == null) {
             etiquetaIds = new ArrayList<>();
         }
+
         return etiquetaIds;
     }
 
@@ -208,17 +217,19 @@ public class Proyecto {
         this.etiquetaIds = etiquetaIds != null ? etiquetaIds : new ArrayList<>();
     }
 
-    /** Añade una etiqueta si no estaba ya asignada */
     public void addEtiqueta(String etiquetaId) {
         if (etiquetaId != null && !getEtiquetaIds().contains(etiquetaId)) {
             etiquetaIds.add(etiquetaId);
         }
     }
 
-    /** Quita una etiqueta */
     public void removeEtiqueta(String etiquetaId) {
         getEtiquetaIds().remove(etiquetaId);
     }
+
+    // =====================================================
+    // Representación
+    // =====================================================
 
     @Override
     public String toString() {

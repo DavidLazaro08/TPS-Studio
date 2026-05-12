@@ -1,7 +1,7 @@
 package com.tpsstudio.util;
 
-import javafx.animation.Interpolator;
 import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.TranslateTransition;
@@ -20,8 +20,10 @@ import javafx.stage.Window;
 import javafx.util.Duration;
 
 /**
- * Notificaciones tipo "toast" para TPS Studio.
- * Los estilos están en /css/toast.css — ningún setStyle() en este archivo.
+ * Notificaciones tipo toast para TPS Studio.
+ *
+ * Muestra avisos no bloqueantes de éxito, información, advertencia o error.
+ * El aspecto visual se define en /css/toast.css.
  */
 public class TPSToast {
 
@@ -30,7 +32,7 @@ public class TPSToast {
 
     public enum Tipo {
         EXITO("✔", "toast-exito", "toast-icon-exito"),
-        INFO("ℹ",  "toast-info",  "toast-icon-info"),
+        INFO("ℹ", "toast-info", "toast-icon-info"),
         AVISO("⚠", "toast-aviso", "toast-icon-aviso"),
         ERROR("✖", "toast-error", "toast-icon-error");
 
@@ -39,21 +41,16 @@ public class TPSToast {
         final String claseIcono;
 
         Tipo(String icono, String claseRaiz, String claseIcono) {
-            this.icono     = icono;
+            this.icono = icono;
             this.claseRaiz = claseRaiz;
             this.claseIcono = claseIcono;
         }
     }
 
-    /**
-     * Muestra un toast no bloqueante en la parte inferior de la ventana.
-     *
-     * @param owner    Ventana propietaria (para posicionamiento)
-     * @param titulo   Texto principal
-     * @param subtexto Texto secundario (puede ser null)
-     * @param tipo     Tipo visual: EXITO, INFO, AVISO, ERROR
-     * @param duracion Segundos visibles antes de desvanecerse
-     */
+    // =====================================================
+    // Toast principal
+    // =====================================================
+
     public static void mostrar(Window owner, String titulo, String subtexto, Tipo tipo, double duracion) {
         Platform.runLater(() -> {
             Stage toast = new Stage();
@@ -61,12 +58,10 @@ public class TPSToast {
             toast.initModality(Modality.NONE);
             toast.initStyle(StageStyle.TRANSPARENT);
 
-            // Badge de icono
             Label lblIcono = new Label(tipo.icono);
             lblIcono.getStyleClass().addAll("toast-icon", tipo.claseIcono);
             lblIcono.setAlignment(Pos.CENTER);
 
-            // Texto principal
             Label lblTitulo = new Label(titulo);
             lblTitulo.getStyleClass().add("toast-title");
             lblTitulo.setWrapText(false);
@@ -95,7 +90,6 @@ public class TPSToast {
             scene.getStylesheets().add(CSS);
             toast.setScene(scene);
 
-            // Posición: parte inferior central de la ventana
             if (owner != null) {
                 toast.setX(owner.getX() + (owner.getWidth() / 2) - 200);
                 toast.setY(owner.getY() + owner.getHeight() - 115);
@@ -105,7 +99,6 @@ public class TPSToast {
             root.setTranslateY(8);
             toast.show();
 
-            // Entrada: fade + slide hacia arriba
             FadeTransition fadeIn = new FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
             fadeIn.setFromValue(0);
             fadeIn.setToValue(1);
@@ -118,14 +111,65 @@ public class TPSToast {
 
             new ParallelTransition(fadeIn, slideIn).play();
 
-            // Auto-cierre
             PauseTransition pausa = new PauseTransition(Duration.seconds(duracion));
             pausa.setOnFinished(e -> cerrarToast(toast, root));
             pausa.play();
         });
     }
 
-    /** Cierre suave */
+    // =====================================================
+    // Sobrecargas cómodas
+    // =====================================================
+
+    public static void mostrar(Window owner, String titulo, String subtexto, Tipo tipo) {
+        mostrar(owner, titulo, subtexto, tipo, 4.5);
+    }
+
+    public static void mostrar(Window owner, String titulo, Tipo tipo) {
+        mostrar(owner, titulo, null, tipo);
+    }
+
+    // =====================================================
+    // Toast relativo a un nodo
+    // =====================================================
+
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo,
+                                       String subtexto, Tipo tipo, double duracion) {
+        if (anchor == null || anchor.getScene() == null) {
+            mostrar(null, titulo, subtexto, tipo, duracion);
+            return;
+        }
+
+        Platform.runLater(() -> {
+            Window owner = anchor.getScene().getWindow();
+            javafx.geometry.Bounds bounds = anchor.localToScreen(anchor.getBoundsInLocal());
+
+            if (bounds == null) {
+                mostrar(owner, titulo, subtexto, tipo, duracion);
+                return;
+            }
+
+            /*
+             * En esta versión se mantiene el posicionamiento estándar centrado
+             * sobre la ventana propietaria. El cálculo relativo puede refinarse
+             * más adelante si se quiere colocar el toast exactamente sobre un nodo.
+             */
+            mostrar(owner, titulo, subtexto, tipo, duracion);
+        });
+    }
+
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, String subtexto, Tipo tipo) {
+        mostrarRelativo(anchor, titulo, subtexto, tipo, 4.5);
+    }
+
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, Tipo tipo) {
+        mostrarRelativo(anchor, titulo, null, tipo, 4.5);
+    }
+
+    // =====================================================
+    // Cierre
+    // =====================================================
+
     private static void cerrarToast(Stage toast, HBox root) {
         FadeTransition fadeOut = new FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), root);
         fadeOut.setFromValue(root.getOpacity());
@@ -139,56 +183,5 @@ public class TPSToast {
         ParallelTransition salida = new ParallelTransition(fadeOut, slideOut);
         salida.setOnFinished(e -> toast.close());
         salida.play();
-    }
-
-    /** Duración por defecto: 4.5 segundos */
-    public static void mostrar(Window owner, String titulo, String subtexto, Tipo tipo) {
-        mostrar(owner, titulo, subtexto, tipo, 4.5);
-    }
-
-    /** Versión compacta sin subtexto */
-    public static void mostrar(Window owner, String titulo, Tipo tipo) {
-        mostrar(owner, titulo, null, tipo);
-    }
-
-    /**
-     * Muestra un toast centrado relativamente a un nodo de la interfaz.
-     * Útil para centrar mensajes en el lienzo (Canvas) o paneles específicos.
-     */
-    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, String subtexto, Tipo tipo, double duracion) {
-        if (anchor == null || anchor.getScene() == null) {
-            mostrar(null, titulo, subtexto, tipo, duracion);
-            return;
-        }
-        Platform.runLater(() -> {
-            Window owner = anchor.getScene().getWindow();
-            javafx.geometry.Bounds bounds = anchor.localToScreen(anchor.getBoundsInLocal());
-            
-            if (bounds == null) {
-                mostrar(owner, titulo, subtexto, tipo, duracion);
-                return;
-            }
-
-            // Calculamos el centro horizontal del nodo
-            double centerX = bounds.getMinX() + (bounds.getWidth() / 2);
-            // Lo posicionamos un poco por encima del fondo del nodo
-            double bottomY = bounds.getMaxY() - 80;
-
-            // Creamos el toast pero sobreescribimos su posición final
-            mostrar(owner, titulo, subtexto, tipo, duracion);
-            
-            // Nota: Debido a que mostrar() crea un nuevo Stage asíncronamente, 
-            // la lógica de reposicionamiento exacto se hereda de mostrar(), 
-            // pero podríamos refinarla si quisiéramos precisión absoluta.
-            // Por ahora, usaremos la lógica estándar centrada en el owner.
-        });
-    }
-
-    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, String subtexto, Tipo tipo) {
-        mostrarRelativo(anchor, titulo, subtexto, tipo, 4.5);
-    }
-
-    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, Tipo tipo) {
-        mostrarRelativo(anchor, titulo, null, tipo, 4.5);
     }
 }

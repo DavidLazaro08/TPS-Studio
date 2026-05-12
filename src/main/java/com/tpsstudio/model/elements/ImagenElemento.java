@@ -3,34 +3,48 @@ package com.tpsstudio.model.elements;
 import javafx.scene.image.Image;
 
 /**
- * Elemento de imagen en la tarjeta CR80
+ * Elemento de imagen colocado sobre la tarjeta.
+ *
+ * Puede funcionar como imagen fija o como imagen vinculada a una columna
+ * de datos variables, por ejemplo para fotografías de acreditaciones.
  */
 public class ImagenElemento extends Elemento {
 
     private String rutaArchivo;
     private Image imagen;
+
     private double opacity;
     private boolean mantenerProporcion;
+
     private double originalWidth;
     private double originalHeight;
-    private String columnaVinculada; // null = elemento fijo; valor = columna del Excel vinculada
+
+    // null = imagen fija; valor = nombre de columna vinculada
+    private String columnaVinculada;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ImagenElemento(String nombre, double x, double y, String rutaArchivo, Image imagen) {
-        super(nombre, x, y, 100, 100); // Tamaño por defecto
+        super(nombre, x, y, 100, 100);
+
         this.rutaArchivo = rutaArchivo;
         this.imagen = imagen;
         this.opacity = 1.0;
         this.mantenerProporcion = true;
 
-        // Ajustar tamaño a proporción de foto carnet (32mm × 26mm ≈ 121px × 98px)
+        /*
+         * Si se recibe una imagen real, se ajusta inicialmente a un tamaño
+         * cómodo de foto tipo carnet, manteniendo su proporción.
+         */
         if (imagen != null) {
             this.originalWidth = imagen.getWidth();
             this.originalHeight = imagen.getHeight();
-            // Tamaño por defecto: foto carnet
-            double maxW = 121; // 32mm a ~96 DPI
-            double maxH = 98; // 26mm a ~96 DPI
 
-            // Calcular escala para mantener proporción
+            double maxW = 121;
+            double maxH = 98;
+
             double scaleX = maxW / originalWidth;
             double scaleY = maxH / originalHeight;
             double scale = Math.min(scaleX, scaleY);
@@ -40,7 +54,10 @@ public class ImagenElemento extends Elemento {
         }
     }
 
-    // Getters y setters
+    // =====================================================
+    // Archivo e imagen
+    // =====================================================
+
     public String getRutaArchivo() {
         return rutaArchivo;
     }
@@ -55,14 +72,14 @@ public class ImagenElemento extends Elemento {
 
     public void setImagen(Image imagen) {
         this.imagen = imagen;
-        // Actualizar dimensiones originales
+
         if (imagen != null) {
             this.originalWidth = imagen.getWidth();
             this.originalHeight = imagen.getHeight();
 
-            // Mantener tamaño de foto carnet con proporción
             double maxW = 121;
             double maxH = 98;
+
             double scaleX = maxW / originalWidth;
             double scaleY = maxH / originalHeight;
             double scale = Math.min(scaleX, scaleY);
@@ -71,6 +88,10 @@ public class ImagenElemento extends Elemento {
             this.height = originalHeight * scale;
         }
     }
+
+    // =====================================================
+    // Visualización
+    // =====================================================
 
     public double getOpacity() {
         return opacity;
@@ -88,6 +109,10 @@ public class ImagenElemento extends Elemento {
         this.mantenerProporcion = mantenerProporcion;
     }
 
+    // =====================================================
+    // Dimensiones originales
+    // =====================================================
+
     public double getOriginalWidth() {
         return originalWidth;
     }
@@ -95,6 +120,10 @@ public class ImagenElemento extends Elemento {
     public double getOriginalHeight() {
         return originalHeight;
     }
+
+    // =====================================================
+    // Datos variables
+    // =====================================================
 
     public String getColumnaVinculada() {
         return columnaVinculada;

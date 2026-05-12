@@ -9,13 +9,17 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Panel de propiedades específico para elementos de texto.
+ */
 public class TextPropertyHandler extends BasePropertyHandler {
 
-    public TextPropertyHandler(Canvas canvas, EditorCanvasManager canvasManager, 
-                                Runnable onCanvasRedraw, Runnable onPropertyChanged) {
+    public TextPropertyHandler(Canvas canvas, EditorCanvasManager canvasManager,
+                               Runnable onCanvasRedraw, Runnable onPropertyChanged) {
         super(canvas, canvasManager, onCanvasRedraw, onPropertyChanged);
     }
 
@@ -23,25 +27,22 @@ public class TextPropertyHandler extends BasePropertyHandler {
     public void buildPanel(VBox container, Elemento elemento) {
         if (!(elemento instanceof TextoElemento texto)) return;
 
-        // 1. Etiqueta (nombre lógico)
         addEtiquetaControl(container, texto, "Ej: NOMBRE, Nº SOCIO...");
 
-        // 2. Contenido del texto
+        // Contenido principal del texto
         Label lblContenido = new Label("Texto:");
         lblContenido.getStyleClass().add("prop-label-small");
 
-        // CAMBIO: TextField en lugar de TextArea para ganar espacio vertical
         TextField txtContenido = new TextField(texto.getContenido());
         txtContenido.setPromptText("Contenido del texto...");
         txtContenido.setMaxWidth(Double.MAX_VALUE);
-        txtContenido.setPrefHeight(24); // Altura compacta de una línea
+        txtContenido.setPrefHeight(24);
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             texto.setContenido(newVal);
             recalculateWidth(texto);
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
 
-        // Vincular a Base de Datos si existe
         if (fuenteDatos != null && fuenteDatos.tieneRegistros()) {
             addSeccionDatosVariables(container, texto, lblContenido, txtContenido);
             container.getChildren().add(new Separator());
@@ -49,11 +50,10 @@ public class TextPropertyHandler extends BasePropertyHandler {
 
         container.getChildren().addAll(lblContenido, txtContenido);
 
-        // 3. Posición y Tamaño
         addPositionSizeControls(container, texto);
         container.getChildren().add(new Separator());
 
-        // 4. Comportamiento (Salto de línea / Auto-ajuste)
+        // Comportamiento del texto dentro de su caja.
         CheckBox chkSalto = new CheckBox("Pasar a la línea inferior si no cabe");
         CheckBox chkAutoFit = new CheckBox("Auto-ajustar al ancho");
 
@@ -79,15 +79,17 @@ public class TextPropertyHandler extends BasePropertyHandler {
 
         container.getChildren().addAll(chkSalto, chkAutoFit, new Separator());
 
-        // 5. Estilo de Fuente
         addFontControls(container, texto);
 
-        // 6. Color
         addColorControlWithEyedropper(container, "Color del Texto:", texto.getColor(), null, hex -> {
             texto.setColor(hex);
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
     }
+
+    // =====================================================
+    // Fuente y estilo
+    // =====================================================
 
     private void addFontControls(VBox container, TextoElemento texto) {
         Label lblFuente = new Label("Fuente:");
@@ -104,7 +106,6 @@ public class TextPropertyHandler extends BasePropertyHandler {
             }
         });
 
-        // Tamaño, Negrita, Cursiva, Alineación (Fila combinada)
         HBox tools = new HBox(8);
         tools.setAlignment(Pos.BOTTOM_LEFT);
         tools.setFillHeight(false);
@@ -118,25 +119,29 @@ public class TextPropertyHandler extends BasePropertyHandler {
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
 
-        // Estilo B/I
         ToggleButton btnBold = new ToggleButton("B");
         btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
         btnBold.setSelected(texto.isNegrita());
         btnBold.setMinWidth(32); btnBold.setPrefWidth(32);
         btnBold.setStyle("-fx-font-weight: bold;");
-        btnBold.setOnAction(e -> { texto.setNegrita(btnBold.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
+        btnBold.setOnAction(e -> {
+            texto.setNegrita(btnBold.isSelected());
+            if (onCanvasRedraw != null) onCanvasRedraw.run();
+        });
 
         ToggleButton btnItalic = new ToggleButton("I");
         btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
         btnItalic.setSelected(texto.isCursiva());
         btnItalic.setMinWidth(32); btnItalic.setPrefWidth(32);
         btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
-        btnItalic.setOnAction(e -> { texto.setCursiva(btnItalic.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
+        btnItalic.setOnAction(e -> {
+            texto.setCursiva(btnItalic.isSelected());
+            if (onCanvasRedraw != null) onCanvasRedraw.run();
+        });
 
         HBox styles = new HBox(0, btnBold, btnItalic);
         styles.getStyleClass().add("prop-segmented-group");
 
-        // Alineación
         ToggleGroup alignGroup = new ToggleGroup();
         ToggleButton bL = createAlignBtn("\u2261", "LEFT", texto, alignGroup, "btn-first");
         ToggleButton bC = createAlignBtn("\u2263", "CENTER", texto, alignGroup, "");
@@ -158,17 +163,24 @@ public class TextPropertyHandler extends BasePropertyHandler {
         b.getStyleClass().add("prop-toggle-btn");
         b.setMinWidth(32); b.setPrefWidth(32);
         b.setSelected(align.equals(texto.getAlineacion()));
-        b.setOnAction(e -> { texto.setAlineacion(align); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
+        b.setOnAction(e -> {
+            texto.setAlineacion(align);
+            if (onCanvasRedraw != null) onCanvasRedraw.run();
+        });
         return b;
     }
 
+    // =====================================================
+    // Datos variables
+    // =====================================================
+
     private void addSeccionDatosVariables(VBox container, TextoElemento texto, Label lblTexto, TextField txtContenido) {
-        VBox section = new VBox(4);
         Label lblSeccion = new Label("Datos Variables");
         lblSeccion.getStyleClass().add("prop-label");
 
         ComboBox<String> cmbColumna = new ComboBox<>();
         cmbColumna.setMaxWidth(Double.MAX_VALUE);
+
         List<String> options = new ArrayList<>();
         options.add("(sin vincular)");
         options.addAll(fuenteDatos.getColumnas());
@@ -176,8 +188,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
 
         String actual = texto.getColumnaVinculada();
         cmbColumna.setValue(actual != null ? actual : "(sin vincular)");
-        
-        // Estado inicial
+
         txtContenido.setDisable(actual != null);
         if (actual != null) lblTexto.setText("Texto (vinculado):");
 
@@ -192,10 +203,10 @@ public class TextPropertyHandler extends BasePropertyHandler {
         container.getChildren().addAll(lblSeccion, cmbColumna);
     }
 
-    /**
-     * Recalcula el ancho del cuadro delimitador basándose en el contenido real del texto,
-     * la fuente y el tamaño elegidos. Solo se aplica si el auto-ajuste y el salto de línea están desactivados.
-     */
+    // =====================================================
+    // Ajuste automático de caja
+    // =====================================================
+
     private void recalculateWidth(TextoElemento texto) {
         if (texto.isAutoAjustar() || texto.isSaltoLinea()) return;
 

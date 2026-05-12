@@ -7,43 +7,50 @@ import com.tpsstudio.model.project.Proyecto;
 import com.tpsstudio.util.ImageUtils;
 import com.tpsstudio.util.TextUtils;
 import com.tpsstudio.view.managers.EditorCanvasManager;
-import javafx.geometry.VPos;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
 /**
- * Motor de renderizado para el canvas del editor.
- * Se encarga exclusivamente de dibujar la tarjeta, elementos y guías.
+ * Motor de renderizado del canvas principal.
+ * Dibuja la tarjeta, fondos, elementos, guías visuales y ayudas de selección.
  */
 public class CanvasRenderer {
-    
-    // Estado de animación para el cuentagotas
+
+    // Estado visual del cuentagotas
     private double eyedropperX, eyedropperY, eyedropperPulse;
     private boolean isEyedropperActive;
 
     private static Image imagenSilueta = null;
+
     static {
         try (var stream = CanvasRenderer.class.getResourceAsStream("/img/silueta.png")) {
             if (stream != null) imagenSilueta = new Image(stream);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Si no se encuentra la imagen, se usará un placeholder básico.
+        }
     }
 
-    public void render(GraphicsContext gc, Proyecto proyecto, double canvasW, double canvasH, 
-                       double zoom, boolean mostrarGuias, AppMode currentMode, 
+    // =====================================================
+    // Render principal
+    // =====================================================
+
+    public void render(GraphicsContext gc, Proyecto proyecto, double canvasW, double canvasH,
+                       double zoom, boolean mostrarGuias, AppMode currentMode,
                        Elemento seleccion, FuenteDatos fuenteDatos, double hudOpacity,
                        boolean eyedropperActive, double ex, double ey, double ep) {
-        
+
         this.isEyedropperActive = eyedropperActive;
         this.eyedropperX = ex; this.eyedropperY = ey; this.eyedropperPulse = ep;
-        
+
         gc.clearRect(0, 0, canvasW, canvasH);
 
         if (proyecto == null) {
@@ -51,7 +58,7 @@ public class CanvasRenderer {
             return;
         }
 
-        // Cálculos de centrado
+        // Posición centrada de la tarjeta dentro del canvas.
         double scaledW = EditorCanvasManager.getScaledWidth(proyecto) * zoom;
         double scaledH = EditorCanvasManager.getScaledHeight(proyecto) * zoom;
         double cardX = (canvasW / 2) - (scaledW / 2);
@@ -59,56 +66,55 @@ public class CanvasRenderer {
 
         gc.save();
 
-        // 1. Guías de sangrado (exterior)
+        // Guía exterior de sangre.
         if (mostrarGuias) {
             double bleed = EditorCanvasManager.BLEED_MARGIN * zoom;
             drawGuideRect(gc, cardX - bleed, cardY - bleed, scaledW + bleed * 2, scaledH + bleed * 2, "#d48a8a", true);
         }
 
-        // 2. Fondo o blanco
+        // Fondo de la tarjeta.
         ImagenFondoElemento fondo = proyecto.getFondoActual();
         if (fondo != null && fondo.getImagen() != null) {
-            gc.drawImage(fondo.getImagen(), cardX + (fondo.getX() * zoom), cardY + (fondo.getY() * zoom), 
-                         fondo.getWidth() * zoom, fondo.getHeight() * zoom);
+            gc.drawImage(fondo.getImagen(), cardX + (fondo.getX() * zoom), cardY + (fondo.getY() * zoom),
+                    fondo.getWidth() * zoom, fondo.getHeight() * zoom);
         } else {
             gc.setFill(Color.WHITE);
             gc.fillRect(cardX, cardY, scaledW, scaledH);
         }
 
-        // 3. Borde de la tarjeta
+        // Borde real de la tarjeta.
         drawGuideRect(gc, cardX, cardY, scaledW, scaledH, "#c4c0c2", false);
 
-        // 4. Margen de seguridad (interior)
+        // Margen interior de seguridad.
         if (mostrarGuias) {
             double safety = EditorCanvasManager.SAFETY_MARGIN * zoom;
             drawGuideRect(gc, cardX + safety, cardY + safety, scaledW - safety * 2, scaledH - safety * 2, "#4a9b7c", true);
         }
 
-        // 5. Elementos (Renderizado inverso: el primero de la lista se dibuja el último para estar ENCIMA)
+        // Renderizado inverso para respetar el orden visual de capas.
         List<Elemento> elementos = proyecto.getElementosActuales();
         for (int i = elementos.size() - 1; i >= 0; i--) {
             Elemento elem = elementos.get(i);
             if (!elem.isVisible()) continue;
-            drawElement(gc, elem, cardX, cardY, zoom, fuenteDatos, seleccion, currentMode);
+            drawElement(gc, elem, cardX, cardY, zoom, fuenteDatos, seleccion, currentMode, proyecto);
         }
 
-        // 6. Troquel (agujero)
         if (mostrarGuias) drawHolePunch(gc, proyecto, cardX, cardY, scaledW, zoom);
-
-        // 7. HUD Informativo (Proyecto/Cliente)
         if (hudOpacity > 0.0) drawHUD(gc, proyecto, canvasW, hudOpacity, currentMode);
 
-        // 8. Información de dimensiones inferior
         drawFooterInfo(gc, proyecto, cardX, cardY, scaledW, scaledH, zoom);
-        
-        // 9. Efecto Cuentagotas (si está activo)
+
         if (isEyedropperActive) drawEyedropperPulse(gc);
 
         gc.restore();
     }
 
-    private void drawElement(GraphicsContext gc, Elemento elem, double cardX, double cardY, 
-                             double zoom, FuenteDatos fuenteDatos, Elemento seleccion, AppMode mode) {
+    // =====================================================
+    // Dibujo de elementos
+    // =====================================================
+
+    private void drawElement(GraphicsContext gc, Elemento elem, double cardX, double cardY,
+                             double zoom, FuenteDatos fuenteDatos, Elemento seleccion, AppMode mode, Proyecto proyecto) {
         double ex = cardX + (elem.getX() * zoom);
         double ey = cardY + (elem.getY() * zoom);
         double ew = elem.getWidth() * zoom;
@@ -117,14 +123,13 @@ public class CanvasRenderer {
         if (elem instanceof TextoElemento t) {
             drawText(gc, t, ex, ey, ew, eh, zoom, fuenteDatos);
         } else if (elem instanceof ImagenElemento i) {
-            drawImage(gc, i, ex, ey, ew, eh, proyectoParaFotos(elem));
+            drawImage(gc, i, ex, ey, ew, eh, proyecto, fuenteDatos);
         } else if (elem instanceof FormaElemento f) {
             drawShape(gc, f, ex, ey, ew, eh, zoom);
         } else if (elem instanceof ElementoCodigo c) {
             drawCode(gc, c, ex, ey, ew, eh, zoom, fuenteDatos);
         }
 
-        // Handles de selección
         if (mode == AppMode.DESIGN && elem == seleccion) {
             drawSelectionBox(gc, elem, ex, ey, ew, eh);
         }
@@ -139,11 +144,12 @@ public class CanvasRenderer {
 
         FontWeight w = t.isNegrita() ? FontWeight.BOLD : FontWeight.NORMAL;
         javafx.scene.text.FontPosture p = t.isCursiva() ? javafx.scene.text.FontPosture.ITALIC : javafx.scene.text.FontPosture.REGULAR;
-        
+
         double fontSize = t.getFontSize();
         gc.setFill(Color.web(t.getColor()));
         gc.setFont(Font.font(t.getFontFamily(), w, p, fontSize * zoom));
 
+        // Ajusta el tamaño si el texto debe caber en una sola línea.
         if (t.isAutoAjustar() && !t.isSaltoLinea()) {
             javafx.scene.text.Text helper = new javafx.scene.text.Text(content);
             helper.setFont(gc.getFont());
@@ -156,11 +162,10 @@ public class CanvasRenderer {
 
         List<String> lines = TextUtils.computeLines(content, t.isSaltoLinea(), gc.getFont(), ew);
         double lineHeight = fontSize * zoom * 1.2;
-        
-        // Calcular altura total para centrar verticalmente
+
         double totalTextHeight = lines.size() * lineHeight;
         double offsetY = Math.max(0, (eh - totalTextHeight) / 2);
-        double currentY = ey + offsetY + (fontSize * zoom * 0.85); // 0.85 para ajustar el baseline visual al centro
+        double currentY = ey + offsetY + (fontSize * zoom * 0.85);
 
         for (String line : lines) {
             double tx = ex;
@@ -174,10 +179,11 @@ public class CanvasRenderer {
         }
     }
 
-    private void drawImage(GraphicsContext gc, ImagenElemento i, double ex, double ey, double ew, double eh, Proyecto p) {
+    private void drawImage(GraphicsContext gc, ImagenElemento i, double ex, double ey, double ew, double eh, Proyecto p, FuenteDatos fd) {
         Image img = i.getImagen();
-        if (i.getColumnaVinculada() != null && p != null) {
-            Image varImg = resolverImagenVariable(p, i.getColumnaVinculada());
+
+        if (i.getColumnaVinculada() != null && p != null && fd != null) {
+            Image varImg = resolverImagenVariable(p, fd, i.getColumnaVinculada());
             if (varImg != null) img = varImg;
         }
 
@@ -196,7 +202,7 @@ public class CanvasRenderer {
             String val = bd.getValor(c.getColumnaVinculada());
             if (val != null) text = val;
         }
-        
+
         Image img = c.getImagen(text);
         if (img != null) {
             gc.drawImage(img, ex, ey, ew, eh);
@@ -221,7 +227,7 @@ public class CanvasRenderer {
     }
 
     private void drawShape(GraphicsContext gc, FormaElemento f, double ex, double ey, double ew, double eh, double zoom) {
-        gc.setLineDashes(); // Asegurar línea continua
+        gc.setLineDashes();
         gc.setLineWidth(Math.max(1.0, f.getGrosorBorde()));
         double oldAlpha = gc.getGlobalAlpha();
         gc.setGlobalAlpha(f.getOpacidad());
@@ -258,6 +264,10 @@ public class CanvasRenderer {
         gc.setGlobalAlpha(oldAlpha);
     }
 
+    // =====================================================
+    // Selección, guías y ayudas visuales
+    // =====================================================
+
     private void drawSelectionBox(GraphicsContext gc, Elemento elem, double ex, double ey, double ew, double eh) {
         gc.setStroke(Color.web("#4a9b7c"));
         gc.setLineWidth(2);
@@ -290,8 +300,8 @@ public class CanvasRenderer {
         double centroX = canvasW / 2;
         double staticTopY = 35;
 
-        // 1. Textos Superiores (Proyecto / Cliente) en modo Producción
-        // Solo si NO es vertical, para evitar que se solapen con la tarjeta
+        // En producción se muestra una pequeña referencia del proyecto y cliente.
+        // En vertical se oculta para evitar solapes con la tarjeta.
         if (mode == AppMode.PRODUCTION && p.getOrientacion() != Orientacion.VERTICAL) {
             gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 18));
             gc.setFill(Color.WHITE);
@@ -300,13 +310,13 @@ public class CanvasRenderer {
 
             gc.setFont(javafx.scene.text.Font.font("System", 14));
             gc.setFill(Color.LIGHTGRAY);
-            
-            String cName = "Cliente: " + (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null 
-                            ? p.getMetadata().getClienteInfo().getNombreEmpresa() : "Sin Asignar");
+
+            String cName = "Cliente: " + (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null
+                    ? p.getMetadata().getClienteInfo().getNombreEmpresa() : "Sin Asignar");
             String link = " 🔗 Editar datos";
             double totalW = TextUtils.getTextWidth(cName + link, gc.getFont());
             gc.fillText(cName, centroX - (totalW / 2), staticTopY + 25);
-            
+
             gc.setFill(Color.web("#8181f7"));
             gc.fillText(link, centroX - (totalW / 2) + TextUtils.getTextWidth(cName, gc.getFont()), staticTopY + 25);
         }
@@ -360,13 +370,37 @@ public class CanvasRenderer {
         }
     }
 
-    private Image resolverImagenVariable(Proyecto p, String col) {
-        if (p == null || p.getMetadata() == null || p.getMetadata().getRutaFotos() == null) return null;
-        // Lógica simplificada: en una implementación real, esto consultaría la FuenteDatos
-        return null; // El EditorCanvasManager pasará el valor resuelto si es posible
-    }
+    // =====================================================
+    // Imágenes variables
+    // =====================================================
 
-    private Proyecto proyectoParaFotos(Elemento e) { return null; /* Inyectar si es necesario */ }
+    private Image resolverImagenVariable(Proyecto p, FuenteDatos fd, String col) {
+        if (p == null || p.getMetadata() == null || p.getMetadata().getRutaFotos() == null || fd == null) return null;
+
+        String nombreImagen = fd.getValor(col);
+        if (nombreImagen == null || nombreImagen.isBlank()) return null;
+
+        Path rutaFotos = Paths.get(p.getMetadata().getRutaFotos());
+        Path archivo = rutaFotos.resolve(nombreImagen);
+
+        if (Files.exists(archivo)) {
+            return ImageUtils.cargarImagenSinBloqueo(archivo.toAbsolutePath().toString());
+        }
+
+        // Si el Excel no incluye extensión, se prueban las más habituales.
+        if (!nombreImagen.contains(".")) {
+            String[] extensiones = {".jpg", ".png", ".jpeg", ".JPG", ".PNG"};
+
+            for (String extension : extensiones) {
+                Path archivoConExtension = rutaFotos.resolve(nombreImagen + extension);
+                if (Files.exists(archivoConExtension)) {
+                    return ImageUtils.cargarImagenSinBloqueo(archivoConExtension.toAbsolutePath().toString());
+                }
+            }
+        }
+
+        return null;
+    }
 
     private void drawEyedropperPulse(GraphicsContext gc) {
         gc.save();
@@ -376,7 +410,7 @@ public class CanvasRenderer {
 
         gc.setStroke(Color.WHITE); gc.setLineWidth(2); gc.setGlobalAlpha(alpha);
         gc.strokeOval(eyedropperX - r1, eyedropperY - r1, r1 * 2, r1 * 2);
-        
+
         gc.setStroke(Color.web("#8181f7")); gc.setLineWidth(1.5); gc.setGlobalAlpha(alpha * 0.7);
         gc.strokeOval(eyedropperX - r2, eyedropperY - r2, r2 * 2, r2 * 2);
         gc.restore();

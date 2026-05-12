@@ -20,49 +20,31 @@ import java.util.List;
 
 /**
  * Gestiona el botón de filtro por categorías y su popup desplegable.
- *
- * <p>Responsabilidad única: construir el botón de filtro, mostrar/ocultar el popup
- * de categorías (con checkboxes, crear nueva, eliminar) y notificar al orquestador
- * cuando el filtro activo cambia.</p>
- *
- * @see ProductionViewManager
  */
 public class FiltroPopupManager {
 
     private final EtiquetasManager etiquetasManager;
-    /** Referencia compartida con ProductionViewManager — se muta directamente. */
     private final List<String> filtroActivo;
-    /** Callback al orquestador para que reaplique el filtro en la lista. */
     private final Runnable onFiltroChanged;
 
     private javafx.stage.Popup filtroPopup;
 
-    /**
-     * @param etiquetasManager gestor de categorías/etiquetas del proyecto.
-     * @param filtroActivo     lista mutable compartida de IDs de etiquetas activas.
-     * @param onFiltroChanged  callback a invocar cada vez que el filtro activo cambia.
-     */
     public FiltroPopupManager(EtiquetasManager etiquetasManager,
-                               List<String> filtroActivo,
-                               Runnable onFiltroChanged) {
+                              List<String> filtroActivo,
+                              Runnable onFiltroChanged) {
         this.etiquetasManager = etiquetasManager;
-        this.filtroActivo     = filtroActivo;
-        this.onFiltroChanged  = onFiltroChanged;
+        this.filtroActivo = filtroActivo;
+        this.onFiltroChanged = onFiltroChanged;
     }
 
-    // =========================================================
-    // Botón público
-    // =========================================================
+    // =====================================================
+    // Botón de filtro
+    // =====================================================
 
-    /**
-     * Construye y devuelve el botón de filtro listo para añadir al header del panel.
-     *
-     * @param todosLosProyectos lista observable completa (necesaria para refrescar popup).
-     * @return botón configurado con icono y handler.
-     */
     public Button crearBoton(ObservableList<Proyecto> todosLosProyectos) {
         Button btn = new Button();
         actualizarIcono(btn);
+
         btn.getStyleClass().add("filter-btn");
         btn.setTooltip(new Tooltip("Filtrar por categoría"));
         btn.setOnAction(e -> {
@@ -72,17 +54,15 @@ public class FiltroPopupManager {
                 mostrarPopup(btn, todosLosProyectos);
             }
         });
+
         return btn;
     }
 
-    /**
-     * Actualiza el texto e icono del botón según el número de filtros activos.
-     *
-     * @param btn botón a actualizar (puede ser null, se ignora silenciosamente).
-     */
     public void actualizarIcono(Button btn) {
         if (btn == null) return;
+
         int activas = filtroActivo.size();
+
         if (activas > 0) {
             btn.setText("🏷️ " + activas);
             btn.setStyle("-fx-text-fill: #6c63ff; -fx-font-weight: bold;");
@@ -92,12 +72,13 @@ public class FiltroPopupManager {
         }
     }
 
-    // =========================================================
-    // Popup interno
-    // =========================================================
+    // =====================================================
+    // Popup
+    // =====================================================
 
     private void mostrarPopup(Button anchor, ObservableList<Proyecto> todos) {
         if (filtroPopup != null && filtroPopup.isShowing()) filtroPopup.hide();
+
         filtroPopup = new javafx.stage.Popup();
         filtroPopup.setAutoHide(true);
 
@@ -106,7 +87,9 @@ public class FiltroPopupManager {
         filtroPopup.getContent().add(contenido);
 
         var ft = new javafx.animation.FadeTransition(
-                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), contenido);
+                javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM),
+                contenido
+        );
         ft.setToValue(1);
         ft.play();
 
@@ -116,10 +99,14 @@ public class FiltroPopupManager {
 
     private void ocultarConAnimacion() {
         if (filtroPopup == null || filtroPopup.getContent().isEmpty()) return;
+
         Node content = filtroPopup.getContent().get(0);
         content.setMouseTransparent(true);
+
         var ft = new javafx.animation.FadeTransition(
-                javafx.util.Duration.millis(AnimationHelper.DURATION_FAST), content);
+                javafx.util.Duration.millis(AnimationHelper.DURATION_FAST),
+                content
+        );
         ft.setToValue(0);
         ft.setOnFinished(ev -> filtroPopup.hide());
         ft.play();
@@ -133,34 +120,36 @@ public class FiltroPopupManager {
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4);");
         contenido.setPrefWidth(210);
 
-        // --- Opción "Todos" ---
         ToggleButton btnTodos = new ToggleButton("★ Todos los proyectos");
         btnTodos.setMaxWidth(Double.MAX_VALUE);
         btnTodos.getStyleClass().add("filter-option-btn");
         btnTodos.setSelected(filtroActivo.isEmpty());
         btnTodos.setOnAction(ev -> {
             filtroActivo.clear();
-            if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+
+            if (etiquetasManager != null) {
+                etiquetasManager.setFiltroActivo(filtroActivo);
+            }
+
             onFiltroChanged.run();
             ocultarConAnimacion();
         });
         contenido.getChildren().add(btnTodos);
 
-        // --- Categorías ---
         if (etiquetasManager != null && !etiquetasManager.getAll().isEmpty()) {
             contenido.getChildren().add(new Separator());
+
             Label lblCats = new Label("CATEGORÍAS");
             lblCats.setStyle("-fx-text-fill: #5a6090; -fx-font-size: 10px; -fx-font-weight: bold;");
             contenido.getChildren().add(lblCats);
 
             for (Etiqueta cat : etiquetasManager.getAll()) {
-                contenido.getChildren().add(
-                        construirFilaCategoria(cat, btnTodos, anchor, todos));
+                contenido.getChildren().add(construirFilaCategoria(cat, btnTodos, anchor, todos));
             }
         }
 
-        // --- Botón nueva categoría ---
         contenido.getChildren().add(new Separator());
+
         Button btnNuevaCat = new Button("+ Nueva categoría");
         btnNuevaCat.getStyleClass().add("btn-dialog-action");
         btnNuevaCat.setMaxWidth(Double.MAX_VALUE);
@@ -171,6 +160,7 @@ public class FiltroPopupManager {
             dlg.setTitle("Nueva Categoría");
             dlg.setHeaderText(null);
             dlg.setContentText("Nombre:");
+
             dlg.showAndWait().ifPresent(nombre -> {
                 if (!nombre.isBlank() && etiquetasManager != null) {
                     etiquetasManager.crear(nombre, null);
@@ -185,11 +175,16 @@ public class FiltroPopupManager {
     }
 
     private HBox construirFilaCategoria(Etiqueta cat,
-                                         ToggleButton btnTodos,
-                                         Button anchor,
-                                         ObservableList<Proyecto> todos) {
+                                        ToggleButton btnTodos,
+                                        Button anchor,
+                                        ObservableList<Proyecto> todos) {
         Circle dot = new Circle(5);
-        try { dot.setFill(Color.web(cat.getColor())); } catch (Exception ex) { dot.setFill(Color.GRAY); }
+
+        try {
+            dot.setFill(Color.web(cat.getColor()));
+        } catch (Exception ex) {
+            dot.setFill(Color.GRAY);
+        }
 
         CheckBox chk = new CheckBox(cat.getNombre());
         chk.setSelected(filtroActivo.contains(cat.getId()));
@@ -198,9 +193,16 @@ public class FiltroPopupManager {
         HBox.setHgrow(chk, Priority.ALWAYS);
 
         chk.selectedProperty().addListener((obs, old, val) -> {
-            if (val) { if (!filtroActivo.contains(cat.getId())) filtroActivo.add(cat.getId()); }
-            else     { filtroActivo.remove(cat.getId()); }
-            if (etiquetasManager != null) etiquetasManager.setFiltroActivo(filtroActivo);
+            if (val) {
+                if (!filtroActivo.contains(cat.getId())) filtroActivo.add(cat.getId());
+            } else {
+                filtroActivo.remove(cat.getId());
+            }
+
+            if (etiquetasManager != null) {
+                etiquetasManager.setFiltroActivo(filtroActivo);
+            }
+
             btnTodos.setSelected(filtroActivo.isEmpty());
             onFiltroChanged.run();
         });
@@ -213,6 +215,7 @@ public class FiltroPopupManager {
             alert.setTitle("Eliminar Categoría");
             alert.setHeaderText(null);
             alert.setContentText("¿Seguro que quieres eliminar la categoría '" + cat.getNombre() + "'?");
+
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 if (etiquetasManager.eliminar(cat.getId())) {
                     filtroActivo.remove(cat.getId());
@@ -226,6 +229,7 @@ public class FiltroPopupManager {
 
         HBox fila = new HBox(8, dot, chk, btnDelete);
         fila.setAlignment(Pos.CENTER_LEFT);
+
         return fila;
     }
 }

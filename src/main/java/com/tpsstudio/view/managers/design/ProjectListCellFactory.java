@@ -15,28 +15,16 @@ import javafx.util.Callback;
 import java.util.function.BiConsumer;
 
 /**
- * Fábrica de celdas para el ListView de proyectos en la vista de Producción.
- *
- * <p>Responsabilidad única: construir y configurar el layout visual de cada celda,
- * incluyendo animaciones de hover, selección y la barra activa lateral pulsante.</p>
- *
- * @see ProductionViewManager
+ * Fábrica de celdas para el listado de proyectos en modo Producción.
  */
 public class ProjectListCellFactory {
 
     private final BiConsumer<Proyecto, Node> onShowOptionsMenu;
 
-    /**
-     * @param onShowOptionsMenu callback invocado al pulsar el botón ⋯;
-     *                          recibe el proyecto y el nodo ancla para posicionar el popup.
-     */
     public ProjectListCellFactory(BiConsumer<Proyecto, Node> onShowOptionsMenu) {
         this.onShowOptionsMenu = onShowOptionsMenu;
     }
 
-    /**
-     * Devuelve la {@code Callback} lista para {@code ListView.setCellFactory()}.
-     */
     public Callback<ListView<Proyecto>, ListCell<Proyecto>> build() {
         return lv -> new ListCell<>() {
 
@@ -45,11 +33,17 @@ public class ProjectListCellFactory {
             @Override
             protected void updateItem(Proyecto item, boolean empty) {
                 super.updateItem(item, empty);
+
                 if (empty || item == null) {
                     setGraphic(null);
                     setText(null);
                     setPadding(Insets.EMPTY);
-                    if (pulse != null) { pulse.stop(); pulse = null; }
+
+                    if (pulse != null) {
+                        pulse.stop();
+                        pulse = null;
+                    }
+
                 } else {
                     setGraphic(buildCellContent(item));
                     setText(null);
@@ -58,7 +52,6 @@ public class ProjectListCellFactory {
             }
 
             private VBox buildCellContent(Proyecto item) {
-                // --- Barra lateral activa ---
                 Region activeBar = new Region();
                 activeBar.setPrefWidth(4);
                 activeBar.setMinWidth(4);
@@ -68,7 +61,6 @@ public class ProjectListCellFactory {
                 activeBar.setOpacity(0.0);
                 activeBar.setVisible(false);
 
-                // --- Texto: nombre + cliente ---
                 Label lblName = new Label(item.getNombre());
                 lblName.getStyleClass().add("project-cell-name");
                 lblName.setMaxWidth(180);
@@ -77,16 +69,17 @@ public class ProjectListCellFactory {
 
                 Label lblEmpresa = new Label("");
                 lblEmpresa.getStyleClass().add("project-cell-type");
+
                 if (item.getMetadata() != null && item.getMetadata().getClienteInfo() != null) {
                     String empresa = item.getMetadata().getClienteInfo().getNombreEmpresa();
                     if (empresa != null && !empresa.trim().isEmpty()) {
                         lblEmpresa.setText("Cliente: " + empresa);
                     }
                 }
+
                 VBox textContainer = new VBox(2, lblName, lblEmpresa);
                 textContainer.setAlignment(Pos.CENTER_LEFT);
 
-                // --- Badge de tipo y botón de opciones ---
                 Label lblBadge = new Label(item.getTipo());
                 lblBadge.getStyleClass().add("project-badge");
 
@@ -95,7 +88,9 @@ public class ProjectListCellFactory {
                 btnOptions.setVisible(false);
                 btnOptions.setPickOnBounds(true);
                 btnOptions.setOnMousePressed(e -> {
-                    if (onShowOptionsMenu != null) onShowOptionsMenu.accept(item, btnOptions);
+                    if (onShowOptionsMenu != null) {
+                        onShowOptionsMenu.accept(item, btnOptions);
+                    }
                     e.consume();
                 });
 
@@ -116,11 +111,9 @@ public class ProjectListCellFactory {
                 contentRow.setMaxWidth(Double.MAX_VALUE);
                 contentRow.setMaxHeight(Double.MAX_VALUE);
 
-                // --- Overlays de hover y selección ---
-                Region hoverOverlay    = buildOverlay("project-hover-overlay");
+                Region hoverOverlay = buildOverlay("project-hover-overlay");
                 Region selectedOverlay = buildOverlay("project-selected-overlay");
 
-                // --- Card con clip redondeado ---
                 StackPane card = new StackPane(hoverOverlay, selectedOverlay, contentRow);
                 card.getStyleClass().add("project-card");
                 card.setPrefHeight(62);
@@ -135,35 +128,44 @@ public class ProjectListCellFactory {
                 });
                 card.setClip(clip);
 
-                // --- Separador inferior ---
                 Region separator = new Region();
                 separator.getStyleClass().add("project-separator");
                 separator.setPrefHeight(1);
                 separator.setMaxWidth(Double.MAX_VALUE);
                 VBox.setMargin(separator, new Insets(0, 8, 0, 8));
 
-                // --- Animaciones ---
-                var hoverIn  = fadeTransition(AnimationHelper.DURATION_FAST, hoverOverlay, 0.6);
+                var hoverIn = fadeTransition(AnimationHelper.DURATION_FAST, hoverOverlay, 0.6);
                 var hoverOut = fadeTransition(200, hoverOverlay, 0.0);
 
                 if (isSelected()) {
                     fadeTransition(AnimationHelper.DURATION_SLOW, selectedOverlay, 1.0).play();
                     activeBar.setVisible(true);
+
                     if (pulse == null) {
                         pulse = buildPulseTimeline(activeBar);
                         pulse.play();
                     }
+
                 } else {
                     activeBar.setVisible(false);
-                    if (pulse != null) { pulse.stop(); pulse = null; }
+
+                    if (pulse != null) {
+                        pulse.stop();
+                        pulse = null;
+                    }
                 }
 
                 card.setOnMouseEntered(e -> {
-                    if (!isSelected()) hoverIn.playFromStart();
+                    if (!isSelected()) {
+                        hoverIn.playFromStart();
+                    }
                     btnOptions.setVisible(true);
                 });
+
                 card.setOnMouseExited(e -> {
-                    if (!isSelected()) hoverOut.playFromStart();
+                    if (!isSelected()) {
+                        hoverOut.playFromStart();
+                    }
                     btnOptions.setVisible(false);
                 });
 
@@ -172,9 +174,9 @@ public class ProjectListCellFactory {
         };
     }
 
-    // =========================================================
-    // Helpers privados de construcción
-    // =========================================================
+    // =====================================================
+    // Helpers de construcción
+    // =====================================================
 
     private Region buildOverlay(String styleClass) {
         Region overlay = new Region();
@@ -194,13 +196,14 @@ public class ProjectListCellFactory {
 
     private javafx.animation.Timeline buildPulseTimeline(Region bar) {
         var t = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(javafx.util.Duration.ZERO,
-                new javafx.animation.KeyValue(bar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH)),
-            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2),
-                new javafx.animation.KeyValue(bar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
-            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4),
-                new javafx.animation.KeyValue(bar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH))
+                new javafx.animation.KeyFrame(javafx.util.Duration.ZERO,
+                        new javafx.animation.KeyValue(bar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH)),
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1.2),
+                        new javafx.animation.KeyValue(bar.opacityProperty(), 1.0, javafx.animation.Interpolator.EASE_BOTH)),
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2.4),
+                        new javafx.animation.KeyValue(bar.opacityProperty(), 0.35, javafx.animation.Interpolator.EASE_BOTH))
         );
+
         t.setCycleCount(javafx.animation.Timeline.INDEFINITE);
         return t;
     }

@@ -1,94 +1,83 @@
 package com.tpsstudio.view.managers;
 
 import com.tpsstudio.model.elements.Elemento;
-import com.tpsstudio.model.elements.ElementoCodigo;
 import com.tpsstudio.model.elements.ImagenFondoElemento;
-import com.tpsstudio.model.elements.TextoElemento;
-import com.tpsstudio.model.elements.ImagenElemento;
 import com.tpsstudio.model.enums.AppMode;
-import com.tpsstudio.model.enums.FondoFitMode;
 import com.tpsstudio.model.enums.TipoCodigo;
-import com.tpsstudio.model.project.Etiqueta;
-import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.model.project.Proyecto;
-import com.tpsstudio.model.project.ProyectoMetadata;
 import com.tpsstudio.service.EtiquetasManager;
 import com.tpsstudio.service.ProjectManager;
 import com.tpsstudio.util.AnimationHelper;
-import com.tpsstudio.view.dialogs.EditarProyectoDialog;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
-import javafx.scene.input.*;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.Node;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.WritableImage;
-import javafx.scene.image.ImageView;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-
 import com.tpsstudio.view.managers.design.LayersPanelManager;
-import com.tpsstudio.view.managers.design.ToolboxManager;
 import com.tpsstudio.view.managers.design.ProductionViewManager;
+import com.tpsstudio.view.managers.design.ToolboxManager;
 import com.tpsstudio.view.managers.design.VariableDataManager;
-import java.util.Map;
-import java.util.Optional;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
 import java.util.function.Consumer;
-import javafx.css.PseudoClass;
 
 /**
- * Gestor del modo de la interfaz de usuario (Diseño / Producción).
- * Orchestrator class that delegates specific UI responsibilities to specialized managers.
+ * Gestiona el cambio entre los modos principales de la interfaz:
+ * Diseño y Producción.
+ *
+ * También coordina los paneles laterales delegando el trabajo específico
+ * en managers más pequeños.
  */
 public class ModeManager {
 
     private AppMode currentMode;
 
-    // Gestores inyectados
+    // =====================================================
+    // Dependencias y contenedores
+    // =====================================================
+
     private EtiquetasManager etiquetasManager;
     private ProjectManager projectManager;
 
-    // Contenedores físicos
     private final VBox leftPanel;
     private final VBox rightPanel;
     private final PropertiesPanelController propertiesPanelController;
 
-    // Callbacks
+    // =====================================================
+    // Callbacks hacia MainViewController
+    // =====================================================
+
     private Runnable onAddText;
     private Runnable onAddImage;
     private Runnable onAddBackground;
     private Runnable onNewCR80;
     private Runnable onExport;
     private Runnable onPrint;
+    private Runnable onValidateDesign;
+    private Runnable onCanvasRedraw;
+
     private Consumer<Elemento> onElementSelected;
     private Consumer<Proyecto> onProjectSelected;
     private Consumer<Proyecto> onEditProject;
     private Consumer<ImagenFondoElemento> onEditExternal;
     private Consumer<ImagenFondoElemento> onReload;
     private Consumer<Elemento> onToggleLock;
-    private Runnable onValidateDesign;
-    private Runnable onCanvasRedraw;
     private Consumer<com.tpsstudio.model.elements.FormaElemento.TipoForma> onAddShape;
     private Consumer<TipoCodigo> onAddCode;
 
+    // =====================================================
     // Estado del panel derecho
+    // =====================================================
+
     private boolean isPropertiesActive = true;
     private Node propertiesNode;
     private Node datosNode;
 
-    // Gestores delegados
+    // =====================================================
+    // Managers delegados
+    // =====================================================
+
     private LayersPanelManager layersPanelManager;
     private ToolboxManager toolboxManager;
     private ProductionViewManager productionViewManager;
@@ -97,6 +86,10 @@ public class ModeManager {
     private Button btnValidar;
     private javafx.animation.Timeline periodicReminder;
     private javafx.animation.Timeline pulseAnimation;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ModeManager(VBox leftPanel, VBox rightPanel, PropertiesPanelController propertiesPanelController) {
         this.leftPanel = leftPanel;
@@ -109,37 +102,41 @@ public class ModeManager {
 
     private void initializeDelegatedManagers() {
         this.layersPanelManager = new LayersPanelManager(
-            leftPanel,
-            () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); },
-            elem -> { if (onElementSelected != null) onElementSelected.accept(elem); },
-            fondo -> { if (onEditExternal != null) onEditExternal.accept(fondo); },
-            elem -> { if (onToggleLock != null) onToggleLock.accept(elem); }
+                leftPanel,
+                () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); },
+                elem -> { if (onElementSelected != null) onElementSelected.accept(elem); },
+                fondo -> { if (onEditExternal != null) onEditExternal.accept(fondo); },
+                elem -> { if (onToggleLock != null) onToggleLock.accept(elem); }
         );
 
         this.toolboxManager = new ToolboxManager(
-            () -> { if (onAddText != null) onAddText.run(); },
-            () -> { if (onAddImage != null) onAddImage.run(); },
-            () -> { if (onAddBackground != null) onAddBackground.run(); },
-            code -> { if (onAddCode != null) onAddCode.accept(code); },
-            shape -> { if (onAddShape != null) onAddShape.accept(shape); },
-            () -> { if (onValidateDesign != null) onValidateDesign.run(); }
+                () -> { if (onAddText != null) onAddText.run(); },
+                () -> { if (onAddImage != null) onAddImage.run(); },
+                () -> { if (onAddBackground != null) onAddBackground.run(); },
+                code -> { if (onAddCode != null) onAddCode.accept(code); },
+                shape -> { if (onAddShape != null) onAddShape.accept(shape); },
+                () -> { if (onValidateDesign != null) onValidateDesign.run(); }
         );
 
         this.productionViewManager = new ProductionViewManager(
-            leftPanel,
-            etiquetasManager,
-            projectManager,
-            proj -> { if (onProjectSelected != null) onProjectSelected.accept(proj); },
-            proj -> { if (onEditProject != null) onEditProject.accept(proj); },
-            () -> { if (onNewCR80 != null) onNewCR80.run(); }
+                leftPanel,
+                etiquetasManager,
+                projectManager,
+                proj -> { if (onProjectSelected != null) onProjectSelected.accept(proj); },
+                proj -> { if (onEditProject != null) onEditProject.accept(proj); },
+                () -> { if (onNewCR80 != null) onNewCR80.run(); }
         );
 
         this.variableDataManager = new VariableDataManager(
-            projectManager,
-            proj -> { if (onEditProject != null) onEditProject.accept(proj); },
-            () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); }
+                projectManager,
+                proj -> { if (onEditProject != null) onEditProject.accept(proj); },
+                () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); }
         );
     }
+
+    // =====================================================
+    // Inyección de managers
+    // =====================================================
 
     public void setEtiquetasManager(EtiquetasManager etiquetasManager) {
         this.etiquetasManager = etiquetasManager;
@@ -154,15 +151,19 @@ public class ModeManager {
     public void setProjectManager(ProjectManager projectManager) {
         this.projectManager = projectManager;
         if (productionViewManager != null) productionViewManager.setProjectManager(projectManager);
-        // Re-inicializar el gestor de datos para que tenga el projectManager inyectado
+
+        // VariableDataManager necesita el ProjectManager cuando ya está disponible.
         this.variableDataManager = new VariableDataManager(
-            projectManager,
-            proj -> { if (onEditProject != null) onEditProject.accept(proj); },
-            () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); }
+                projectManager,
+                proj -> { if (onEditProject != null) onEditProject.accept(proj); },
+                () -> { if (onCanvasRedraw != null) onCanvasRedraw.run(); }
         );
     }
 
-    // ===================== CALLBACK SETTERS =====================
+    // =====================================================
+    // Callback setters
+    // =====================================================
+
     public void setOnAddText(Runnable cb) { this.onAddText = cb; }
     public void setOnAddImage(Runnable cb) { this.onAddImage = cb; }
     public void setOnAddBackground(Runnable cb) { this.onAddBackground = cb; }
@@ -182,24 +183,36 @@ public class ModeManager {
 
     public AppMode getCurrentMode() { return currentMode; }
 
+    // =====================================================
+    // Cambio de modo y construcción de paneles
+    // =====================================================
+
     public void switchMode(AppMode newMode, Proyecto proyecto, Elemento selectedElement, ObservableList<Proyecto> projects) {
         this.currentMode = newMode;
         leftPanel.getChildren().clear();
+
         if (newMode == AppMode.DESIGN) {
             rightPanel.getChildren().clear();
             buildDesignModePanels(proyecto, selectedElement);
         } else {
             productionViewManager.buildProductionModePanels(projects, proyecto);
         }
+
         AnimationHelper.applyFadeTransition(leftPanel, 550, 0.3, 1.0);
         AnimationHelper.applyFadeTransition(rightPanel, 550, 0.3, 1.0);
+
         if (onCanvasRedraw != null) onCanvasRedraw.run();
     }
 
     private void buildDesignModePanels(Proyecto proyecto, Elemento selectedElement) {
         VBox toolbox = toolboxManager.buildToolboxPanel();
         this.btnValidar = toolboxManager.getBtnValidar();
-        leftPanel.getChildren().addAll(toolbox, new Separator(), layersPanelManager.buildLayersPanel(proyecto, selectedElement));
+
+        leftPanel.getChildren().addAll(
+                toolbox,
+                new Separator(),
+                layersPanelManager.buildLayersPanel(proyecto, selectedElement)
+        );
 
         refreshPropertiesPanel(selectedElement, proyecto);
         this.datosNode = variableDataManager.buildPanel(proyecto);
@@ -209,7 +222,9 @@ public class ModeManager {
 
     public void setRightPanelTabActiva(boolean isProperties) {
         if (this.isPropertiesActive == isProperties) return;
+
         this.isPropertiesActive = isProperties;
+
         if (currentMode == AppMode.DESIGN) {
             Node targetNode = isPropertiesActive ? propertiesNode : datosNode;
             if (targetNode != null) {
@@ -220,13 +235,20 @@ public class ModeManager {
         }
     }
 
+    // =====================================================
+    // Refresco de paneles
+    // =====================================================
+
     public void refreshPropertiesPanel(Elemento selectedElement, Proyecto proyecto) {
         VBox properties = propertiesPanelController.buildPanel(selectedElement, proyecto);
         ScrollPane scrollProps = new ScrollPane(properties);
+
         scrollProps.setFitToWidth(true);
         scrollProps.getStyleClass().add("panel-scroll-view");
         VBox.setVgrow(scrollProps, Priority.ALWAYS);
+
         this.propertiesNode = scrollProps;
+
         if (isPropertiesActive && currentMode == AppMode.DESIGN) rightPanel.getChildren().setAll(propertiesNode);
     }
 
@@ -238,26 +260,39 @@ public class ModeManager {
         layersPanelManager.rebuildLayersPanel(proyecto, selectedElement, null);
     }
 
+    // =====================================================
+    // Validación visual del diseño
+    // =====================================================
+
     public void setValidationWarning(boolean hasWarning) {
         if (btnValidar == null) return;
+
         if (hasWarning) {
             if (periodicReminder != null) return;
+
             periodicReminder = new javafx.animation.Timeline(
-                new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10), e -> {
-                    btnValidar.getStyleClass().add("has-warnings");
-                    if (pulseAnimation == null) pulseAnimation = AnimationHelper.createPulseAnimation(btnValidar);
-                    pulseAnimation.play();
-                }),
-                new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10).add(javafx.util.Duration.seconds(8)), e -> {
-                    btnValidar.getStyleClass().remove("has-warnings");
-                    if (pulseAnimation != null) pulseAnimation.stop();
-                })
+                    new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10), e -> {
+                        btnValidar.getStyleClass().add("has-warnings");
+                        if (pulseAnimation == null) pulseAnimation = AnimationHelper.createPulseAnimation(btnValidar);
+                        pulseAnimation.play();
+                    }),
+                    new javafx.animation.KeyFrame(javafx.util.Duration.minutes(10).add(javafx.util.Duration.seconds(8)), e -> {
+                        btnValidar.getStyleClass().remove("has-warnings");
+                        if (pulseAnimation != null) pulseAnimation.stop();
+                    })
             );
+
             periodicReminder.setCycleCount(javafx.animation.Animation.INDEFINITE);
             periodicReminder.play();
+
         } else {
-            if (periodicReminder != null) { periodicReminder.stop(); periodicReminder = null; }
+            if (periodicReminder != null) {
+                periodicReminder.stop();
+                periodicReminder = null;
+            }
+
             btnValidar.getStyleClass().remove("has-warnings");
+
             if (pulseAnimation != null) pulseAnimation.stop();
         }
     }

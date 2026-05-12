@@ -31,38 +31,35 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-
 /**
- * Sub-controlador que centraliza todas las acciones sobre elementos del diseño:
- * añadir texto, imagen, forma o fondo, y eliminar el elemento seleccionado.
+ * Sub-controlador encargado de las acciones de edición sobre elementos:
+ * añadir texto, imagen, forma, código, fondo y eliminar el elemento seleccionado.
  *
- * <p>MainViewController delega en esta clase la lógica de cada acción de edición.
- * Los métodos son llamados directamente desde los callbacks de ModeManager
- * (que son lambdas registradas en setupCanvas).</p>
- *
- * <p>No tiene acceso a nodos @FXML directamente — solo usa {@code canvas}
- * para obtener el {@code Window} propietario de los diálogos FileChooser.</p>
+ * MainViewController delega aquí estas operaciones para mantener el controlador
+ * principal más limpio.
  */
 public class ElementActionsController {
 
-    // Dependencias inyectadas desde MainViewController
+    // =========================================================
+    // Dependencias
+    // =========================================================
+
     private final MainViewModel viewModel;
     private final ProjectManager projectManager;
     private final EditorCanvasManager canvasManager;
-    private final Canvas canvas;              // Solo para obtener getScene().getWindow()
-    private final Runnable onRedraw;          // Callback → dibujarCanvas()
-    private final Runnable onEnsureProps;     // Callback → ensurePropertiesPanelVisible()
+    private final Canvas canvas;
+    private final Runnable onRedraw;
+    private final Runnable onEnsureProps;
 
     /**
-     * Crea el sub-controlador con las dependencias mínimas necesarias.
+     * Crea el sub-controlador con las dependencias necesarias.
      *
-     * @param viewModel       estado observable de la aplicación.
-     * @param projectManager  lógica de negocio de proyectos y elementos.
-     * @param canvasManager   gestor del canvas (para actualizar elemento seleccionado).
-     * @param canvas          referencia al canvas central (solo para Window).
-     * @param onRedraw        callback que ejecuta dibujarCanvas() en MainViewController.
-     * @param onEnsureProps   callback que ejecuta ensurePropertiesPanelVisible() en MVC.
-     * @param onFitModeDialog callback que muestra el diálogo de FitMode y devuelve la elección.
+     * @param viewModel      estado observable de la aplicación.
+     * @param projectManager lógica de negocio de proyectos y elementos.
+     * @param canvasManager  gestor del canvas.
+     * @param canvas         canvas central, usado también para obtener la ventana.
+     * @param onRedraw       callback para redibujar el canvas.
+     * @param onEnsureProps  callback para mostrar el panel de propiedades.
      */
     public ElementActionsController(MainViewModel viewModel,
                                     ProjectManager projectManager,
@@ -82,11 +79,8 @@ public class ElementActionsController {
     // Añadir elementos
     // =========================================================
 
-    /**
-     * Añade un nuevo elemento de texto al proyecto activo y lo selecciona.
-     */
-    public void añadirTexto() {
-        TextoElemento texto = projectManager.añadirTexto();
+    public void anadirTexto() {
+        TextoElemento texto = projectManager.anadirTexto();
         if (texto != null) {
             viewModel.setElementoSeleccionado(texto);
             canvasManager.setElementoSeleccionado(texto);
@@ -94,31 +88,21 @@ public class ElementActionsController {
         }
     }
 
-    /**
-     * Añade un nuevo placeholder de imagen al proyecto activo y lo selecciona.
-     * Si la auto-detección vincula una columna de foto, muestra una notificación toast.
-     */
-    public void añadirImagen() {
-        ImagenElemento imagen = projectManager.añadirImagenPlaceholder();
+    public void anadirImagen() {
+        ImagenElemento imagen = projectManager.anadirImagenPlaceholder();
         if (imagen != null) {
             viewModel.setElementoSeleccionado(imagen);
             canvasManager.setElementoSeleccionado(imagen);
             onEnsureProps.run();
 
-            // Avisar si se detectó y vinculó columna de foto automáticamente
             if (imagen.getColumnaVinculada() != null) {
                 notificarColumnaAutoVinculada(imagen.getColumnaVinculada());
             }
         }
     }
 
-    /**
-     * Añade una nueva forma geométrica del tipo indicado y la selecciona.
-     *
-     * @param tipo tipo de forma (rectángulo, elipse, línea).
-     */
-    public void añadirForma(FormaElemento.TipoForma tipo) {
-        FormaElemento forma = projectManager.añadirForma(tipo);
+    public void anadirForma(FormaElemento.TipoForma tipo) {
+        FormaElemento forma = projectManager.anadirForma(tipo);
         if (forma != null) {
             viewModel.setElementoSeleccionado(forma);
             canvasManager.setElementoSeleccionado(forma);
@@ -126,11 +110,8 @@ public class ElementActionsController {
         }
     }
 
-    /**
-     * Añade un nuevo código (QR o Barras) al proyecto activo y lo selecciona.
-     */
-    public void añadirCodigo(TipoCodigo tipo) {
-        ElementoCodigo codigo = projectManager.añadirCodigo(tipo);
+    public void anadirCodigo(TipoCodigo tipo) {
+        ElementoCodigo codigo = projectManager.anadirCodigo(tipo);
         if (codigo != null) {
             viewModel.setElementoSeleccionado(codigo);
             canvasManager.setElementoSeleccionado(codigo);
@@ -138,12 +119,7 @@ public class ElementActionsController {
         }
     }
 
-    /**
-     * Muestra el FileChooser para seleccionar una imagen de fondo.
-     * Si ya hay un fondo, pide confirmación antes de reemplazarlo.
-     * Aplica el FitMode elegido por el usuario (o el preferido guardado).
-     */
-    public void añadirFondo() {
+    public void anadirFondo() {
         if (viewModel.getProyectoActual() == null) return;
 
         ImagenFondoElemento fondoExistente = viewModel.getProyectoActual().getFondoActual();
@@ -160,7 +136,7 @@ public class ElementActionsController {
         FondoFitMode fitMode = mostrarDialogoFitMode();
         if (fitMode == null) return;
 
-        ImagenFondoElemento fondo = projectManager.añadirFondoDesdeArchivo(file, fitMode);
+        ImagenFondoElemento fondo = projectManager.anadirFondoDesdeArchivo(file, fitMode);
         if (fondo != null) {
             viewModel.setElementoSeleccionado(fondo);
             canvasManager.setElementoSeleccionado(fondo);
@@ -171,9 +147,6 @@ public class ElementActionsController {
     // Eliminar elemento
     // =========================================================
 
-    /**
-     * Elimina el elemento actualmente seleccionado del proyecto.
-     */
     public void eliminarElemento() {
         if (projectManager.eliminarElemento(viewModel.getElementoSeleccionado())) {
             canvasManager.setElementoSeleccionado(null);
@@ -181,17 +154,14 @@ public class ElementActionsController {
         }
     }
 
-    /**
-     * Abre el archivo del fondo en el editor externo configurado (si existe),
-     * o en el editor predeterminado del sistema.
-     */
+    // =========================================================
+    // Editor externo y recarga de fondo
+    // =========================================================
+
     public void abrirEditorExterno(ImagenFondoElemento fondo) {
         new ExternalEditorService(viewModel.getProyectoActual()).abrirEditor(fondo);
     }
 
-    /**
-     * Recarga la imagen del fondo desde el disco.
-     */
     public void recargarFondo(ImagenFondoElemento fondo) {
         if (fondo == null || fondo.getRutaArchivo() == null) {
             Alert alert = AlertHelper.createAlert(Alert.AlertType.WARNING);
@@ -203,9 +173,6 @@ public class ElementActionsController {
             return;
         }
 
-        // Resolver la ruta del archivo: puede ser relativa (proyectos con estructura)
-        // o absoluta (proyectos legacy). En el caso relativo, se resuelve contra
-        // la carpeta raíz del proyecto para obtener la ruta física real.
         final File file;
         String rutaGuardada = fondo.getRutaArchivo();
         var metadata = viewModel.getProyectoActual() != null
@@ -213,11 +180,9 @@ public class ElementActionsController {
 
         if (!new File(rutaGuardada).isAbsolute() && metadata != null
                 && metadata.getCarpetaProyecto() != null) {
-            // Ruta relativa → resolverla contra la carpeta del proyecto
             Path rutaAbsoluta = Paths.get(metadata.getCarpetaProyecto()).resolve(rutaGuardada);
             file = rutaAbsoluta.toFile();
         } else {
-            // Ruta absoluta (proyectos legacy) o sin metadata
             file = new File(rutaGuardada);
         }
 
@@ -237,7 +202,6 @@ public class ElementActionsController {
 
             fondo.setImagen(nuevaImagen);
 
-            // Respetar preferencia guardada — igual que en añadirFondo()
             FondoFitMode nuevoModo;
             if (viewModel.getProyectoActual() != null
                     && viewModel.getProyectoActual().isNoVolverAPreguntarFondo()
@@ -246,6 +210,7 @@ public class ElementActionsController {
             } else {
                 nuevoModo = mostrarDialogoFitMode();
             }
+
             if (nuevoModo != null) fondo.setFitMode(nuevoModo);
 
             fondo.ajustarATamaño(
@@ -265,6 +230,10 @@ public class ElementActionsController {
             alert.showAndWait();
         }
     }
+
+    // =========================================================
+    // Diálogos
+    // =========================================================
 
     private FondoFitMode mostrarDialogoFitMode() {
         Dialog<FondoFitMode> dialog = new Dialog<>();
@@ -317,14 +286,6 @@ public class ElementActionsController {
         return dialog.showAndWait().orElse(null);
     }
 
-
-    // =========================================================
-    // Helpers privados
-    // =========================================================
-
-    /**
-     * Muestra un diálogo de confirmación antes de reemplazar el fondo actual.
-     */
     private boolean confirmarReemplazoFondo() {
         Alert alert = AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reemplazar Fondo");
@@ -333,9 +294,10 @@ public class ElementActionsController {
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
-    /**
-     * Muestra un toast con retraso cuando la auto-detección vincula columna de foto.
-     */
+    // =========================================================
+    // Helpers privados
+    // =========================================================
+
     private void notificarColumnaAutoVinculada(String columna) {
         PauseTransition delay = new PauseTransition(Duration.seconds(1.2));
         delay.setOnFinished(e -> TPSToast.mostrar(

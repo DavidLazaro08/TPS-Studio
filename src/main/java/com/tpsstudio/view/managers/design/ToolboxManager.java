@@ -1,7 +1,7 @@
 package com.tpsstudio.view.managers.design;
 
-import com.tpsstudio.model.enums.TipoCodigo;
 import com.tpsstudio.model.elements.FormaElemento;
+import com.tpsstudio.model.enums.TipoCodigo;
 import com.tpsstudio.util.AnimationHelper;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -12,10 +12,14 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+
 import java.util.function.Consumer;
 
 /**
- * Gestor especializado para el Panel de Herramientas (Toolbox).
+ * Gestiona el panel de herramientas del modo Diseño.
+ *
+ * Construye los botones para añadir textos, imágenes, fondos, códigos,
+ * formas geométricas y ejecutar la validación del diseño.
  */
 public class ToolboxManager {
 
@@ -23,7 +27,6 @@ public class ToolboxManager {
     private boolean shapesExpanded = false;
     private Button btnValidar;
 
-    // Callbacks
     private final Runnable onAddText;
     private final Runnable onAddImage;
     private final Runnable onAddBackground;
@@ -31,8 +34,8 @@ public class ToolboxManager {
     private final Consumer<FormaElemento.TipoForma> onAddShape;
     private final Runnable onValidateDesign;
 
-    public ToolboxManager(Runnable onAddText, 
-                          Runnable onAddImage, 
+    public ToolboxManager(Runnable onAddText,
+                          Runnable onAddImage,
                           Runnable onAddBackground,
                           Consumer<TipoCodigo> onAddCode,
                           Consumer<FormaElemento.TipoForma> onAddShape,
@@ -54,27 +57,58 @@ public class ToolboxManager {
         toolbox.setPadding(new Insets(14, 12, 14, 12));
         toolbox.getStyleClass().add("tools-panel");
 
-        VBox header = new VBox(2);
-        header.setPadding(new Insets(0, 0, 8, 0));
-        Label lblToolbox = new Label("Herramientas");
-        lblToolbox.getStyleClass().add("panel-title");
-        Label lblSubtitulo = new Label("Seleccione un elemento para añadir al lienzo");
-        lblSubtitulo.getStyleClass().add("panel-placeholder");
-        header.getChildren().addAll(lblToolbox, lblSubtitulo);
+        VBox header = buildHeader();
 
-        // ---- Texto ----
         Button btnTexto = makeToolButton("T", "tool-icon", "Texto", "tool-label", "tool-button");
         btnTexto.setOnAction(e -> { if (onAddText != null) onAddText.run(); });
 
-        // ---- Imagen ----
         Button btnImagen = makeToolButton("▣", "tool-icon", "Imagen", "tool-label", "tool-button");
         btnImagen.setOnAction(e -> { if (onAddImage != null) onAddImage.run(); });
 
-        // ---- Fondo ----
         Button btnFondo = makeToolButton("⬚", "tool-icon", "Fondo", "tool-label", "tool-button");
         btnFondo.setOnAction(e -> { if (onAddBackground != null) onAddBackground.run(); });
 
-        // ---- Acordeón de Códigos (QR + Barras) ----
+        VBox codesContainer = buildCodesAccordion();
+        VBox shapesSubMenu = buildShapesSubMenu();
+        Button btnToggleFormas = buildShapesToggle(shapesSubMenu);
+
+        btnValidar = makeToolButton("✓", "tool-icon", "Validar Diseño", "tool-label", "validate-button");
+        btnValidar.setOnAction(e -> { if (onValidateDesign != null) onValidateDesign.run(); });
+
+        toolbox.getChildren().addAll(
+                header,
+                btnTexto,
+                btnImagen,
+                btnFondo,
+                codesContainer,
+                btnToggleFormas,
+                shapesSubMenu,
+                new Separator(),
+                btnValidar
+        );
+
+        return toolbox;
+    }
+
+    // =====================================================
+    // Construcción de bloques
+    // =====================================================
+
+    private VBox buildHeader() {
+        VBox header = new VBox(2);
+        header.setPadding(new Insets(0, 0, 8, 0));
+
+        Label lblToolbox = new Label("Herramientas");
+        lblToolbox.getStyleClass().add("panel-title");
+
+        Label lblSubtitulo = new Label("Seleccione un elemento para añadir al lienzo");
+        lblSubtitulo.getStyleClass().add("panel-placeholder");
+
+        header.getChildren().addAll(lblToolbox, lblSubtitulo);
+        return header;
+    }
+
+    private VBox buildCodesAccordion() {
         VBox codesContainer = new VBox(0);
         VBox codesSubMenu = new VBox(1);
         codesSubMenu.getStyleClass().add("tool-subtools");
@@ -87,6 +121,7 @@ public class ToolboxManager {
 
         Label iconCodes = new Label("⦀");
         iconCodes.getStyleClass().add("tool-icon");
+
         Label textCodes = new Label("Códigos");
         textCodes.getStyleClass().add("tool-label");
 
@@ -103,7 +138,7 @@ public class ToolboxManager {
         btnToggleCodes.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         btnToggleCodes.setMaxWidth(Double.MAX_VALUE);
         btnToggleCodes.getStyleClass().add("tool-button");
-        
+
         btnToggleCodes.setOnAction(e -> {
             barcodesExpanded = !barcodesExpanded;
             iconExpanderC.setText(barcodesExpanded ? "\u25BE" : "\u25B8");
@@ -123,36 +158,50 @@ public class ToolboxManager {
         codesSubMenu.getChildren().add(separator);
 
         for (TipoCodigo tipo : TipoCodigo.values()) {
-            if (tipo == TipoCodigo.QR) continue; 
+            if (tipo == TipoCodigo.QR) continue;
+
             Button btnSub = makeSubToolButton("‖", tipo.getNombre());
             btnSub.setOnAction(e -> { if (onAddCode != null) onAddCode.accept(tipo); });
             codesSubMenu.getChildren().add(btnSub);
         }
 
         codesContainer.getChildren().addAll(btnToggleCodes, codesSubMenu);
+        return codesContainer;
+    }
 
-        // ---- Subherramientas de forma ----
+    private VBox buildShapesSubMenu() {
         VBox shapesSubMenu = new VBox(1);
         shapesSubMenu.getStyleClass().add("tool-subtools");
         shapesSubMenu.setVisible(shapesExpanded);
         shapesSubMenu.setManaged(shapesExpanded);
 
         Button btnRectangulo = makeSubToolButton("▭", "Rectángulo");
-        btnRectangulo.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.RECTANGULO); });
+        btnRectangulo.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.RECTANGULO);
+        });
+
         Button btnElipse = makeSubToolButton("◯", "Elipse");
-        btnElipse.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.ELIPSE); });
+        btnElipse.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.ELIPSE);
+        });
+
         Button btnLinea = makeSubToolButton("―", "Línea");
-        btnLinea.setOnAction(e -> { if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.LINEA); });
+        btnLinea.setOnAction(e -> {
+            if (onAddShape != null) onAddShape.accept(FormaElemento.TipoForma.LINEA);
+        });
 
         shapesSubMenu.getChildren().addAll(btnRectangulo, btnElipse, btnLinea);
+        return shapesSubMenu;
+    }
 
-        // ---- Dibujar Forma (acordeón) ----
+    private Button buildShapesToggle(VBox shapesSubMenu) {
         Label iconExpander = new Label(shapesExpanded ? "\u25BE" : "\u25B8");
         iconExpander.getStyleClass().add("tool-icon");
         iconExpander.setMinWidth(16);
 
         Label iconFormas = new Label("⬒");
         iconFormas.getStyleClass().add("tool-icon");
+
         Label textFormas = new Label("Dibujar Forma");
         textFormas.getStyleClass().add("tool-label");
 
@@ -168,29 +217,26 @@ public class ToolboxManager {
         btnToggleFormas.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         btnToggleFormas.setMaxWidth(Double.MAX_VALUE);
         btnToggleFormas.getStyleClass().add("tool-button");
+
         btnToggleFormas.setOnAction(e -> {
             shapesExpanded = !shapesExpanded;
             iconExpander.setText(shapesExpanded ? "\u25BE" : "\u25B8");
             AnimationHelper.animateAccordion(shapesSubMenu, shapesExpanded);
         });
 
-        // ---- Validar Diseño ----
-        btnValidar = makeToolButton("✓", "tool-icon", "Validar Diseño", "tool-label", "validate-button");
-        btnValidar.setOnAction(e -> { if (onValidateDesign != null) onValidateDesign.run(); });
-
-        toolbox.getChildren().addAll(
-                header, btnTexto, btnImagen, btnFondo,
-                codesContainer, btnToggleFormas, shapesSubMenu,
-                new Separator(), btnValidar
-        );
-        return toolbox;
+        return btnToggleFormas;
     }
 
+    // =====================================================
+    // Botones reutilizables
+    // =====================================================
+
     private Button makeToolButton(String iconText, String iconStyle,
-                                   String labelText, String labelStyle,
-                                   String buttonStyle) {
+                                  String labelText, String labelStyle,
+                                  String buttonStyle) {
         Label icon = new Label(iconText);
         icon.getStyleClass().add(iconStyle);
+
         Label label = new Label(labelText);
         label.getStyleClass().add(labelStyle);
 
@@ -203,12 +249,14 @@ public class ToolboxManager {
         btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.getStyleClass().add(buttonStyle);
+
         return btn;
     }
 
     private Button makeSubToolButton(String iconText, String labelText) {
         Label icon = new Label(iconText);
         icon.getStyleClass().add("tool-icon");
+
         Label label = new Label(labelText);
         label.getStyleClass().add("tool-label");
 
@@ -221,6 +269,7 @@ public class ToolboxManager {
         btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.getStyleClass().add("tool-subbutton");
+
         return btn;
     }
 }
