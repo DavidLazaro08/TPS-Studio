@@ -93,24 +93,24 @@ public abstract class BasePropertyHandler {
         lblPos.getStyleClass().add("prop-label");
 
         GridPane grid = new GridPane();
-        grid.setHgap(8); 
+        grid.setHgap(5); 
         grid.setVgap(0);
         grid.setPadding(new Insets(5, 0, 5, 0));
 
-        // Columnas con alineación a la IZQUIERDA pero anchos controlados para armonía
+        // Columnas
         ColumnConstraints col0 = new ColumnConstraints();
         col0.setHalignment(HPos.LEFT);
         col0.setMinWidth(20);
 
         ColumnConstraints col1 = new ColumnConstraints();
-        col1.setPrefWidth(75);
+        col1.setPrefWidth(70);
 
         ColumnConstraints col2 = new ColumnConstraints();
         col2.setHalignment(HPos.LEFT);
-        col2.setMinWidth(50); // Suficiente para "Ancho:" a la izquierda
-
+        col2.setMinWidth(55); 
+        
         ColumnConstraints col3 = new ColumnConstraints();
-        col3.setPrefWidth(75);
+        col3.setPrefWidth(70);
 
         grid.getColumnConstraints().addAll(col0, col1, col2, col3);
 
@@ -119,7 +119,7 @@ public abstract class BasePropertyHandler {
         txtW = createNumberField(elemento.getWidth(), "Ancho", elemento::setWidth);
         txtH = createNumberField(elemento.getHeight(), "Alto", elemento::setHeight);
         
-        String fieldStyle = "-fx-pref-width: 70px;";
+        String fieldStyle = "-fx-pref-width: 65px;";
         txtX.setStyle(fieldStyle); txtY.setStyle(fieldStyle);
         txtW.setStyle(fieldStyle); txtH.setStyle(fieldStyle);
 
@@ -127,17 +127,30 @@ public abstract class BasePropertyHandler {
         Label lblY = new Label("Y:");
         Label lblW = new Label("Ancho:");
         Label lblH = new Label("Alto:");
+        
+        // Espaciado entre bloques (Y y Alto bajan un poco)
+        Insets rowSpacing = new Insets(6, 0, 0, 0);
+        GridPane.setMargin(lblY, rowSpacing);
+        GridPane.setMargin(txtY, rowSpacing);
+        GridPane.setMargin(lblH, new Insets(6, 0, 0, 10)); // 6 top, 10 left
+        GridPane.setMargin(txtH, rowSpacing);
+
+        // Margen izquierdo para separar columnas
+        GridPane.setMargin(lblW, new Insets(0, 0, 0, 10));
 
         lblMmX = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getX()));
         lblMmY = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getY()));
         lblMmW = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getWidth()));
         lblMmH = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getHeight()));
 
-        Insets mmPadding = new Insets(1, 0, 8, 0); 
+        Insets mmPadding = new Insets(1, 0, 2, 0); 
         lblMmX.setPadding(mmPadding);
         lblMmY.setPadding(mmPadding);
         lblMmW.setPadding(mmPadding);
         lblMmH.setPadding(mmPadding);
+        
+        GridPane.setMargin(lblMmW, new Insets(0, 0, 0, 10));
+        GridPane.setMargin(lblMmH, new Insets(0, 0, 0, 10));
         
         lblMmX.getStyleClass().add("prop-label-mm");
         lblMmY.getStyleClass().add("prop-label-mm");
