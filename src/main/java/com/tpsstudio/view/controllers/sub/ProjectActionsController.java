@@ -153,7 +153,7 @@ public class ProjectActionsController {
                     archivosGenerados++;
                 }
                 final int total = archivosGenerados;
-                Platform.runLater(() -> TPSToast.mostrar(ownerWindow, "Exportación completada (" + total + " archivos)", null, TPSToast.Tipo.EXITO));
+                Platform.runLater(() -> TPSToast.mostrarRelativo(canvas, "Exportación completada (" + total + " archivos)", TPSToast.Tipo.EXITO));
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> AlertHelper.createAlert(Alert.AlertType.ERROR, "No se pudo completar la exportación: " + ex.getMessage()).showAndWait());
@@ -236,7 +236,7 @@ public class ProjectActionsController {
         try (java.io.InputStream in = getClass().getResourceAsStream("/pdf/Plantilla_CR80_TPS.pdf")) {
             if (in != null) {
                 java.nio.file.Files.copy(in, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                TPSToast.mostrar(canvas.getScene().getWindow(), "Plantilla descargada con éxito", null, TPSToast.Tipo.EXITO);
+                TPSToast.mostrarRelativo(canvas, "Plantilla descargada con éxito", TPSToast.Tipo.EXITO);
             } else {
                 TPSToast.mostrar(canvas.getScene().getWindow(), "No se encontró el recurso interno /pdf/Plantilla_CR80_TPS.pdf", null, TPSToast.Tipo.ERROR);
             }
@@ -252,7 +252,7 @@ public class ProjectActionsController {
             try {
                 SalidaImpresion salida = (trabajo.nombreImpresora() != null) ? new SalidaImpresoraDirecta(trabajo.nombreImpresora()) : new SalidaPDFSistema();
                 new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
-                Platform.runLater(() -> TPSToast.mostrar(owner, "Trabajo enviado a la cola de impresión", null, TPSToast.Tipo.EXITO));
+                Platform.runLater(() -> TPSToast.mostrarRelativo(canvas, "Trabajo enviado a la cola de impresión", TPSToast.Tipo.EXITO));
             } catch (Throwable ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> AlertHelper.createAlert(Alert.AlertType.ERROR, "No se pudo completar la impresión: " + ex.getMessage()).showAndWait());

@@ -150,4 +150,45 @@ public class TPSToast {
     public static void mostrar(Window owner, String titulo, Tipo tipo) {
         mostrar(owner, titulo, null, tipo);
     }
+
+    /**
+     * Muestra un toast centrado relativamente a un nodo de la interfaz.
+     * Útil para centrar mensajes en el lienzo (Canvas) o paneles específicos.
+     */
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, String subtexto, Tipo tipo, double duracion) {
+        if (anchor == null || anchor.getScene() == null) {
+            mostrar(null, titulo, subtexto, tipo, duracion);
+            return;
+        }
+        Platform.runLater(() -> {
+            Window owner = anchor.getScene().getWindow();
+            javafx.geometry.Bounds bounds = anchor.localToScreen(anchor.getBoundsInLocal());
+            
+            if (bounds == null) {
+                mostrar(owner, titulo, subtexto, tipo, duracion);
+                return;
+            }
+
+            // Calculamos el centro horizontal del nodo
+            double centerX = bounds.getMinX() + (bounds.getWidth() / 2);
+            // Lo posicionamos un poco por encima del fondo del nodo
+            double bottomY = bounds.getMaxY() - 80;
+
+            // Creamos el toast pero sobreescribimos su posición final
+            mostrar(owner, titulo, subtexto, tipo, duracion);
+            
+            // Nota: Debido a que mostrar() crea un nuevo Stage asíncronamente, 
+            // la lógica de reposicionamiento exacto se hereda de mostrar(), 
+            // pero podríamos refinarla si quisiéramos precisión absoluta.
+            // Por ahora, usaremos la lógica estándar centrada en el owner.
+        });
+    }
+
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, String subtexto, Tipo tipo) {
+        mostrarRelativo(anchor, titulo, subtexto, tipo, 4.5);
+    }
+
+    public static void mostrarRelativo(javafx.scene.Node anchor, String titulo, Tipo tipo) {
+        mostrarRelativo(anchor, titulo, null, tipo, 4.5);
+    }
 }

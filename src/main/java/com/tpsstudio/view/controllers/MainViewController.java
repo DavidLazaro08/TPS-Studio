@@ -252,7 +252,7 @@ public class MainViewController {
             if ("error".equals(tipo)) {
                 TPSToast.mostrar(owner, mensaje, null, TPSToast.Tipo.ERROR);
             } else {
-                TPSToast.mostrar(owner, mensaje, null, TPSToast.Tipo.EXITO);
+                TPSToast.mostrarRelativo(canvasContainer, mensaje, null, TPSToast.Tipo.EXITO);
             }
         });
 
@@ -369,8 +369,8 @@ public class MainViewController {
         modeManager.setOnToggleLock(elemento -> {
             elemento.setLocked(!elemento.isLocked());
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
-                // Reconstruir para que el icono de candado se actualice en la celda
-                modeManager.rebuildLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
+                // Refresco ligero sin reconstruir todo el panel
+                modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
             dibujarCanvas();
         });

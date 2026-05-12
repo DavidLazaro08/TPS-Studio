@@ -37,6 +37,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         txtContenido.setPrefHeight(24); // Altura compacta de una línea
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             texto.setContenido(newVal);
+            recalculateWidth(texto);
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
 
@@ -98,6 +99,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         cmbFuente.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 texto.setFontFamily(newVal);
+                recalculateWidth(texto);
                 if (onCanvasRedraw != null) onCanvasRedraw.run();
             }
         });
@@ -112,6 +114,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         spnSize.setPrefWidth(65);
         spnSize.valueProperty().addListener((obs, o, n) -> {
             texto.setFontSize(n);
+            recalculateWidth(texto);
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
 
@@ -187,5 +190,27 @@ public class TextPropertyHandler extends BasePropertyHandler {
         });
 
         container.getChildren().addAll(lblSeccion, cmbColumna);
+    }
+
+    /**
+     * Recalcula el ancho del cuadro delimitador basándose en el contenido real del texto,
+     * la fuente y el tamaño elegidos. Solo se aplica si el auto-ajuste y el salto de línea están desactivados.
+     */
+    private void recalculateWidth(TextoElemento texto) {
+        if (texto.isAutoAjustar() || texto.isSaltoLinea()) return;
+
+        javafx.scene.text.Text helper = new javafx.scene.text.Text(texto.getContenido());
+        helper.setFont(javafx.scene.text.Font.font(
+                texto.getFontFamily(),
+                texto.isNegrita() ? javafx.scene.text.FontWeight.BOLD : javafx.scene.text.FontWeight.NORMAL,
+                texto.isCursiva() ? javafx.scene.text.FontPosture.ITALIC : javafx.scene.text.FontPosture.REGULAR,
+                texto.getFontSize()
+        ));
+
+        double newWidth = helper.getLayoutBounds().getWidth() + 4;
+        if (newWidth > 5) {
+            texto.setWidth(newWidth);
+            updatePositionFields(texto);
+        }
     }
 }
