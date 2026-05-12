@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TPS Studio - Manual de Usuario</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+  @page { margin: 0; size: A4; }
+  @media print {
+    body { background: white !important; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: linear-gradient(135deg,#1a1d23 0%,#2d3250 50%,#1a1d23 100%) !important; }
+    .section, .toc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section-num, .note, .warning, .tip, .feature-card, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h3, h4, .note, .warning, .tip, .feature-card, .img-placeholder, tr { page-break-inside: avoid; break-inside: avoid; }
+    .two-col { display: block !important; }
+    .two-col > * { margin-bottom: 16px; }
+    table { page-break-inside: avoid; break-inside: avoid; }
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#f4f6f9;color:#1a1d23;font-size:14px;line-height:1.7}
+  .cover{background:linear-gradient(135deg,#1a1d23 0%,#2d3250 50%,#1a1d23 100%);color:white;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;page-break-after:always}
+  .cover .logo-box{width:90px;height:90px;background:linear-gradient(135deg,#4a9b7c,#8181f7);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 30px}
+  .cover h1{font-size:52px;font-weight:900;letter-spacing:-2px;margin-bottom:10px}
+  .cover h1 span{color:#4a9b7c}
+  .cover .subtitle{font-size:18px;color:#a0a5cc;margin-bottom:40px}
+  .cover .version{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50px;padding:8px 24px;font-size:13px;color:#8181f7;display:inline-block;margin-bottom:50px}
+  .cover .meta{color:#6b7280;font-size:13px;margin-top:40px}
+  .toc{background:white;padding:60px 80px;page-break-after:always}
+  .toc h2{font-size:28px;font-weight:700;color:#1a1d23;border-bottom:3px solid #4a9b7c;padding-bottom:12px;margin-bottom:30px}
+  .toc ol{list-style:none;counter-reset:toc}
+  .toc li{counter-increment:toc;padding:10px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px;font-size:14px}
+  .toc li::before{content:counter(toc,decimal-leading-zero);font-size:11px;font-weight:700;color:#4a9b7c;min-width:28px}
+  .toc li .dots{flex:1;border-bottom:1px dotted #ccc;height:1px;margin:0 8px}
+  .toc .page-ref{color:#6b7280;font-size:12px}
+  .toc .sub{padding-left:40px;font-size:13px;color:#4b5563}
+  .section{background:white;margin:0;padding:60px 80px;page-break-before:always}
+  .section-header{display:flex;align-items:center;gap:16px;margin-bottom:40px;padding-bottom:20px;border-bottom:2px solid #f0f2f5}
+  .section-num{background:linear-gradient(135deg,#4a9b7c,#3a8a6c);color:white;font-size:18px;font-weight:900;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .section h2{font-size:28px;font-weight:700;color:#1a1d23}
+  .section h3{font-size:18px;font-weight:600;color:#2d3250;margin:32px 0 12px;padding-left:12px;border-left:3px solid #4a9b7c}
+  .section h4{font-size:15px;font-weight:600;color:#374151;margin:20px 0 8px}
+  .section p{color:#4b5563;margin-bottom:14px}
+  .img-placeholder{background:#f8f9fc;border:2px dashed #cbd5e1;border-radius:12px;padding:20px;text-align:center;color:#94a3b8;margin:24px 0;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .img-placeholder .icon{font-size:36px;opacity:0.4}
+  .img-placeholder .label{font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+  .img-placeholder .desc{font-size:11px;color:#b0b8c4}
+  .note{background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #4a9b7c;border-radius:8px;padding:16px 20px;margin:20px 0}
+  .note strong{color:#166534}
+  .warning{background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:16px 20px;margin:20px 0}
+  .tip{background:#eff6ff;border:1px solid #93c5fd;border-left:4px solid #3b82f6;border-radius:8px;padding:16px 20px;margin:20px 0}
+  .steps{counter-reset:step;list-style:none;margin:16px 0}
+  .steps li{counter-increment:step;padding:12px 0 12px 52px;position:relative;border-bottom:1px solid #f5f5f5}
+  .steps li::before{content:counter(step);position:absolute;left:0;top:10px;background:#4a9b7c;color:white;font-size:12px;font-weight:700;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .kbd{display:inline-block;background:#f1f5f9;border:1px solid #cbd5e1;border-bottom:2px solid #94a3b8;border-radius:4px;padding:2px 8px;font-family:monospace;font-size:12px;color:#334155}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:20px 0}
+  .feature-card{background:#f8f9fc;border:1px solid #e5e7eb;border-radius:12px;padding:20px}
+  .feature-card h4{color:#2d3250;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .feature-card p{font-size:13px;color:#6b7280;margin:0}
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+  th{background:#f8f9fc;font-weight:600;padding:10px 14px;text-align:left;border-bottom:2px solid #e5e7eb;color:#374151}
+  td{padding:10px 14px;border-bottom:1px solid #f0f0f0;color:#4b5563}
+  tr:hover td{background:#fafbfd}
+  @media print{body{background:white}.section,.toc,.cover{box-shadow:none}}
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="cover">
+  <div class="logo-box">🪪</div>
+  <div class="version">v1.0 — 2025</div>
+  <h1>TPS <span>Studio</span></h1>
+  <p class="subtitle">Software profesional de diseño y producción de tarjetas de identificación</p>
+  <div class="img-placeholder" style="width:600px;max-width:90%;min-height:280px;border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);margin:40px auto">
+    <div class="icon">🖥</div>
+  </div>
+  <p class="meta">Manual de Usuario · David Gutiérrez · Grado Superior de Programación</p>
+</div>
+
+<!-- ÍNDICE -->
+<div class="toc">
+  <h2>📋 Índice de Contenidos</h2>
+  <ol>
+    <li><span>Introducción y requisitos del sistema</span><span class="dots"></span><span class="page-ref">3</span></li>
+    <li><span>Primeros pasos: instalación e inicio de sesión</span><span class="dots"></span><span class="page-ref">4</span></li>
+    <li><span>Pantalla principal y distribución de la interfaz</span><span class="dots"></span><span class="page-ref">5</span></li>
+    <li><span>Gestión de proyectos</span><span class="dots"></span><span class="page-ref">7</span></li>
+    <li class="sub"><span>Crear un nuevo proyecto</span><span class="dots"></span><span class="page-ref">7</span></li>
+    <li class="sub"><span>Abrir y editar proyectos existentes</span><span class="dots"></span><span class="page-ref">8</span></li>
+    <li class="sub"><span>Duplicar y eliminar proyectos</span><span class="dots"></span><span class="page-ref">9</span></li>
+    <li><span>Modo Diseño: el editor de tarjetas</span><span class="dots"></span><span class="page-ref">10</span></li>
+    <li class="sub"><span>El lienzo y el zoom</span><span class="dots"></span><span class="page-ref">10</span></li>
+    <li class="sub"><span>Añadir y configurar elementos</span><span class="dots"></span><span class="page-ref">11</span></li>
+    <li class="sub"><span>Capas y orden de los elementos</span><span class="dots"></span><span class="page-ref">14</span></li>
+    <li class="sub"><span>Frente y Dorso de la tarjeta</span><span class="dots"></span><span class="page-ref">15</span></li>
+    <li><span>Vinculación de datos variables (Excel / Access)</span><span class="dots"></span><span class="page-ref">16</span></li>
+    <li><span>Exportación a PDF</span><span class="dots"></span><span class="page-ref">18</span></li>
+    <li class="sub"><span>Mail-Merge (un PDF por registro)</span><span class="dots"></span><span class="page-ref">18</span></li>
+    <li class="sub"><span>Muestra de diseño A4</span><span class="dots"></span><span class="page-ref">19</span></li>
+    <li class="sub"><span>PDF para imprenta (con sangrado)</span><span class="dots"></span><span class="page-ref">20</span></li>
+    <li><span>Impresión directa</span><span class="dots"></span><span class="page-ref">21</span></li>
+    <li><span>Atajos de teclado</span><span class="dots"></span><span class="page-ref">22</span></li>
+    <li><span>Preguntas frecuentes y solución de problemas</span><span class="dots"></span><span class="page-ref">23</span></li>
+  </ol>
+</div>
+
+<!-- SECCIÓN 1: INTRODUCCIÓN -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Introducción y requisitos del sistema</h2>
+  </div>
+
+  <p><strong>TPS Studio</strong> es una aplicación de escritorio diseñada para la creación, gestión y producción en masa de tarjetas de identificación profesionales en formato CR80 (el mismo tamaño que una tarjeta de crédito estándar: 85,6 × 54 mm).</p>
+  <p>El programa permite diseñar tarjetas con texto, imágenes, códigos QR, códigos de barras y fondos gráficos; vincularlas a bases de datos externas (Excel, Access); y generar los documentos finales listos para imprimir o enviar a imprenta.</p>
+
+  <h3>¿Para quién está pensado?</h3>
+  <div class="two-col">
+    <div class="feature-card">
+      <h4>🏢 Empresas y organizaciones</h4>
+      <p>Producción en masa de carnets de empleado, tarjetas de acceso o credenciales de eventos con datos personalizados por registro.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🎓 Centros educativos</h4>
+      <p>Generación de carnets de estudiante vinculados a una base de datos con fotos individuales y datos del alumno.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🏥 Clínicas y hospitales</h4>
+      <p>Tarjetas de identificación de pacientes o personal sanitario con código QR o código de barras integrado.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🎪 Organizadores de eventos</h4>
+      <p>Acreditaciones personalizadas por asistente, con diseño profesional y exportación directa al PDF definitivo.</p>
+    </div>
+  </div>
+
+  <h3>Características principales</h3>
+  <ul style="list-style:disc;padding-left:24px;color:#4b5563">
+    <li style="margin-bottom:8px">Editor visual de tarjetas CR80 con zoom y guías de sangrado</li>
+    <li style="margin-bottom:8px">Soporte de elementos: Texto, Imagen, Forma geométrica, QR y Código de Barras</li>
+    <li style="margin-bottom:8px">Diseño de Frente y Dorso de la tarjeta de forma independiente</li>
+    <li style="margin-bottom:8px">Vinculación dinámica a archivos Excel (.xlsx) o Access (.accdb / .mdb)</li>
+    <li style="margin-bottom:8px">Fotos por registro: vincula una columna de tu Excel a una carpeta de imágenes</li>
+    <li style="margin-bottom:8px">Exportación a PDF en tres modalidades (Mail-Merge, Muestra A4, Imprenta)</li>
+    <li style="margin-bottom:8px">Impresión directa desde la aplicación</li>
+    <li style="margin-bottom:8px">Sistema de etiquetas y filtros para organizar proyectos</li>
+  </ul>
+
+  <h3>Requisitos del sistema</h3>
+  <table>
+    <tr><th>Componente</th><th>Requisito mínimo</th><th>Recomendado</th></tr>
+    <tr><td>Sistema operativo</td><td>Windows 10 64-bit</td><td>Windows 11</td></tr>
+    <tr><td>Java</td><td>JDK 21 o superior</td><td>JDK 21 LTS</td></tr>
+    <tr><td>Memoria RAM</td><td>4 GB</td><td>8 GB o más</td></tr>
+    <tr><td>Espacio en disco</td><td>500 MB libres</td><td>2 GB libres</td></tr>
+    <tr><td>Resolución de pantalla</td><td>1280 × 720</td><td>1920 × 1080 o superior</td></tr>
+    <tr><td>Microsoft Office</td><td>No obligatorio</td><td>Para archivos .accdb</td></tr>
+  </table>
+
+  <div class="note">
+    <strong>📌 Nota:</strong> TPS Studio no requiere conexión a Internet para funcionar. Todas las operaciones son locales, lo que garantiza la privacidad de los datos de sus clientes.
+  </div>
+</div>
+
+<!-- SECCIÓN 2: PRIMEROS PASOS -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Primeros pasos: instalación e inicio de sesión</h2>
+  </div>
+
+  <h3>Instalación</h3>
+  <ol class="steps">
+    <li>Descarga el archivo <strong>TPS_Studio_Setup.exe</strong> desde la ubicación indicada por tu administrador.</li>
+    <li>Ejecuta el instalador con doble clic y sigue los pasos del asistente.</li>
+    <li>Asegúrate de tener instalado <strong>Java 21</strong> en tu equipo. Si no lo tienes, el instalador te redirigirá a la descarga oficial.</li>
+    <li>Una vez completada la instalación, aparecerá el icono de TPS Studio en el escritorio.</li>
+  </ol>
+
+  <div class="img-placeholder">
+    <div class="icon">🖼</div>
+  </div>
+
+  <h3>Inicio de sesión</h3>
+  <p>Al abrir TPS Studio por primera vez, verás la <strong>pantalla de inicio de sesión</strong>. Introduce las credenciales que te haya proporcionado tu administrador.</p>
+
+  <div class="two-col">
+    <div>
+      <h4>Usuario Estándar</h4>
+      <p>Acceso completo al editor de diseño y exportación. Puede crear, editar y exportar sus propios proyectos.</p>
+    </div>
+    <div>
+      <h4>Administrador</h4>
+      <p>Además del acceso estándar, puede ver y gestionar todos los proyectos del sistema y acceder a la configuración global.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>🔐 Primer inicio:</strong> Si es la primera vez que usas la aplicación, usa las credenciales por defecto: usuario <code>admin</code> y contraseña <code>admin</code>. Cámbialas inmediatamente desde el panel de configuración.
+  </div>
+</div>
+
+<!-- SECCIÓN 3: INTERFAZ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>Pantalla principal y distribución de la interfaz</h2>
+  </div>
+
+  <p>La interfaz de TPS Studio está organizada en dos grandes modos de trabajo que se alternan fácilmente: el <strong>Modo Producción</strong> (gestión de proyectos) y el <strong>Modo Diseño</strong> (editor de la tarjeta).</p>
+
+  <div class="img-placeholder" style="min-height:320px">
+    <div class="icon">🖥</div>
+  </div>
+
+  <h3>Barra superior (Toolbar)</h3>
+  <p>Contiene los controles de acción más frecuentes, organizados en grupos:</p>
+  <table>
+    <tr><th>Grupo</th><th>Controles disponibles</th></tr>
+    <tr><td>📁 Proyecto</td><td>Nuevo, Abrir, Guardar, Duplicar</td></tr>
+    <tr><td>➕ Añadir elemento</td><td>Texto, Imagen, QR, Código de barras, Forma, Fondo</td></tr>
+    <tr><td>🔍 Vista</td><td>Zoom +/−, Ajustar a pantalla, Mostrar/ocultar guías</td></tr>
+    <tr><td>📄 Exportar</td><td>Exportar PDF, Imprimir</td></tr>
+    <tr><td>🔄 Cara activa</td><td>Alternar entre Frente y Dorso de la tarjeta</td></tr>
+  </table>
+
+  <h3>Panel izquierdo</h3>
+  <p>Contiene dos paneles apilados verticalmente:</p>
+  <div class="two-col">
+    <div class="feature-card">
+      <h4>🗂 Capas</h4>
+      <p>Lista todos los elementos que hay en el lienzo, en orden de profundidad. Permite seleccionar, ocultar o reordenar elementos sin usar el ratón sobre el lienzo.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🧰 Caja de herramientas</h4>
+      <p>Acceso rápido para añadir cualquier tipo de elemento al diseño con un solo clic, con una breve descripción de cada uno.</p>
+    </div>
+  </div>
+
+  <h3>El lienzo central</h3>
+  <p>Es el área de diseño donde se representa la tarjeta a escala. Incluye guías visuales opcionales:</p>
+  <ul style="list-style:disc;padding-left:24px;color:#4b5563">
+    <li style="margin-bottom:6px"><strong>Línea roja (sangrado):</strong> zona que puede cortarse en la impresión. Los elementos importantes no deben entrar aquí.</li>
+    <li style="margin-bottom:6px"><strong>Línea verde (margen de seguridad):</strong> zona interior de máxima seguridad. El texto y elementos clave deben quedar dentro.</li>
+    <li style="margin-bottom:6px"><strong>Línea gris (borde real de la tarjeta):</strong> el límite exacto del CR80.</li>
+  </ul>
+
+  <div class="img-placeholder">
+    <div class="icon">📐</div>
+  </div>
+
+  <h3>Panel derecho (Propiedades)</h3>
+  <p>Aparece automáticamente al seleccionar un elemento. Sus controles cambian según el tipo de elemento seleccionado (texto, imagen, forma, código…). Permite ajustar posición, tamaño, colores, fuente y configuración de datos variables.</p>
+
+  <div class="tip">
+    <strong>💡 Consejo:</strong> Puedes ocultar los paneles laterales haciendo clic en su borde o usando los atajos de teclado para ganar espacio en el lienzo.
+  </div>
+</div>
+
+<!-- SECCIÓN 4: GESTIÓN DE PROYECTOS -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Gestión de proyectos</h2>
+  </div>
+
+  <p>En el <strong>Modo Producción</strong> puedes ver todos tus proyectos y acceder a las opciones de gestión. Cada proyecto representa un diseño de tarjeta diferente (un cliente, un evento, un tipo de credencial…).</p>
+
+  <div class="img-placeholder">
+    <div class="icon">📂</div>
+  </div>
+
+  <h3>Crear un nuevo proyecto</h3>
+  <ol class="steps">
+    <li>Haz clic en el botón <strong>"+ Nuevo Proyecto"</strong> de la barra superior o usa el atajo <span class="kbd">Ctrl</span> + <span class="kbd">N</span>.</li>
+    <li>Se abrirá el diálogo de creación. Rellena el <strong>nombre del proyecto</strong> y los datos del cliente (empresa, contacto).</li>
+    <li>Elige la <strong>orientación</strong> de la tarjeta: Horizontal (paisaje) o Vertical (retrato).</li>
+    <li>Opcionalmente, selecciona la <strong>ubicación en disco</strong> donde se guardará la carpeta del proyecto. Si no lo haces, se usará la carpeta por defecto.</li>
+    <li>Haz clic en <strong>"Crear"</strong>. El proyecto se crea con su estructura de carpetas y se abre automáticamente en el editor.</li>
+  </ol>
+
+  <div class="img-placeholder">
+    <div class="icon">🆕</div>
+  </div>
+
+  <div class="note">
+    <strong>📁 Estructura de carpetas:</strong> Al crear un proyecto, TPS Studio genera automáticamente una carpeta con el nombre del proyecto que contiene las subcarpetas <code>/Fotos</code> (para imágenes de personas) y <code>/Fondos</code> (para imágenes de fondo). Esto mantiene el proyecto portable y organizado.
+  </div>
+
+  <h3>Abrir y editar un proyecto existente</h3>
+  <p>Hay tres formas de abrir un proyecto:</p>
+  <ul style="list-style:disc;padding-left:24px;color:#4b5563">
+    <li style="margin-bottom:8px"><strong>Desde la lista de proyectos recientes:</strong> en la pantalla de inicio se muestran los últimos proyectos abiertos. Haz doble clic en uno para abrirlo.</li>
+    <li style="margin-bottom:8px"><strong>Desde el explorador de archivos:</strong> usa el botón "Abrir" de la barra superior y navega hasta el archivo <code>.tps</code> del proyecto.</li>
+    <li style="margin-bottom:8px"><strong>Desde la lista del Modo Producción:</strong> haz clic en la tarjeta del proyecto y luego en "Diseñar".</li>
+  </ul>
+
+  <p>Para <strong>editar los datos</strong> de un proyecto (nombre, cliente, base de datos vinculada), haz clic derecho sobre él en la lista y selecciona <strong>"Editar"</strong>, o usa el botón con icono de lápiz.</p>
+
+  <h3>Duplicar y eliminar proyectos</h3>
+  <p><strong>Duplicar:</strong> crea una copia completa del proyecto (diseño y archivos) con un nombre diferente. Es útil cuando quieres crear una variante de un diseño existente sin modificar el original.</p>
+
+  <div class="warning">
+    <strong>⚠️ Atención:</strong> La opción "Eliminar" del menú <strong>no borra los archivos del disco</strong>. Simplemente elimina el proyecto de la lista de TPS Studio. Para borrar los archivos físicamente, deberás hacerlo manualmente desde el explorador de Windows.
+  </div>
+</div>
+
+</body>
+</html>

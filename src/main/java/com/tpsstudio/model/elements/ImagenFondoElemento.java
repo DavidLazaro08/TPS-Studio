@@ -4,36 +4,48 @@ import com.tpsstudio.model.enums.FondoFitMode;
 import javafx.scene.image.Image;
 
 /**
- * Elemento de fondo para la tarjeta CR80
- * Siempre bloqueado, siempre al fondo (z-order -1000)
+ * Elemento de fondo de la tarjeta.
+ *
+ * Representa la imagen base del diseño y se ajusta según el modo elegido:
+ * con sangre o al tamaño final CR80.
  */
 public class ImagenFondoElemento extends Elemento {
 
     private String rutaArchivo;
     private Image imagen;
-    private FondoFitMode fitMode; // BLEED = con sangre, FINAL = sin sangre
+    private FondoFitMode fitMode;
 
-    public ImagenFondoElemento(String rutaArchivo, Image imagen, double cardWidth, double cardHeight,
-            FondoFitMode fitMode) {
+    // =====================================================
+    // Constructor
+    // =====================================================
+
+    public ImagenFondoElemento(String rutaArchivo,
+                               Image imagen,
+                               double cardWidth,
+                               double cardHeight,
+                               FondoFitMode fitMode) {
+
         super("[Fondo]", 0, 0, cardWidth, cardHeight);
+
         this.rutaArchivo = rutaArchivo;
         this.imagen = imagen;
-        this.fitMode = fitMode != null ? fitMode : FondoFitMode.BLEED; // Por defecto con sangrado
-        this.locked = true; // Siempre bloqueado
+        this.fitMode = fitMode != null ? fitMode : FondoFitMode.BLEED;
+
+        this.locked = true;
     }
 
-    /**
-     * Ajusta el tamaño del fondo según el modo de ajuste
-     */
+    // =====================================================
+    // Ajuste de tamaño
+    // =====================================================
+
     public void ajustarATamaño(double cardWidth, double cardHeight, double bleedPx) {
         if (fitMode == FondoFitMode.BLEED) {
-            // Con sangrado: cubre CR80 + bleed
             this.x = -bleedPx;
             this.y = -bleedPx;
             this.width = cardWidth + (bleedPx * 2);
             this.height = cardHeight + (bleedPx * 2);
+
         } else {
-            // Sin sangrado: solo CR80 final
             this.x = 0;
             this.y = 0;
             this.width = cardWidth;
@@ -41,7 +53,10 @@ public class ImagenFondoElemento extends Elemento {
         }
     }
 
-    // Getters y setters
+    // =====================================================
+    // Archivo e imagen
+    // =====================================================
+
     public String getRutaArchivo() {
         return rutaArchivo;
     }
@@ -58,6 +73,10 @@ public class ImagenFondoElemento extends Elemento {
         this.imagen = imagen;
     }
 
+    // =====================================================
+    // Modo de ajuste
+    // =====================================================
+
     public FondoFitMode getFitMode() {
         return fitMode;
     }
@@ -66,9 +85,10 @@ public class ImagenFondoElemento extends Elemento {
         this.fitMode = fitMode;
     }
 
-    /**
-     * Z-order siempre al fondo
-     */
+    // =====================================================
+    // Orden visual
+    // =====================================================
+
     public int getZOrder() {
         return -1000;
     }

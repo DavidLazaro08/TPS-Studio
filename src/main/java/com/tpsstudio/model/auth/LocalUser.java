@@ -4,14 +4,23 @@ import java.time.LocalDateTime;
 
 /**
  * Representa un usuario local registrado tras la activación.
+ *
+ * En esta versión académica la contraseña se almacena en local para simular
+ * un sistema de acceso sencillo.
  */
 public class LocalUser {
+
     private String username;
     private String email;
-    private String password; // En un sistema real deberia ir hasheada
+    private String password;
     private LocalDateTime registrationDate;
 
-    public LocalUser() {}
+    // =====================================================
+    // Constructores
+    // =====================================================
+
+    public LocalUser() {
+    }
 
     public LocalUser(String username, String email, String password) {
         this.username = username;
@@ -20,16 +29,39 @@ public class LocalUser {
         this.registrationDate = LocalDateTime.now();
     }
 
-    // Getters y Setters
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    // =====================================================
+    // Getters y setters
+    // =====================================================
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getUsername() {
+        return username;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    public LocalDateTime getRegistrationDate() { return registrationDate; }
-    public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public LocalDateTime getRegistrationDate() {
+        return registrationDate;
+    }
+
+    public void setRegistrationDate(LocalDateTime registrationDate) {
+        this.registrationDate = registrationDate;
+    }
 }

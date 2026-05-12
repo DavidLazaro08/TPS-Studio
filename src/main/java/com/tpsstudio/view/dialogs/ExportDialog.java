@@ -35,7 +35,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
     // Estado interno de la prueba (configurada mediante PruebaConfigDialog)
     private PruebaConfigDialog.PruebaConfig configPrueba = null;
 
-    public ExportDialog(Window owner, int totalRegistrosBD, String nombreProyecto) {
+    public ExportDialog(Window owner, int totalRegistrosBD, com.tpsstudio.model.project.Proyecto proyecto) {
         initOwner(owner);
         setTitle("Exportar");
         setHeaderText("¿Qué deseas generar?");
@@ -43,6 +43,9 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         getDialogPane().getStylesheets().add(CSS);
         getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.OK);
         ((Button) getDialogPane().lookupButton(ButtonType.OK)).setText("Generar");
+
+        boolean tieneDorso = proyecto != null
+                && (!proyecto.getElementosDorso().isEmpty() || proyecto.getFondoDorso() != null);
 
         VBox root = new VBox(14);
         root.setPadding(new Insets(20));
@@ -59,7 +62,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         Button btnConfigurarMailMerge = new Button("⚙ Configurar...");
 
         final String[] rangoFilasVal = { "TODOS" };
-        final boolean[] imprimirDorsoVal = { true };
+        final boolean[] imprimirDorsoVal = { tieneDorso };
         final boolean[] sinSangreVal = { false };
 
         btnConfigurarMailMerge.setOnAction(e -> {
@@ -81,14 +84,21 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
             VBox boxRango = new VBox(4, new Label("Registros a exportar:"), txtMMRango, lblRangoHint);
 
             ToggleGroup tgComp = new ToggleGroup();
-            RadioButton rbMMAnverso = new RadioButton("Solo Anverso");
-            RadioButton rbMMAnversoReverso = new RadioButton("Anverso + Reverso");
-            rbMMAnverso.setToggleGroup(tgComp);
-            rbMMAnversoReverso.setToggleGroup(tgComp);
-            if (imprimirDorsoVal[0])
-                rbMMAnversoReverso.setSelected(true);
-            else
-                rbMMAnverso.setSelected(true);
+            RadioButton rbMMFrente = new RadioButton("Solo Frente");
+            RadioButton rbMMFrenteDorso = new RadioButton("Frente + Dorso");
+            rbMMFrente.setToggleGroup(tgComp);
+            rbMMFrenteDorso.setToggleGroup(tgComp);
+
+            if (!tieneDorso) {
+                rbMMFrenteDorso.setDisable(true);
+                Tooltip.install(rbMMFrenteDorso, new Tooltip("Este proyecto no tiene diseño de dorso."));
+                rbMMFrente.setSelected(true);
+            } else {
+                if (imprimirDorsoVal[0])
+                    rbMMFrenteDorso.setSelected(true);
+                else
+                    rbMMFrente.setSelected(true);
+            }
 
             ToggleGroup tgSang = new ToggleGroup();
             RadioButton rbMMConSangre = new RadioButton("Con sangre (imprenta)");
@@ -100,7 +110,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
             else
                 rbMMConSangre.setSelected(true);
 
-            HBox hbComp = new HBox(20, rbMMAnverso, rbMMAnversoReverso);
+            HBox hbComp = new HBox(20, rbMMFrente, rbMMFrenteDorso);
             HBox hbSang = new HBox(20, rbMMConSangre, rbMMSinSangre);
 
             VBox dlgBox = new VBox(20,
@@ -113,7 +123,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
             dlg.showAndWait().ifPresent(res -> {
                 if (res == ButtonType.OK) {
                     rangoFilasVal[0] = txtMMRango.getText().trim().isEmpty() ? "TODOS" : txtMMRango.getText().trim();
-                    imprimirDorsoVal[0] = rbMMAnversoReverso.isSelected();
+                    imprimirDorsoVal[0] = rbMMFrenteDorso.isSelected();
                     sinSangreVal[0] = rbMMSinSangre.isSelected();
                     btnConfigurarMailMerge.setText("⚙ Configurado ✔");
                 }
@@ -137,7 +147,7 @@ public class ExportDialog extends Dialog<ExportDialog.ExportConfig> {
         Button btnConfigurarPrueba = new Button("⚙ Configurar...");
         btnConfigurarPrueba.setDisable(true);
         btnConfigurarPrueba.setOnAction(e -> {
-            PruebaConfigDialog cfd = new PruebaConfigDialog(owner, nombreProyecto);
+            PruebaConfigDialog cfd = new PruebaConfigDialog(owner, proyecto.getNombre());
             cfd.showAndWait().ifPresent(c -> {
                 configPrueba = c;
                 btnConfigurarPrueba.setText("⚙ Configurado ✔");

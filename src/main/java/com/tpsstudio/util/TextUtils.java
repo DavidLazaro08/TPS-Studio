@@ -75,4 +75,11 @@ public class TextUtils {
         }
         return finalLines;
     }
+
+    public static double getTextWidth(String text, Font font) {
+        if (text == null || text.isEmpty()) return 0;
+        javafx.scene.text.Text helper = new javafx.scene.text.Text(text);
+        helper.setFont(font);
+        return helper.getLayoutBounds().getWidth();
+    }
 }

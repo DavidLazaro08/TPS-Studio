@@ -1,18 +1,27 @@
 package com.tpsstudio.model.elements;
 
 /**
- * Clase base abstracta para elementos gráficos en la tarjeta CR80
+ * Clase base para todos los elementos gráficos colocados sobre la tarjeta.
+ *
+ * Define posición, tamaño, visibilidad, bloqueo y nombre común para textos,
+ * imágenes, formas, fondos y códigos.
  */
 public abstract class Elemento {
 
-    protected double x; // Posición X en píxeles
-    protected double y; // Posición Y en píxeles
-    protected double width; // Ancho en píxeles
-    protected double height; // Alto en píxeles
-    protected boolean visible; // Visible en el canvas
-    protected boolean locked; // Bloqueado (no editable)
-    protected String nombre; // Nombre del elemento
-    protected String etiqueta; // Etiqueta opcional: "NOMBRE", "Nº SOCIO", "FOTO CARNET", etc.
+    protected double x;
+    protected double y;
+    protected double width;
+    protected double height;
+
+    protected boolean visible;
+    protected boolean locked;
+
+    protected String nombre;
+    protected String etiqueta;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public Elemento(String nombre, double x, double y, double width, double height) {
         this.nombre = nombre;
@@ -24,7 +33,10 @@ public abstract class Elemento {
         this.locked = false;
     }
 
-    // Getters y setters
+    // =====================================================
+    // Posición y tamaño
+    // =====================================================
+
     public double getX() {
         return x;
     }
@@ -57,6 +69,10 @@ public abstract class Elemento {
         this.height = height;
     }
 
+    // =====================================================
+    // Estado
+    // =====================================================
+
     public boolean isVisible() {
         return visible;
     }
@@ -72,6 +88,10 @@ public abstract class Elemento {
     public void setLocked(boolean locked) {
         this.locked = locked;
     }
+
+    // =====================================================
+    // Identificación
+    // =====================================================
 
     public String getNombre() {
         return nombre;
@@ -89,9 +109,10 @@ public abstract class Elemento {
         this.etiqueta = etiqueta;
     }
 
-    /**
-     * Verifica si un punto está dentro del elemento
-     */
+    // =====================================================
+    // Utilidades
+    // =====================================================
+
     public boolean contains(double px, double py) {
         return px >= x && px <= x + width && py >= y && py <= y + height;
     }
@@ -101,6 +122,7 @@ public abstract class Elemento {
         if (etiqueta != null && !etiqueta.isEmpty()) {
             return etiqueta;
         }
+
         return nombre;
     }
 }

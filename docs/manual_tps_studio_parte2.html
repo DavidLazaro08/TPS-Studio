@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TPS Studio - Manual Parte 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+  @page { margin: 15mm 20mm; size: A4; }
+  @media print {
+    body { background: white !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h3, h4, .note, .warning, .tip, .feature-card, .img-placeholder, tr, table { page-break-inside: avoid; break-inside: avoid; }
+    .section { page-break-before: always; break-before: page; }
+    .two-col { display: block !important; }
+    .two-col > * { margin-bottom: 16px; }
+  }
+  * { margin:0; padding:0; box-sizing:border-box }
+  body { font-family:'Inter',sans-serif; background:#f4f6f9; color:#1a1d23; font-size:14px; line-height:1.7 }
+  .section { background:white; padding:50px 70px; margin-bottom:2px }
+  .section-header { display:flex; align-items:center; gap:16px; margin-bottom:36px; padding-bottom:16px; border-bottom:2px solid #f0f2f5 }
+  .section-num { background:linear-gradient(135deg,#4a9b7c,#3a8a6c); color:white; font-size:18px; font-weight:900; width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+  .section h2 { font-size:26px; font-weight:700 }
+  .section h3 { font-size:17px; font-weight:600; color:#2d3250; margin:28px 0 10px; padding-left:12px; border-left:3px solid #4a9b7c }
+  .section h4 { font-size:14px; font-weight:600; color:#374151; margin:18px 0 6px }
+  .section p { color:#4b5563; margin-bottom:12px }
+  .img-placeholder { background:#f8f9fc; border:2px dashed #cbd5e1; border-radius:12px; padding:20px; text-align:center; color:#94a3b8; margin:20px 0; min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px }
+  .img-placeholder .icon { font-size:32px; opacity:0.4 }
+  .img-placeholder .label { font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase }
+  .img-placeholder .desc { font-size:11px; color:#b0b8c4 }
+  .note { background:#f0fdf4; border:1px solid #86efac; border-left:4px solid #4a9b7c; border-radius:8px; padding:14px 18px; margin:18px 0 }
+  .warning { background:#fffbeb; border:1px solid #fcd34d; border-left:4px solid #f59e0b; border-radius:8px; padding:14px 18px; margin:18px 0 }
+  .tip { background:#eff6ff; border:1px solid #93c5fd; border-left:4px solid #3b82f6; border-radius:8px; padding:14px 18px; margin:18px 0 }
+  .steps { counter-reset:step; list-style:none; margin:14px 0 }
+  .steps li { counter-increment:step; padding:10px 0 10px 48px; position:relative; border-bottom:1px solid #f5f5f5 }
+  .steps li::before { content:counter(step); position:absolute; left:0; top:8px; background:#4a9b7c; color:white; font-size:11px; font-weight:700; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center }
+  .kbd { display:inline-block; background:#f1f5f9; border:1px solid #cbd5e1; border-bottom:2px solid #94a3b8; border-radius:4px; padding:2px 8px; font-family:monospace; font-size:11px; color:#334155 }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:16px 0 }
+  .feature-card { background:#f8f9fc; border:1px solid #e5e7eb; border-radius:10px; padding:18px }
+  .feature-card h4 { color:#2d3250; margin-bottom:6px }
+  .feature-card p { font-size:13px; color:#6b7280; margin:0 }
+  table { width:100%; border-collapse:collapse; margin:18px 0; font-size:13px }
+  th { background:#f8f9fc; font-weight:600; padding:10px 12px; text-align:left; border-bottom:2px solid #e5e7eb; color:#374151 }
+  td { padding:9px 12px; border-bottom:1px solid #f0f0f0; color:#4b5563 }
+  ul.lista { list-style:disc; padding-left:22px; color:#4b5563 }
+  ul.lista li { margin-bottom:7px }
+  .badge { display:inline-block; background:#e0fdf4; color:#065f46; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; margin-right:4px }
+</style>
+</head>
+<body>
+
+<!-- SECCIÓN 5: MODO DISEÑO -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Modo Diseño: el editor de tarjetas</h2>
+  </div>
+
+  <p>El <strong>Modo Diseño</strong> es el corazón de TPS Studio. Aquí construyes visualmente tu tarjeta arrastrando, redimensionando y configurando cada elemento hasta conseguir exactamente el resultado que buscas.</p>
+
+  <div class="img-placeholder" style="min-height:260px">
+    <div class="icon">🎨</div>
+  </div>
+
+  <h3>El lienzo y el zoom</h3>
+  <p>El lienzo muestra la tarjeta a escala real ajustada a la pantalla. Puedes acercar y alejar la vista para trabajar con más precisión:</p>
+  <table>
+    <tr><th>Acción</th><th>Atajo</th><th>Resultado</th></tr>
+    <tr><td>Zoom in</td><td><span class="kbd">Ctrl</span> + <span class="kbd">+</span> o rueda del ratón ↑</td><td>Acerca la vista</td></tr>
+    <tr><td>Zoom out</td><td><span class="kbd">Ctrl</span> + <span class="kbd">-</span> o rueda del ratón ↓</td><td>Aleja la vista</td></tr>
+    <tr><td>Zoom 100%</td><td><span class="kbd">Ctrl</span> + <span class="kbd">0</span></td><td>Vista a tamaño real</td></tr>
+    <tr><td>Ajustar a ventana</td><td><span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">F</span></td><td>Encuadra la tarjeta en pantalla</td></tr>
+  </table>
+
+  <h3>Frente y Dorso de la tarjeta</h3>
+  <p>Cada proyecto puede tener diseño en ambas caras. Usa el selector de cara en la barra superior para alternar entre <strong>Frente</strong> y <strong>Dorso</strong>. Los elementos de cada cara son completamente independientes.</p>
+
+  <div class="note">
+    <strong>📌 Nota:</strong> Si no diseñas nada en el Dorso, las opciones de exportación e impresión a doble cara se desactivarán automáticamente para evitar errores.
+  </div>
+
+  <div class="img-placeholder">
+    <div class="icon">🔄</div>
+  </div>
+
+  <h3>Seleccionar, mover y redimensionar elementos</h3>
+  <ul class="lista">
+    <li><strong>Seleccionar:</strong> haz clic sobre cualquier elemento del lienzo. Aparecerá un borde verde con puntos de control en las esquinas.</li>
+    <li><strong>Mover:</strong> haz clic y arrastra el elemento a la nueva posición. También puedes usar las teclas de dirección (↑↓←→) para moverlo pixel a pixel.</li>
+    <li><strong>Redimensionar:</strong> arrastra cualquiera de los puntos de control de las esquinas.</li>
+    <li><strong>Deseleccionar:</strong> haz clic en cualquier zona vacía del lienzo.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>💡 Consejo:</strong> Si quieres ajustar la posición o el tamaño con exactitud, introduce los valores numéricos directamente en el panel de propiedades de la derecha.
+  </div>
+
+  <h3>Añadir elementos al diseño</h3>
+  <p>Hay dos formas de añadir elementos:</p>
+  <ul class="lista">
+    <li>Desde la <strong>Caja de herramientas</strong> del panel izquierdo (clic en el tipo de elemento).</li>
+    <li>Desde la <strong>barra superior</strong>, sección "Añadir elemento".</li>
+  </ul>
+  <p>El elemento aparece en el centro del lienzo listo para mover y configurar.</p>
+
+  <h3>El panel de Propiedades</h3>
+  <p>Al seleccionar un elemento, el panel derecho muestra sus propiedades específicas. Cada tipo de elemento tiene sus propias opciones:</p>
+
+  <div class="two-col">
+    <div class="feature-card">
+      <h4>🔤 Texto</h4>
+      <p>Fuente, tamaño, color, alineación, negrita, cursiva, salto de línea y auto-ajuste al ancho.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🖼 Imagen</h4>
+      <p>Selección de archivo, opacidad, y vinculación a columna de foto de la base de datos.</p>
+    </div>
+    <div class="feature-card">
+      <h4>⬛ Forma</h4>
+      <p>Color de relleno, color y grosor de borde, radio de curvatura y opacidad.</p>
+    </div>
+    <div class="feature-card">
+      <h4>📷 Código QR / Barras</h4>
+      <p>Contenido del código, tipo (QR, Code128, EAN…), colores y vinculación a datos variables.</p>
+    </div>
+  </div>
+
+  <h3>Capas y orden de los elementos</h3>
+  <p>El panel de <strong>Capas</strong> (panel izquierdo, parte superior) muestra todos los elementos ordenados por profundidad: el elemento que aparece primero en la lista está encima en el lienzo.</p>
+
+  <div class="img-placeholder">
+    <div class="icon">📋</div>
+  </div>
+
+  <p>Desde el panel de capas puedes:</p>
+  <ul class="lista">
+    <li>Seleccionar un elemento haciendo clic en su nombre</li>
+    <li><strong>Reordenar</strong> arrastrando los elementos de la lista arriba o abajo</li>
+    <li><strong>Ocultar/mostrar</strong> un elemento con el icono del ojo 👁</li>
+    <li><strong>Eliminar</strong> un elemento con el icono de papelera</li>
+  </ul>
+</div>
+
+<!-- SECCIÓN 6: DATOS VARIABLES -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Vinculación de datos variables (Excel / Access)</h2>
+  </div>
+
+  <p>La vinculación de datos es la característica más potente de TPS Studio. Permite que los elementos de texto, imagen y código del diseño se rellenen automáticamente con los datos de cada fila de tu base de datos, generando tarjetas completamente personalizadas en masa.</p>
+
+  <h3>Formatos de datos admitidos</h3>
+  <div class="two-col">
+    <div class="feature-card">
+      <h4>📊 Excel (.xlsx, .xls)</h4>
+      <p>La opción más habitual. La primera fila debe contener los nombres de las columnas (cabeceras). Cada fila siguiente es un registro (una persona, un empleado, etc.).</p>
+    </div>
+    <div class="feature-card">
+      <h4>🗄 Access (.accdb, .mdb)</h4>
+      <p>Para bases de datos más grandes. Requiere el driver de Microsoft Office instalado en el equipo.</p>
+    </div>
+  </div>
+
+  <h3>Vincular una base de datos al proyecto</h3>
+  <ol class="steps">
+    <li>Abre el proyecto en el editor.</li>
+    <li>Ve a <strong>Proyecto → Editar datos del proyecto</strong> (o haz clic derecho en el proyecto desde el modo Producción → Editar).</li>
+    <li>En el campo <strong>"Base de datos"</strong>, haz clic en <strong>"Seleccionar archivo"</strong> y elige tu archivo Excel o Access.</li>
+    <li>Haz clic en <strong>"Guardar"</strong>. TPS Studio cargará las columnas automáticamente.</li>
+  </ol>
+
+  <div class="img-placeholder">
+    <div class="icon">🔗</div>
+  </div>
+
+  <h3>Vincular un texto a una columna</h3>
+  <ol class="steps">
+    <li>Selecciona el elemento de <strong>texto</strong> en el lienzo que quieres vincular (por ejemplo, el campo con el nombre de la persona).</li>
+    <li>En el panel de propiedades de la derecha, busca la sección <strong>"Datos Variables"</strong>.</li>
+    <li>Selecciona en el desplegable la <strong>columna de tu Excel</strong> que quieres que se muestre (por ejemplo: "NOMBRE", "APELLIDOS", "CARGO"…).</li>
+    <li>El texto del lienzo mostrará inmediatamente el valor del registro activo.</li>
+  </ol>
+
+  <div class="img-placeholder">
+    <div class="icon">🔤</div>
+  </div>
+
+  <h3>Vincular una imagen (foto por persona)</h3>
+  <p>Para que cada tarjeta muestre la foto de la persona correspondiente:</p>
+  <ol class="steps">
+    <li>Crea una columna en tu Excel llamada <code>FOTO</code>, <code>IMAGEN</code> o similar. Escribe el nombre del archivo de cada foto (por ejemplo: <code>garcia_juan.jpg</code>).</li>
+    <li>Copia todos los archivos de foto a la carpeta <strong>/Fotos</strong> dentro de la carpeta de tu proyecto.</li>
+    <li>En el diseño, añade un elemento de tipo <strong>Imagen</strong>.</li>
+    <li>En el panel de propiedades, vincula la columna de tu Excel a ese elemento imagen.</li>
+    <li>TPS Studio buscará automáticamente el archivo en la carpeta /Fotos y lo mostrará.</li>
+  </ol>
+
+  <div class="note">
+    <strong>📌 Nombres de archivo:</strong> Puedes escribir en el Excel el nombre con o sin extensión (<code>garcia_juan</code> o <code>garcia_juan.jpg</code>). TPS Studio probará automáticamente con las extensiones más comunes (.jpg, .png, .jpeg) si no la encuentra con el nombre exacto.
+  </div>
+
+  <h3>Navegar entre registros</h3>
+  <p>En el panel lateral de <strong>"Datos Variables"</strong> verás la tabla completa de registros. Para ver cómo quedará cada tarjeta individual:</p>
+  <ul class="lista">
+    <li>Haz clic en cualquier fila de la tabla para que el lienzo muestre esa tarjeta.</li>
+    <li>Usa las flechas ← → de la barra de datos para pasar al registro anterior o siguiente.</li>
+  </ul>
+
+  <div class="img-placeholder">
+    <div class="icon">👥</div>
+  </div>
+
+  <div class="warning">
+    <strong>⚠️ Importante:</strong> Los datos vinculados son solo para vista previa. El diseño base (posición, fuente, tamaño) siempre se mantiene. Cada tarjeta final se genera en el momento de exportar o imprimir.
+  </div>
+</div>
+
+<!-- SECCIÓN 7: EXPORTACIÓN -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Exportación a PDF</h2>
+  </div>
+
+  <p>TPS Studio ofrece tres modalidades de exportación a PDF, cada una pensada para un caso de uso específico. Accede a ellas desde <strong>Archivo → Exportar PDF</strong> o desde el botón de exportación en la barra superior.</p>
+
+  <div class="img-placeholder">
+    <div class="icon">📄</div>
+  </div>
+
+  <h3>Mail-Merge — Un PDF por cada registro</h3>
+  <p>Genera un PDF individual para cada persona/registro de tu base de datos, con sus datos personales ya aplicados. Ideal para enviar por correo electrónico o para archivar.</p>
+  <table>
+    <tr><th>Opción</th><th>Descripción</th></tr>
+    <tr><td>Solo Frente</td><td>Genera un PDF de una sola página con la cara delantera</td></tr>
+    <tr><td>Frente + Dorso</td><td>Genera un PDF de dos páginas (solo disponible si hay diseño en el Dorso)</td></tr>
+    <tr><td>Rango de registros</td><td>Puedes exportar todos los registros o solo un rango (ej: del 1 al 50)</td></tr>
+  </table>
+
+  <div class="note">
+    <strong>📌 Carpeta de salida:</strong> Se creará una subcarpeta <code>/PDF_Export</code> dentro del proyecto con todos los PDFs generados, nombrados automáticamente con los datos del registro.
+  </div>
+
+  <h3>Muestra de Diseño A4 — Para aprobación del cliente</h3>
+  <p>Genera un único PDF en formato A4 con el diseño de la tarjeta centrado, un área para la firma del cliente y los datos del proyecto. Perfecto para obtener el visto bueno antes de imprimir.</p>
+
+  <div class="img-placeholder">
+    <div class="icon">✍️</div>
+  </div>
+
+  <h3>PDF para Imprenta</h3>
+  <p>Genera un PDF de alta resolución con el diseño incluyendo el área de sangrado completa, listo para enviar directamente a la imprenta. Este PDF incluye únicamente el fondo y los elementos estáticos, sin datos personales.</p>
+
+  <div class="warning">
+    <strong>⚠️ Para imprenta profesional:</strong> Asegúrate de que el fondo de la tarjeta se extiende hasta el borde de sangrado (la línea roja del lienzo) para evitar bordes blancos tras el corte.
+  </div>
+</div>
+
+<!-- SECCIÓN 8: IMPRESIÓN DIRECTA -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>Impresión directa</h2>
+  </div>
+
+  <p>Además de exportar a PDF, TPS Studio permite enviar las tarjetas directamente a cualquier impresora instalada en el sistema, incluyendo impresoras de tarjetas específicas.</p>
+
+  <ol class="steps">
+    <li>Haz clic en el botón <strong>"Imprimir"</strong> de la barra superior o usa <span class="kbd">Ctrl</span> + <span class="kbd">P</span>.</li>
+    <li>En el diálogo de impresión, selecciona la <strong>impresora</strong> de destino.</li>
+    <li>Elige si quieres imprimir <strong>Solo Frente</strong> o <strong>Frente + Dorso</strong>. La opción de doble cara solo aparece si tienes diseño en ambas caras.</li>
+    <li>Selecciona el <strong>rango de registros</strong> si tienes una base de datos vinculada.</li>
+    <li>Haz clic en <strong>"Imprimir"</strong>.</li>
+  </ol>
+
+  <div class="img-placeholder">
+    <div class="icon">🖨</div>
+  </div>
+</div>
+
+<!-- SECCIÓN 9: ATAJOS -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <h2>Atajos de teclado</h2>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h4>Gestión de proyectos</h4>
+      <table>
+        <tr><th>Atajo</th><th>Acción</th></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">N</span></td><td>Nuevo proyecto</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">O</span></td><td>Abrir proyecto</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Guardar proyecto</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">P</span></td><td>Imprimir</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">E</span></td><td>Exportar PDF</td></tr>
+      </table>
+    </div>
+    <div>
+      <h4>Editor de diseño</h4>
+      <table>
+        <tr><th>Atajo</th><th>Acción</th></tr>
+        <tr><td><span class="kbd">Del</span></td><td>Eliminar elemento seleccionado</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">+</span></td><td>Zoom in</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">-</span></td><td>Zoom out</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">0</span></td><td>Zoom 100%</td></tr>
+        <tr><td>Flechas ↑↓←→</td><td>Mover elemento 1px</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SECCIÓN 10: FAQ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <h2>Preguntas frecuentes y solución de problemas</h2>
+  </div>
+
+  <h3>❓ No aparece la foto en la tarjeta aunque tengo el archivo en /Fotos</h3>
+  <p>Comprueba que el nombre del archivo en la columna de Excel coincide exactamente con el nombre del archivo en disco (respetando mayúsculas). Si el archivo es <code>Juan_García.jpg</code>, en el Excel debe poner exactamente <code>Juan_García.jpg</code> o <code>Juan_García</code>.</p>
+
+  <h3>❓ La opción "Frente + Dorso" está desactivada en el diálogo de exportación</h3>
+  <p>Esto es normal y es una protección automática. TPS Studio detecta que el Dorso de la tarjeta está vacío (sin elementos ni fondo) y desactiva la opción para evitar generar páginas en blanco. Añade algún elemento al Dorso y la opción se activará.</p>
+
+  <h3>❓ El programa va lento al navegar entre registros con muchas fotos</h3>
+  <p>Las fotos se cargan bajo demanda. Si las imágenes originales son muy grandes (más de 5 MB), considera redimensionarlas a un máximo de 1000×1000 px antes de añadirlas a la carpeta /Fotos. El resultado impreso será idéntico.</p>
+
+  <h3>❓ IntelliJ / el IDE muestra errores en el código aunque el programa funciona</h3>
+  <p>Si ves errores relacionados con caracteres como <code>\u00f1</code> en los nombres de métodos, puede ser un problema de codificación del IDE. No afecta al funcionamiento del programa. Solución: ve a <em>File → Settings → Editor → File Encodings</em> y establece todo a <strong>UTF-8</strong>.</p>
+
+  <h3>❓ El PDF exportado tiene un borde blanco en los bordes de la tarjeta</h3>
+  <p>El fondo del diseño no llega hasta el área de sangrado. En el editor, asegúrate de que la imagen de fondo se extiende hasta la línea roja de sangrado (2mm por cada lado). Usa la opción "Ajustar con sangrado" al añadir el fondo.</p>
+
+  <div class="note">
+    <strong>📞 Soporte:</strong> Si encuentras un problema no descrito aquí, contacta con el equipo de soporte técnico o consulta la documentación técnica del proyecto en la carpeta <code>/docs</code>.
+  </div>
+</div>
+
+</body>
+</html>

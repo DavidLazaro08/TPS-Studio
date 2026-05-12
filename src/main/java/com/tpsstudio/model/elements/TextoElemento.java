@@ -1,7 +1,11 @@
 package com.tpsstudio.model.elements;
 
 /**
- * Elemento de texto en la tarjeta CR80
+ * Elemento de texto colocado sobre la tarjeta.
+ *
+ * Permite configurar contenido, fuente, color, alineación y comportamiento
+ * de ajuste dentro de su caja delimitadora. También puede vincularse a una
+ * columna de datos variables.
  */
 public class TextoElemento extends Elemento {
 
@@ -10,26 +14,44 @@ public class TextoElemento extends Elemento {
     private String fontFamily;
     private String color;
     private String alineacion;
+
     private boolean negrita;
     private boolean cursiva;
-    private Boolean saltoLinea; // Usamos Boolean para que GSON lo deje a null en proyectos viejos
-    private Boolean autoAjustar; // null = false por defecto
-    private String columnaVinculada; // null = elemento fijo; valor = columna del Excel vinculada
+
+    /*
+     * Se usan Boolean en lugar de boolean para mantener compatibilidad
+     * con proyectos antiguos guardados sin estas propiedades.
+     */
+    private Boolean saltoLinea;
+    private Boolean autoAjustar;
+
+    // null = texto fijo; valor = nombre de columna vinculada
+    private String columnaVinculada;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public TextoElemento(String nombre, double x, double y) {
-        super(nombre, x, y, 100, 30); // Tamaño por defecto
+        super(nombre, x, y, 100, 30);
+
         this.contenido = "Texto";
         this.fontSize = 14;
         this.fontFamily = "Arial";
         this.color = "#000000";
         this.alineacion = "LEFT";
+
         this.negrita = false;
         this.cursiva = false;
+
         this.saltoLinea = true;
         this.autoAjustar = false;
     }
 
-    // Getters y setters
+    // =====================================================
+    // Contenido
+    // =====================================================
+
     public String getContenido() {
         return contenido;
     }
@@ -37,6 +59,18 @@ public class TextoElemento extends Elemento {
     public void setContenido(String contenido) {
         this.contenido = contenido;
     }
+
+    public String getColumnaVinculada() {
+        return columnaVinculada;
+    }
+
+    public void setColumnaVinculada(String columnaVinculada) {
+        this.columnaVinculada = columnaVinculada;
+    }
+
+    // =====================================================
+    // Fuente y estilo
+    // =====================================================
 
     public double getFontSize() {
         return fontSize;
@@ -86,16 +120,12 @@ public class TextoElemento extends Elemento {
         this.cursiva = cursiva;
     }
 
-    public String getColumnaVinculada() {
-        return columnaVinculada;
-    }
-
-    public void setColumnaVinculada(String columnaVinculada) {
-        this.columnaVinculada = columnaVinculada;
-    }
+    // =====================================================
+    // Ajuste de texto
+    // =====================================================
 
     public boolean isSaltoLinea() {
-        return saltoLinea == null ? true : saltoLinea; // Default a true para proyectos viejos
+        return saltoLinea == null ? true : saltoLinea;
     }
 
     public void setSaltoLinea(boolean saltoLinea) {

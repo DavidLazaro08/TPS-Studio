@@ -3,40 +3,31 @@ package com.tpsstudio.model.project;
 import java.time.LocalDateTime;
 
 /**
- * Metadatos asociados a un {@link Proyecto}.
+ * Metadatos asociados a un proyecto de TPS Studio.
  *
- * <p>Separa la información descriptiva y de persistencia del modelo de dominio puro.
- * Contiene rutas de recursos en disco, información del cliente y marcas de tiempo,
- * que no forman parte del diseño gráfico en sí pero son necesarias para gestionar
- * el ciclo de vida del proyecto.</p>
- *
- * <p><b>Rutas gestionadas:</b></p>
- * <ul>
- *   <li>{@code rutaTPS} — Archivo principal del proyecto ({@code .tps}).</li>
- *   <li>{@code rutaFotos} — Subcarpeta de fotografías de personas/elementos variables.</li>
- *   <li>{@code rutaFondos} — Subcarpeta de imágenes de fondo de tarjeta.</li>
- *   <li>{@code rutaBBDD} — Archivo de base de datos CSV/XLSX para mail-merge (opcional).</li>
- * </ul>
- *
- * <p>Las rutas son rehidratadas al cargar el proyecto para soportar proyectos
- * que hayan sido movidos de ubicación en disco.</p>
- *
- * @see Proyecto
- * @see ClienteInfo
- * @see com.tpsstudio.service.ProyectoFileManager
+ * Guarda información complementaria al diseño: nombre, rutas en disco,
+ * datos del cliente, fechas y orientación de la tarjeta.
  */
 public class ProyectoMetadata {
 
     private String nombre;
-    private String ubicacion; // Carpeta padre donde se creará TPS_NombreProyecto
-    private String rutaTPS;    // Ruta completa al archivo proyecto.tps
-    private String rutaFotos;  // Ruta a carpeta Fotos/
-    private String rutaFondos; // Ruta a carpeta Fondos/
-    private String rutaBBDD;   // Ruta a base de datos (opcional)
-    private ClienteInfo clienteInfo; // Información del cliente
+    private String ubicacion;
+
+    private String rutaTPS;
+    private String rutaFotos;
+    private String rutaFondos;
+    private String rutaBBDD;
+
+    private ClienteInfo clienteInfo;
+
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
+
     private com.tpsstudio.model.enums.Orientacion orientacion;
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ProyectoMetadata() {
         this.clienteInfo = new ClienteInfo();
@@ -45,7 +36,9 @@ public class ProyectoMetadata {
         this.orientacion = com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
-    // ================== GETTERS Y SETTERS ==================
+    // =====================================================
+    // Datos básicos
+    // =====================================================
 
     public String getNombre() {
         return nombre;
@@ -62,6 +55,10 @@ public class ProyectoMetadata {
     public void setUbicacion(String ubicacion) {
         this.ubicacion = ubicacion;
     }
+
+    // =====================================================
+    // Rutas del proyecto
+    // =====================================================
 
     public String getRutaTPS() {
         return rutaTPS;
@@ -95,6 +92,18 @@ public class ProyectoMetadata {
         this.rutaBBDD = rutaBBDD;
     }
 
+    public String getCarpetaProyecto() {
+        if (rutaTPS == null) {
+            return null;
+        }
+
+        return new java.io.File(rutaTPS).getParent();
+    }
+
+    // =====================================================
+    // Cliente
+    // =====================================================
+
     public ClienteInfo getClienteInfo() {
         return clienteInfo;
     }
@@ -102,6 +111,10 @@ public class ProyectoMetadata {
     public void setClienteInfo(ClienteInfo clienteInfo) {
         this.clienteInfo = clienteInfo != null ? clienteInfo : new ClienteInfo();
     }
+
+    // =====================================================
+    // Fechas
+    // =====================================================
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
@@ -119,20 +132,17 @@ public class ProyectoMetadata {
         this.fechaModificacion = fechaModificacion;
     }
 
+    // =====================================================
+    // Orientación
+    // =====================================================
+
     public com.tpsstudio.model.enums.Orientacion getOrientacion() {
-        return orientacion != null ? orientacion : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+        return orientacion != null
+                ? orientacion
+                : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
     }
 
     public void setOrientacion(com.tpsstudio.model.enums.Orientacion orientacion) {
         this.orientacion = orientacion;
-    }
-
-    /* Obtiene la carpeta raíz del proyecto (TPS_NombreProyecto) */
-
-    public String getCarpetaProyecto() {
-        if (rutaTPS == null) {
-            return null;
-        }
-        return new java.io.File(rutaTPS).getParent();
     }
 }

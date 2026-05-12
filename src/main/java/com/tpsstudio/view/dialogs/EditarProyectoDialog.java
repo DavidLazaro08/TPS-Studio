@@ -194,7 +194,15 @@ public class EditarProyectoDialog extends Dialog<ProyectoMetadata> {
                 new Separator(),
                 lblInfo);
 
-        getDialogPane().setContent(content);
+        // Envolver en ScrollPane para evitar que el contenido empuje los botones fuera de la vista
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.getStyleClass().add("scroll-invisible"); // Usar el estilo de scroll minimalista
+        scrollPane.setPrefHeight(500); // Altura máxima sugerida
+        
+        getDialogPane().setContent(scrollPane);
 
         // Botones
         ButtonType btnGuardar = new ButtonType("Guardar Cambios", ButtonBar.ButtonData.OK_DONE);

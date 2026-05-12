@@ -3,19 +3,10 @@ package com.tpsstudio.model.project;
 import java.util.regex.Pattern;
 
 /**
- * Datos de contacto del cliente que solicita el trabajo de impresión.
+ * Datos de contacto del cliente asociado a un proyecto.
  *
- * <p>Forma parte de los metadatos del proyecto ({@link ProyectoMetadata}) y se
- * persiste junto al archivo {@code .tps}. También se exporta como un archivo de
- * texto independiente dentro de la carpeta del proyecto para facilitar
- * el acceso rápido sin abrir la aplicación.</p>
- *
- * <p><b>Validación incluida:</b><br/>
- * Los métodos {@link #isEmailValido()} y {@link #isTelefonoValido()} aplican
- * expresiones regulares para validar el formato de los datos sin depender
- * de bibliotecas externas.</p>
- *
- * @see ProyectoMetadata
+ * Se guardan junto a los metadatos del proyecto y también pueden exportarse
+ * como archivo de texto dentro de la carpeta del trabajo.
  */
 public class ClienteInfo {
 
@@ -25,12 +16,15 @@ public class ClienteInfo {
     private String telefono;
     private String observaciones;
 
-    // Patrones de validación
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     private static final Pattern TELEFONO_PATTERN = Pattern.compile(
             "^[+]?[0-9\\s\\-()]{9,20}$");
+
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ClienteInfo() {
         this.nombreEmpresa = "";
@@ -40,7 +34,9 @@ public class ClienteInfo {
         this.observaciones = "";
     }
 
-    // Getters y Setters
+    // =====================================================
+    // Datos del cliente
+    // =====================================================
 
     public String getNombreEmpresa() {
         return nombreEmpresa;
@@ -82,56 +78,62 @@ public class ClienteInfo {
         this.observaciones = observaciones != null ? observaciones : "";
     }
 
-    // Métodos de validación
+    // =====================================================
+    // Validaciones
+    // =====================================================
 
-    /**
-     * Valida el formato del email
-     * 
-     * @return true si el email es válido o está vacío
-     */
     public static boolean validarEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
-            return true; // Email opcional
+            return true;
         }
+
         return EMAIL_PATTERN.matcher(email.trim()).matches();
     }
 
-    /**
-     * Valida el formato del teléfono
-     * 
-     * @return true si el teléfono es válido o está vacío
-     */
     public static boolean validarTelefono(String telefono) {
         if (telefono == null || telefono.trim().isEmpty()) {
-            return true; // Teléfono opcional
+            return true;
         }
+
         return TELEFONO_PATTERN.matcher(telefono.trim()).matches();
     }
 
-    /**
-     * Verifica si hay información del cliente
-     */
     public boolean tieneInformacion() {
-        return !nombreEmpresa.trim().isEmpty() ||
-                !nombreContacto.trim().isEmpty() ||
-                !email.trim().isEmpty() ||
-                !telefono.trim().isEmpty() ||
-                !observaciones.trim().isEmpty();
+        return !nombreEmpresa.trim().isEmpty()
+                || !nombreContacto.trim().isEmpty()
+                || !email.trim().isEmpty()
+                || !telefono.trim().isEmpty()
+                || !observaciones.trim().isEmpty();
     }
+
+    // =====================================================
+    // Representación
+    // =====================================================
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (!nombreEmpresa.isEmpty())
+
+        if (!nombreEmpresa.isEmpty()) {
             sb.append("Empresa: ").append(nombreEmpresa).append("\n");
-        if (!nombreContacto.isEmpty())
+        }
+
+        if (!nombreContacto.isEmpty()) {
             sb.append("Contacto: ").append(nombreContacto).append("\n");
-        if (!email.isEmpty())
+        }
+
+        if (!email.isEmpty()) {
             sb.append("Email: ").append(email).append("\n");
-        if (!telefono.isEmpty())
+        }
+
+        if (!telefono.isEmpty()) {
             sb.append("Teléfono: ").append(telefono).append("\n");
-        if (!observaciones.isEmpty())
+        }
+
+        if (!observaciones.isEmpty()) {
             sb.append("Observaciones: ").append(observaciones);
+        }
+
         return sb.toString();
     }
 }

@@ -1,6 +1,5 @@
 package com.tpsstudio.model.elements;
 
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
@@ -15,68 +14,83 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Elemento gráfico que representa un código (QR o Código de Barras).
+ * Elemento gráfico que representa un código QR o código de barras.
  *
- * <p>Soporta múltiples formatos gracias a ZXing y permite vinculación dinámica
- * con la base de datos.</p>
+ * Utiliza ZXing para generar la imagen del código y permite vincular su
+ * contenido a una columna de datos variables.
  */
 public class ElementoCodigo extends Elemento {
 
-    // ─── Propiedades persistidas ──────────────────────────────────────────────
+    // =====================================================
+    // Propiedades persistidas
+    // =====================================================
 
     private TipoCodigo tipo;
     private String contenido;
     private String columnaVinculada;
-    private String colorCodigo; // Antes colorQR
+    private String colorCodigo;
     private String colorFondo;
-    private String nivelCorreccion; // Solo para QR
+    private String nivelCorreccion;
     private int margen;
-    private boolean mostrarTexto; 
+    private boolean mostrarTexto;
     private int fontSize;
     private boolean negrita;
     private boolean cursiva;
 
-    // ─── Caché en memoria ─────────────────────────────────────────────────────
+    // =====================================================
+    // Caché en memoria
+    // =====================================================
+
     private transient Image imagenCacheada;
     private transient String ultimoTextoGenerado;
     private transient TipoCodigo ultimoTipoGenerado;
 
-    // ─── Constructor ──────────────────────────────────────────────────────────
+    // =====================================================
+    // Constructor
+    // =====================================================
 
     public ElementoCodigo(String nombre, double x, double y, TipoCodigo tipo) {
-        // Dimensiones por defecto según si es 2D o 1D
         super(nombre, x, y, tipo.isEs2D() ? 60 : 80, tipo.isEs2D() ? 60 : 40);
-        this.tipo             = tipo;
-        // Contenidos de ejemplo válidos por tipo
+
+        this.tipo = tipo;
+
         this.contenido = switch (tipo) {
             case QR -> "https://tpsstudio.com";
-            case EAN13 -> "8412345678905"; // EAN-13 requiere 13 dígitos (el último es check digit)
-            case UPCA -> "123456789012";  // UPC-A requiere 12 dígitos
-            default -> "12345678";        // CODE 128 / 39 son alfanuméricos
+            case EAN13 -> "8412345678905";
+            case UPCA -> "123456789012";
+            default -> "12345678";
         };
+
         this.columnaVinculada = null;
-        this.colorCodigo      = "#000000";
-        this.colorFondo       = "#FFFFFF";
-        this.nivelCorreccion  = "M";
-        this.margen           = tipo.isEs2D() ? 1 : 10;
-        this.mostrarTexto     = true;
-        this.fontSize         = 10;
-        this.negrita          = true; // Por defecto negrita para que se vea bien
-        this.cursiva          = false;
+        this.colorCodigo = "#000000";
+        this.colorFondo = "#FFFFFF";
+        this.nivelCorreccion = "M";
+        this.margen = tipo.isEs2D() ? 1 : 10;
+        this.mostrarTexto = true;
+        this.fontSize = 10;
+        this.negrita = true;
+        this.cursiva = false;
     }
 
-    // ─── Generación de imagen ─────────────────────────────────────────────────
+    // =====================================================
+    // Generación de imagen
+    // =====================================================
 
     public Image getImagen(String textoActual) {
-        if (textoActual == null || textoActual.isBlank()) return null;
+        if (textoActual == null || textoActual.isBlank()) {
+            return null;
+        }
 
-        if (imagenCacheada != null && textoActual.equals(ultimoTextoGenerado) && tipo == ultimoTipoGenerado) {
+        if (imagenCacheada != null
+                && textoActual.equals(ultimoTextoGenerado)
+                && tipo == ultimoTipoGenerado) {
             return imagenCacheada;
         }
 
         imagenCacheada = generarImagen(textoActual);
         ultimoTextoGenerado = textoActual;
         ultimoTipoGenerado = tipo;
+
         return imagenCacheada;
     }
 
@@ -88,11 +102,11 @@ public class ElementoCodigo extends Elemento {
 
     private Image generarImagen(String texto) {
         try {
-            // Lógica Inteligente: Limpiar y completar checksum si es EAN/UPC
             String textoProcesado = procesarTextoSegunTipo(texto, tipo);
-            
+
             MultiFormatWriter writer = new MultiFormatWriter();
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+
             hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
             hints.put(EncodeHintType.MARGIN, margen);
 
@@ -100,12 +114,12 @@ public class ElementoCodigo extends Elemento {
                 hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.valueOf(nivelCorreccion));
             }
 
-            // Tamaño base de generación (proporcional al elemento)
             int targetWidth = 400;
             int targetHeight = (int) (targetWidth * (height / width));
-            
-            // Forzar cuadrado para QR
-            if (tipo.isEs2D()) targetHeight = targetWidth;
+
+            if (tipo.isEs2D()) {
+                targetHeight = targetWidth;
+            }
 
             BitMatrix matrix = writer.encode(textoProcesado, tipo.getFormat(), targetWidth, targetHeight, hints);
 
@@ -120,6 +134,7 @@ public class ElementoCodigo extends Elemento {
                     pw.setArgb(x, y, matrix.get(x, y) ? argbColor : argbFondo);
                 }
             }
+
             return imagen;
 
         } catch (WriterException | IllegalArgumentException e) {
@@ -129,7 +144,11 @@ public class ElementoCodigo extends Elemento {
 
     private int hexToArgb(String hex) {
         String h = (hex == null ? "#000000" : hex).replace("#", "");
-        if (h.length() == 6) h = "FF" + h;
+
+        if (h.length() == 6) {
+            h = "FF" + h;
+        }
+
         try {
             return (int) Long.parseLong(h, 16);
         } catch (NumberFormatException e) {
@@ -137,98 +156,174 @@ public class ElementoCodigo extends Elemento {
         }
     }
 
+    // =====================================================
+    // Procesado de contenido
+    // =====================================================
+
     public String getTextoProcesado(String textoRaw) {
         return procesarTextoSegunTipo(textoRaw, tipo);
     }
 
     private String procesarTextoSegunTipo(String texto, TipoCodigo tipo) {
-        if (texto == null || texto.isBlank()) return "";
-        
-        // Solo procesamos EAN13 y UPCA que son los que tienen checksum rígido
+        if (texto == null || texto.isBlank()) {
+            return "";
+        }
+
         if (tipo == TipoCodigo.EAN13) {
             String soloNumeros = texto.replaceAll("[^0-9]", "");
+
             if (soloNumeros.length() >= 12) {
                 String base = soloNumeros.substring(0, 12);
                 return base + calcularCheckDigitEAN(base);
             }
+
         } else if (tipo == TipoCodigo.UPCA) {
             String soloNumeros = texto.replaceAll("[^0-9]", "");
+
             if (soloNumeros.length() >= 11) {
                 String base = soloNumeros.substring(0, 11);
                 return base + calcularCheckDigitUPC(base);
             }
         }
-        
+
         return texto;
     }
 
     private int calcularCheckDigitEAN(String base12) {
         int sum = 0;
+
         for (int i = 0; i < 12; i++) {
             int digit = Character.getNumericValue(base12.charAt(i));
             sum += (i % 2 == 0) ? digit : digit * 3;
         }
+
         int res = 10 - (sum % 10);
         return (res == 10) ? 0 : res;
     }
 
     private int calcularCheckDigitUPC(String base11) {
         int sum = 0;
+
         for (int i = 0; i < 11; i++) {
             int digit = Character.getNumericValue(base11.charAt(i));
             sum += (i % 2 == 0) ? digit * 3 : digit;
         }
+
         int res = 10 - (sum % 10);
         return (res == 10) ? 0 : res;
     }
 
-    // ─── Getters y Setters ────────────────────────────────────────────────────
+    // =====================================================
+    // Getters y setters
+    // =====================================================
 
-    public TipoCodigo getTipo() { return tipo; }
-    public void setTipo(TipoCodigo tipo) { 
-        this.tipo = tipo; 
-        // Ajustar proporciones si cambia de 2D a 1D o viceversa
+    public TipoCodigo getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(TipoCodigo tipo) {
+        this.tipo = tipo;
+
         if (tipo.isEs2D() && width != height) {
             setWidth(Math.max(width, height));
             setHeight(getWidth());
         }
-        invalidarCache(); 
+
+        invalidarCache();
     }
 
-    public String getContenido() { return contenido; }
-    public void setContenido(String contenido) { this.contenido = contenido; invalidarCache(); }
+    public String getContenido() {
+        return contenido;
+    }
 
-    public String getColumnaVinculada() { return columnaVinculada; }
-    public void setColumnaVinculada(String columnaVinculada) { this.columnaVinculada = columnaVinculada; }
+    public void setContenido(String contenido) {
+        this.contenido = contenido;
+        invalidarCache();
+    }
 
-    public String getColorCodigo() { return colorCodigo; }
-    public void setColorCodigo(String color) { this.colorCodigo = color; invalidarCache(); }
+    public String getColumnaVinculada() {
+        return columnaVinculada;
+    }
 
-    public String getColorFondo() { return colorFondo; }
-    public void setColorFondo(String color) { this.colorFondo = color; invalidarCache(); }
+    public void setColumnaVinculada(String columnaVinculada) {
+        this.columnaVinculada = columnaVinculada;
+    }
 
-    public String getNivelCorreccion() { return nivelCorreccion; }
-    public void setNivelCorreccion(String nivel) { this.nivelCorreccion = nivel; invalidarCache(); }
+    public String getColorCodigo() {
+        return colorCodigo;
+    }
 
-    public int getMargen() { return margen; }
-    public void setMargen(int margen) { this.margen = margen; invalidarCache(); }
+    public void setColorCodigo(String color) {
+        this.colorCodigo = color;
+        invalidarCache();
+    }
 
-    public boolean isMostrarTexto() { return mostrarTexto; }
-    public void setMostrarTexto(boolean mostrarTexto) { this.mostrarTexto = mostrarTexto; }
+    public String getColorFondo() {
+        return colorFondo;
+    }
 
-    public int getFontSize() { return fontSize; }
-    public void setFontSize(int fontSize) { this.fontSize = fontSize; }
+    public void setColorFondo(String color) {
+        this.colorFondo = color;
+        invalidarCache();
+    }
 
-    public boolean isNegrita() { return negrita; }
-    public void setNegrita(boolean negrita) { this.negrita = negrita; }
+    public String getNivelCorreccion() {
+        return nivelCorreccion;
+    }
 
-    public boolean isCursiva() { return cursiva; }
-    public void setCursiva(boolean cursiva) { this.cursiva = cursiva; }
+    public void setNivelCorreccion(String nivel) {
+        this.nivelCorreccion = nivel;
+        invalidarCache();
+    }
 
-    public boolean esDinamico() { return columnaVinculada != null && !columnaVinculada.isBlank(); }
+    public int getMargen() {
+        return margen;
+    }
+
+    public void setMargen(int margen) {
+        this.margen = margen;
+        invalidarCache();
+    }
+
+    public boolean isMostrarTexto() {
+        return mostrarTexto;
+    }
+
+    public void setMostrarTexto(boolean mostrarTexto) {
+        this.mostrarTexto = mostrarTexto;
+    }
+
+    public int getFontSize() {
+        return fontSize;
+    }
+
+    public void setFontSize(int fontSize) {
+        this.fontSize = fontSize;
+    }
+
+    public boolean isNegrita() {
+        return negrita;
+    }
+
+    public void setNegrita(boolean negrita) {
+        this.negrita = negrita;
+    }
+
+    public boolean isCursiva() {
+        return cursiva;
+    }
+
+    public void setCursiva(boolean cursiva) {
+        this.cursiva = cursiva;
+    }
+
+    public boolean esDinamico() {
+        return columnaVinculada != null && !columnaVinculada.isBlank();
+    }
 
     @Override
     public String toString() {
-        return (tipo != null ? tipo.getNombre() : "Código") + (etiqueta != null && !etiqueta.isEmpty() ? " | " + etiqueta : "");
+        return (tipo != null ? tipo.getNombre() : "Código")
+                + (etiqueta != null && !etiqueta.isEmpty() ? " | " + etiqueta : "");
     }
 }

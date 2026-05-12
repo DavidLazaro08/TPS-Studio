@@ -756,18 +756,18 @@
 }
 
 /* ScrollPane del panel lateral */
-.sidebar-scroll {
+.sidebar-scroll, .scroll-invisible {
     -fx-background-color: transparent;
     -fx-background: transparent;
     -fx-padding: 0;
     -fx-border-color: transparent;
 }
 
-.sidebar-scroll .viewport {
+.sidebar-scroll .viewport, .scroll-invisible .viewport {
     -fx-background-color: transparent;
 }
 
-.sidebar-scroll .corner {
+.sidebar-scroll .corner, .scroll-invisible .corner {
     -fx-background-color: transparent;
 }
 
