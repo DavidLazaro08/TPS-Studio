@@ -84,8 +84,10 @@ public class CanvasRenderer {
             drawGuideRect(gc, cardX + safety, cardY + safety, scaledW - safety * 2, scaledH - safety * 2, "#4a9b7c", true);
         }
 
-        // 5. Elementos
-        for (Elemento elem : proyecto.getElementosActuales()) {
+        // 5. Elementos (Renderizado inverso: el primero de la lista se dibuja el último para estar ENCIMA)
+        List<Elemento> elementos = proyecto.getElementosActuales();
+        for (int i = elementos.size() - 1; i >= 0; i--) {
+            Elemento elem = elementos.get(i);
             if (!elem.isVisible()) continue;
             drawElement(gc, elem, cardX, cardY, zoom, fuenteDatos, seleccion, currentMode);
         }
@@ -219,6 +221,7 @@ public class CanvasRenderer {
     }
 
     private void drawShape(GraphicsContext gc, FormaElemento f, double ex, double ey, double ew, double eh, double zoom) {
+        gc.setLineDashes(); // Asegurar línea continua
         gc.setLineWidth(Math.max(1.0, f.getGrosorBorde()));
         double oldAlpha = gc.getGlobalAlpha();
         gc.setGlobalAlpha(f.getOpacidad());

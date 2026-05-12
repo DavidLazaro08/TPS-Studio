@@ -8,7 +8,6 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.List;
 public class TextPropertyHandler extends BasePropertyHandler {
 
     public TextPropertyHandler(Canvas canvas, EditorCanvasManager canvasManager, 
-                               Runnable onCanvasRedraw, Runnable onPropertyChanged) {
+                                Runnable onCanvasRedraw, Runnable onPropertyChanged) {
         super(canvas, canvasManager, onCanvasRedraw, onPropertyChanged);
     }
 
@@ -31,11 +30,11 @@ public class TextPropertyHandler extends BasePropertyHandler {
         Label lblContenido = new Label("Texto:");
         lblContenido.getStyleClass().add("prop-label-small");
 
-        TextArea txtContenido = new TextArea(texto.getContenido());
+        // CAMBIO: TextField en lugar de TextArea para ganar espacio vertical
+        TextField txtContenido = new TextField(texto.getContenido());
         txtContenido.setPromptText("Contenido del texto...");
         txtContenido.setMaxWidth(Double.MAX_VALUE);
-        txtContenido.setPrefRowCount(3);
-        txtContenido.setWrapText(true);
+        txtContenido.setPrefHeight(24); // Altura compacta de una línea
         txtContenido.textProperty().addListener((obs, old, newVal) -> {
             texto.setContenido(newVal);
             if (onCanvasRedraw != null) onCanvasRedraw.run();
@@ -77,7 +76,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
             if (onCanvasRedraw != null) onCanvasRedraw.run();
         });
 
-        container.getChildren().addAll(chkSalto, chkAutoFit);
+        container.getChildren().addAll(chkSalto, chkAutoFit, new Separator());
 
         // 5. Estilo de Fuente
         addFontControls(container, texto);
@@ -106,7 +105,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         // Tamaño, Negrita, Cursiva, Alineación (Fila combinada)
         HBox tools = new HBox(8);
         tools.setAlignment(Pos.BOTTOM_LEFT);
-        tools.setFillHeight(false); // Evita que los botones se estiren a lo alto
+        tools.setFillHeight(false);
 
         Spinner<Integer> spnSize = new Spinner<>(8, 72, (int) texto.getFontSize());
         spnSize.setEditable(true);
@@ -160,7 +159,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         return b;
     }
 
-    private void addSeccionDatosVariables(VBox container, TextoElemento texto, Label lblTexto, TextArea txtContenido) {
+    private void addSeccionDatosVariables(VBox container, TextoElemento texto, Label lblTexto, TextField txtContenido) {
         VBox section = new VBox(4);
         Label lblSeccion = new Label("Datos Variables");
         lblSeccion.getStyleClass().add("prop-label");

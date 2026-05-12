@@ -5,9 +5,14 @@ import com.tpsstudio.model.project.FuenteDatos;
 import com.tpsstudio.view.managers.EditorCanvasManager;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -15,7 +20,6 @@ import java.util.function.Consumer;
 
 /**
  * Clase base para los gestores de propiedades.
- * Proporciona métodos de utilidad para crear controles comunes y gestionar el cuentagotas.
  */
 public abstract class BasePropertyHandler {
 
@@ -25,17 +29,14 @@ public abstract class BasePropertyHandler {
     protected final Runnable onPropertyChanged;
     protected FuenteDatos fuenteDatos;
 
-    // Propiedad compartida para el estado del cuentagotas
     protected static final BooleanProperty eyedropperActive = new SimpleBooleanProperty(false);
-    
-    // Bandera para evitar bucles de eventos durante actualizaciones automáticas
     private boolean isInternalUpdate = false;
 
-    // Referencias para actualización en tiempo real (X, Y, W, H)
     protected TextField txtX, txtY, txtW, txtH;
+    protected Label lblMmX, lblMmY, lblMmW, lblMmH;
 
     public BasePropertyHandler(Canvas canvas, EditorCanvasManager canvasManager, 
-                               Runnable onCanvasRedraw, Runnable onPropertyChanged) {
+                                Runnable onCanvasRedraw, Runnable onPropertyChanged) {
         this.canvas = canvas;
         this.canvasManager = canvasManager;
         this.onCanvasRedraw = onCanvasRedraw;
@@ -46,14 +47,8 @@ public abstract class BasePropertyHandler {
         this.fuenteDatos = fuenteDatos;
     }
 
-    /**
-     * Método principal que cada Handler debe implementar para construir su UI específica.
-     */
     public abstract void buildPanel(VBox container, Elemento elemento);
 
-    /**
-     * Actualiza los campos numéricos de posición en tiempo real (ej: al arrastrar en el canvas).
-     */
     public void updatePositionFields(Elemento elemento) {
         if (elemento == null) return;
         isInternalUpdate = true;
@@ -62,6 +57,11 @@ public abstract class BasePropertyHandler {
             updateField(txtY, elemento.getY());
             updateField(txtW, elemento.getWidth());
             updateField(txtH, elemento.getHeight());
+            
+            if (lblMmX != null) lblMmX.setText(com.tpsstudio.util.UnitConverter.formatMm(elemento.getX()));
+            if (lblMmY != null) lblMmY.setText(com.tpsstudio.util.UnitConverter.formatMm(elemento.getY()));
+            if (lblMmW != null) lblMmW.setText(com.tpsstudio.util.UnitConverter.formatMm(elemento.getWidth()));
+            if (lblMmH != null) lblMmH.setText(com.tpsstudio.util.UnitConverter.formatMm(elemento.getHeight()));
         } finally {
             isInternalUpdate = false;
         }
@@ -72,8 +72,6 @@ public abstract class BasePropertyHandler {
             field.setText(String.format(java.util.Locale.US, "%.0f", value));
         }
     }
-
-    // ===================== UTILIDADES DE UI =====================
 
     protected TextField createNumberField(double initialValue, String prompt, Consumer<Double> onValidChange) {
         TextField tf = new TextField(String.format(java.util.Locale.US, "%.0f", initialValue));
@@ -94,32 +92,68 @@ public abstract class BasePropertyHandler {
         Label lblPos = new Label("Posición y Tamaño");
         lblPos.getStyleClass().add("prop-label");
 
-        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
-        grid.setHgap(8); grid.setVgap(8);
+        GridPane grid = new GridPane();
+        grid.setHgap(8); 
+        grid.setVgap(0);
+        grid.setPadding(new Insets(5, 0, 5, 0));
+
+        // Columnas con alineación a la IZQUIERDA pero anchos controlados para armonía
+        ColumnConstraints col0 = new ColumnConstraints();
+        col0.setHalignment(HPos.LEFT);
+        col0.setMinWidth(20);
+
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPrefWidth(75);
+
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHalignment(HPos.LEFT);
+        col2.setMinWidth(50); // Suficiente para "Ancho:" a la izquierda
+
+        ColumnConstraints col3 = new ColumnConstraints();
+        col3.setPrefWidth(75);
+
+        grid.getColumnConstraints().addAll(col0, col1, col2, col3);
 
         txtX = createNumberField(elemento.getX(), "X", elemento::setX);
         txtY = createNumberField(elemento.getY(), "Y", elemento::setY);
         txtW = createNumberField(elemento.getWidth(), "Ancho", elemento::setWidth);
         txtH = createNumberField(elemento.getHeight(), "Alto", elemento::setHeight);
+        
+        String fieldStyle = "-fx-pref-width: 70px;";
+        txtX.setStyle(fieldStyle); txtY.setStyle(fieldStyle);
+        txtW.setStyle(fieldStyle); txtH.setStyle(fieldStyle);
 
         Label lblX = new Label("X:");
-        lblX.setMinWidth(20);
         Label lblY = new Label("Y:");
-        lblY.setMinWidth(20);
         Label lblW = new Label("Ancho:");
-        lblW.setMinWidth(45);
         Label lblH = new Label("Alto:");
-        lblH.setMinWidth(45);
 
+        lblMmX = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getX()));
+        lblMmY = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getY()));
+        lblMmW = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getWidth()));
+        lblMmH = new Label(com.tpsstudio.util.UnitConverter.formatMm(elemento.getHeight()));
+
+        Insets mmPadding = new Insets(1, 0, 8, 0); 
+        lblMmX.setPadding(mmPadding);
+        lblMmY.setPadding(mmPadding);
+        lblMmW.setPadding(mmPadding);
+        lblMmH.setPadding(mmPadding);
+        
+        lblMmX.getStyleClass().add("prop-label-mm");
+        lblMmY.getStyleClass().add("prop-label-mm");
+        lblMmW.getStyleClass().add("prop-label-mm");
+        lblMmH.getStyleClass().add("prop-label-mm");
+
+        // Layout del grid
         grid.add(lblX, 0, 0); grid.add(txtX, 1, 0);
         grid.add(lblW, 2, 0); grid.add(txtW, 3, 0);
-        grid.add(lblY, 0, 1); grid.add(txtY, 1, 1);
-        grid.add(lblH, 2, 1); grid.add(txtH, 3, 1);
+        grid.add(lblMmX, 1, 1);
+        grid.add(lblMmW, 3, 1);
 
-        // Aplicar estilos CSS a las etiquetas del grid
-        grid.getChildren().stream()
-            .filter(n -> n instanceof Label)
-            .forEach(n -> n.getStyleClass().add("prop-label-small"));
+        grid.add(lblY, 0, 2); grid.add(txtY, 1, 2);
+        grid.add(lblH, 2, 2); grid.add(txtH, 3, 2);
+        grid.add(lblMmY, 1, 3);
+        grid.add(lblMmH, 3, 3);
 
         container.getChildren().addAll(lblPos, grid);
     }
@@ -153,7 +187,6 @@ public abstract class BasePropertyHandler {
         btnEyedropper.setMinWidth(30);
         if (disableProp != null) btnEyedropper.disableProperty().bind(disableProp.not());
 
-        // Lógica visual del cuentagotas
         btnEyedropper.styleProperty().bind(
             javafx.beans.binding.Bindings.when(eyedropperActive)
                 .then("-fx-background-color: #221e3a; -fx-text-fill: #c4bcec; -fx-border-color: #3b3570;")

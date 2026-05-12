@@ -20,7 +20,8 @@ import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
@@ -30,34 +31,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Sub-controlador que centraliza todas las acciones de proyecto:
- * crear, abrir, guardar, exportar, imprimir y editar.
- *
- * <p>MainViewController delega en esta clase la lógica pesada de cada acción.
- * De esta forma, los métodos @FXML del controlador principal actúan como
- * simples puntos de entrada ("delegadores"), y la lógica real vive aquí.</p>
- *
- * <p>Esta clase no tiene acceso a los nodos @FXML directamente, solo necesita
- * el {@code canvas} para obtener el {@code Window} propietario de los diálogos.</p>
+ * Sub-controlador que centraliza todas las acciones de proyecto.
  */
 public class ProjectActionsController {
 
-    // Dependencias inyectadas desde MainViewController
     private final MainViewModel viewModel;
     private final ProjectManager projectManager;
-    private final Canvas canvas;          // Solo para obtener getScene().getWindow()
-    private final Runnable onRedraw;      // Callback para forzar redibujo del canvas
+    private final Canvas canvas;          
+    private final Runnable onRedraw;      
     private final EtiquetasManager etiquetasManager;
 
-    /**
-     * Crea el sub-controlador con las dependencias mínimas necesarias.
-     *
-     * @param viewModel        estado observable de la aplicación.
-     * @param projectManager   lógica de negocio de proyectos.
-     * @param canvas           referencia al canvas central (solo para Window).
-     * @param onRedraw         callback que ejecuta {@code dibujarCanvas()} en MainViewController.
-     * @param etiquetasManager gestor de categorías del usuario.
-     */
     public ProjectActionsController(MainViewModel viewModel,
                                     ProjectManager projectManager,
                                     Canvas canvas,
@@ -70,14 +53,6 @@ public class ProjectActionsController {
         this.etiquetasManager = etiquetasManager;
     }
 
-    // =========================================================
-    // Acciones de proyecto
-    // =========================================================
-
-    /**
-     * Abre el diálogo para crear un nuevo proyecto CR80 y, si se confirma,
-     * lo crea y notifica al usuario con un alert informativo.
-     */
     public void nuevoProyecto() {
         Window owner = canvas.getScene() != null ? canvas.getScene().getWindow() : null;
         NuevoProyectoDialog dialog = new NuevoProyectoDialog(owner, etiquetasManager);
@@ -88,7 +63,6 @@ public class ProjectActionsController {
             Proyecto nuevo = projectManager.crearProyectoDesdeMetadata(metadata);
 
             if (nuevo != null) {
-                // Aplicar categorías seleccionadas
                 nuevo.setEtiquetaIds(dialog.getEtiquetasSeleccionadas());
                 projectManager.guardarProyecto();
 
@@ -104,31 +78,16 @@ public class ProjectActionsController {
                                     "• Fotos\n" +
                                     "• Fondos\n" +
                                     "• Base de Datos (BBDD)");
-
-                    String css = getClass().getResource("/css/dialogs.css").toExternalForm();
-                    alert.getDialogPane().getStylesheets().add(css);
-
-                    if (owner != null) {
-                        alert.setOnShown(e -> {
-                            javafx.stage.Stage stage = (javafx.stage.Stage) alert.getDialogPane().getScene().getWindow();
-                            stage.setX(owner.getX() + (owner.getWidth() - stage.getWidth()) / 2.0);
-                            stage.setY(owner.getY() + (owner.getHeight() - stage.getHeight()) / 2.0);
-                        });
-                    }
                     alert.showAndWait();
                 });
             }
         }
     }
 
-    /**
-     * Muestra el FileChooser para abrir un proyecto .tps existente.
-     */
     public void abrirProyecto() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Abrir Proyecto");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivos TPS", "*.tps"));
 
         File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
         if (file != null) {
@@ -136,18 +95,10 @@ public class ProjectActionsController {
         }
     }
 
-    /**
-     * Guarda el proyecto activo en su archivo .tps.
-     */
     public void guardarProyecto() {
         projectManager.guardarProyecto();
     }
 
-    /**
-     * Abre el diálogo de configuración de exportación y, si el usuario confirma,
-     * genera los PDFs correspondientes (Mail-Merge, prueba A4 y/o imprenta)
-     * en un hilo de fondo para no bloquear la UI.
-     */
     public void exportarProyecto() {
         if (viewModel.getProyectoActual() == null) {
             AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de exportar.").showAndWait();
@@ -157,32 +108,22 @@ public class ProjectActionsController {
         FuenteDatos fd = projectManager.getFuenteDatos();
         int totalRegistros = (fd != null) ? fd.getTotalRegistros() : 1;
 
-        // 1. Diálogo de configuración de exportación
         ExportDialog exportDialog = new ExportDialog(
                 canvas.getScene().getWindow(), totalRegistros, viewModel.getProyectoActual().getNombre());
         Optional<ExportDialog.ExportConfig> cfg = exportDialog.showAndWait();
         if (cfg.isEmpty() || cfg.get() == null) return;
 
         ExportDialog.ExportConfig config = cfg.get();
-
-        // 2. Resolver filas a exportar (solo si exportarRegistros es true)
         List<Integer> filas = new ArrayList<>();
         if (config.exportarRegistros()) {
             try {
                 filas = ExportDialog.parseRangoFilas(config.rangoFilas(), totalRegistros);
             } catch (IllegalArgumentException ex) {
-                AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage())
-                        .showAndWait();
-                return;
-            }
-            if (filas.isEmpty()) {
-                AlertHelper.createAlert(Alert.AlertType.WARNING, "Ningún registro válido seleccionado para Mail-Merge.")
-                        .showAndWait();
+                AlertHelper.createAlert(Alert.AlertType.ERROR, "El rango de registros no es válido:\n" + ex.getMessage()).showAndWait();
                 return;
             }
         }
 
-        // 3. Elegir ubicación de destino
         FileChooser fc = new FileChooser();
         fc.setTitle("Seleccionar ubicación para la exportación");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF", "*.pdf"));
@@ -190,10 +131,7 @@ public class ProjectActionsController {
         File destino = fc.showSaveDialog(canvas.getScene().getWindow());
         if (destino == null) return;
 
-        // 4. Generar PDFs en hilo de fondo
-        com.tpsstudio.service.PDFExportService pdfService =
-                new com.tpsstudio.service.PDFExportService(viewModel.getProyectoActual(), fd);
-
+        com.tpsstudio.service.PDFExportService pdfService = new com.tpsstudio.service.PDFExportService(viewModel.getProyectoActual(), fd);
         final List<Integer> filasFinal = filas;
         final File basePath = destino;
         final Window ownerWindow = canvas.getScene().getWindow();
@@ -202,81 +140,41 @@ public class ProjectActionsController {
             try {
                 String baseUri = basePath.getAbsolutePath().replaceAll("(?i)\\.pdf$", "");
                 int archivosGenerados = 0;
-
-                // A) PDF Mail-Merge
                 if (config.exportarRegistros()) {
-                    File fMerge = new File(baseUri + "_registros.pdf");
-                    pdfService.exportar(config, filasFinal, fMerge);
+                    pdfService.exportar(config, filasFinal, new File(baseUri + "_registros.pdf"));
                     archivosGenerados++;
                 }
-
-                // B) Prueba A4
                 if (config.configPrueba() != null) {
-                    File fPrueba = new File(baseUri + "_prueba.pdf");
-                    pdfService.generarPruebaA4(config.configPrueba(), fPrueba);
+                    pdfService.generarPruebaA4(config.configPrueba(), new File(baseUri + "_prueba.pdf"));
                     archivosGenerados++;
                 }
-
-                // C) PDF Imprenta
                 if (config.exportarImprenta()) {
-                    File fImprenta = new File(baseUri + "_imprenta.pdf");
-                    pdfService.exportarImprenta(fImprenta);
+                    pdfService.exportarImprenta(new File(baseUri + "_imprenta.pdf"));
                     archivosGenerados++;
                 }
-
                 final int total = archivosGenerados;
-                Platform.runLater(() -> TPSToast.mostrar(
-                        ownerWindow,
-                        "Exportación completada (" + total + " archivos generados)",
-                        null, TPSToast.Tipo.EXITO));
-
+                Platform.runLater(() -> TPSToast.mostrar(ownerWindow, "Exportación completada (" + total + " archivos)", null, TPSToast.Tipo.EXITO));
             } catch (Throwable ex) {
                 ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al exportar");
-                    err.setHeaderText("No se pudo completar la exportación");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
+                Platform.runLater(() -> AlertHelper.createAlert(Alert.AlertType.ERROR, "No se pudo completar la exportación: " + ex.getMessage()).showAndWait());
             }
         }, "pdf-export-thread").start();
     }
 
-    /**
-     * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF temporal
-     * y lo envía al sistema operativo (o a la impresora directa elegida).
-     */
     public void imprimirProyecto() {
         if (viewModel.getProyectoActual() == null) {
             AlertHelper.createAlert(Alert.AlertType.WARNING, "Selecciona un proyecto antes de imprimir.").showAndWait();
             return;
         }
 
-        if (!SalidaPDFSistema.isSupported()) {
-            TPSToast.mostrar(canvas.getScene().getWindow(),
-                    "La impresión mediante el sistema no está disponible en este equipo.",
-                    null, TPSToast.Tipo.ERROR);
-            return;
-        }
-
         FuenteDatos fd = projectManager.getFuenteDatos();
-        ImpresionDialog dialog = new ImpresionDialog(
-                canvas.getScene().getWindow(),
-                viewModel.getProyectoActual(),
-                fd);
-
+        ImpresionDialog dialog = new ImpresionDialog(canvas.getScene().getWindow(), viewModel.getProyectoActual(), fd);
         Optional<TrabajoImpresion> resultado = dialog.showAndWait();
-        if (resultado.isEmpty() || resultado.get() == null) return;
-
-        ejecutarTrabajoImpresion(resultado.get(), viewModel.getProyectoActual(), fd);
+        if (resultado.isPresent()) {
+            ejecutarTrabajoImpresion(resultado.get(), viewModel.getProyectoActual(), fd);
+        }
     }
 
-    /**
-     * Abre el diálogo para editar o eliminar los datos de un proyecto existente.
-     *
-     * @param proyecto proyecto a editar.
-     */
     public boolean editarProyecto(Proyecto proyecto) {
         Window owner = canvas.getScene().getWindow();
         EditarProyectoDialog dialog = new EditarProyectoDialog(proyecto, owner, etiquetasManager);
@@ -290,50 +188,74 @@ public class ProjectActionsController {
         if (resultado.isPresent()) {
             ProyectoMetadata nuevaMetadata = resultado.get();
             projectManager.editarProyecto(proyecto, nuevaMetadata);
-
-            // Si la BD vinculada cambió, recargar la fuente de datos
             projectManager.cargarFuenteDatos(nuevaMetadata.getRutaBBDD());
             return true;
         }
-        
         return false;
     }
 
-    // =========================================================
-    // Helpers privados
-    // =========================================================
+    public void validarDiseno() {
+        if (viewModel.getProyectoActual() == null) return;
+        com.tpsstudio.service.DesignValidatorService validator = new com.tpsstudio.service.DesignValidatorService();
+        java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
 
-    /**
-     * Ejecuta el trabajo de impresión en un hilo de fondo.
-     * Construye la estrategia de salida adecuada y delega en ImpresionService.
-     */
+        Alert alert = AlertHelper.createAlert(Alert.AlertType.INFORMATION);
+        alert.initOwner(canvas.getScene().getWindow());
+        alert.setTitle("Validación de Diseño");
+        alert.setHeaderText(avisos.isEmpty() ? "¡Diseño correcto!" : "Avisos de diseño encontrados:");
+
+        if (avisos.isEmpty()) {
+            alert.setContentText("No se han detectado problemas de resolución ni elementos fuera de las zonas seguras.");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String aviso : avisos) sb.append("• ").append(aviso).append("\n\n");
+            
+            TextArea textArea = new TextArea(sb.toString().trim());
+            textArea.setEditable(false);
+            textArea.setWrapText(true);
+            textArea.setPrefHeight(250);
+            textArea.setPrefWidth(460);
+            
+            VBox content = new VBox(textArea);
+            VBox.setVgrow(textArea, javafx.scene.layout.Priority.ALWAYS);
+            content.setPadding(new javafx.geometry.Insets(10, 0, 0, 0));
+            alert.getDialogPane().setContent(content);
+        }
+        alert.showAndWait();
+    }
+
+    public void descargarPlantilla() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Descargar Plantilla CR80");
+        fileChooser.setInitialFileName("Plantilla_CR80_TPS.pdf");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento PDF", "*.pdf"));
+
+        File file = fileChooser.showSaveDialog(canvas.getScene().getWindow());
+        if (file == null) return;
+
+        try (java.io.InputStream in = getClass().getResourceAsStream("/pdf/Plantilla_CR80_TPS.pdf")) {
+            if (in != null) {
+                java.nio.file.Files.copy(in, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                TPSToast.mostrar(canvas.getScene().getWindow(), "Plantilla descargada con éxito", null, TPSToast.Tipo.EXITO);
+            } else {
+                TPSToast.mostrar(canvas.getScene().getWindow(), "No se encontró el recurso interno /pdf/Plantilla_CR80_TPS.pdf", null, TPSToast.Tipo.ERROR);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            TPSToast.mostrar(canvas.getScene().getWindow(), "Error al guardar la plantilla.", null, TPSToast.Tipo.ERROR);
+        }
+    }
+
     private void ejecutarTrabajoImpresion(TrabajoImpresion trabajo, Proyecto proyecto, FuenteDatos fd) {
         Window owner = canvas.getScene().getWindow();
-
         new Thread(() -> {
             try {
-                SalidaImpresion salida;
-                if (trabajo.nombreImpresora() != null) {
-                    salida = new SalidaImpresoraDirecta(trabajo.nombreImpresora());
-                } else {
-                    salida = new SalidaPDFSistema();
-                }
+                SalidaImpresion salida = (trabajo.nombreImpresora() != null) ? new SalidaImpresoraDirecta(trabajo.nombreImpresora()) : new SalidaPDFSistema();
                 new ImpresionService().ejecutar(trabajo, proyecto, fd, salida);
-
-                Platform.runLater(() -> TPSToast.mostrar(
-                        owner,
-                        "Trabajo enviado a la cola de impresión",
-                        null, TPSToast.Tipo.EXITO));
-
+                Platform.runLater(() -> TPSToast.mostrar(owner, "Trabajo enviado a la cola de impresión", null, TPSToast.Tipo.EXITO));
             } catch (Throwable ex) {
                 ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = AlertHelper.createAlert(Alert.AlertType.ERROR);
-                    err.setTitle("Error al imprimir");
-                    err.setHeaderText("No se pudo completar la impresión");
-                    err.setContentText(ex.getMessage());
-                    err.showAndWait();
-                });
+                Platform.runLater(() -> AlertHelper.createAlert(Alert.AlertType.ERROR, "No se pudo completar la impresión: " + ex.getMessage()).showAndWait());
             }
         }, "imprimir-thread").start();
     }
