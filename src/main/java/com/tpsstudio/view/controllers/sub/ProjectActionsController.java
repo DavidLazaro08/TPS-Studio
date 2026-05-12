@@ -109,7 +109,7 @@ public class ProjectActionsController {
         int totalRegistros = (fd != null) ? fd.getTotalRegistros() : 1;
 
         ExportDialog exportDialog = new ExportDialog(
-                canvas.getScene().getWindow(), totalRegistros, viewModel.getProyectoActual().getNombre());
+                canvas.getScene().getWindow(), totalRegistros, viewModel.getProyectoActual());
         Optional<ExportDialog.ExportConfig> cfg = exportDialog.showAndWait();
         if (cfg.isEmpty() || cfg.get() == null) return;
 
