@@ -1,74 +1,71 @@
-# 🪪 TPS Studio — Diseño y Producción de Tarjetas
+# TPS Studio — Card Design & Production Suite
 
-¡Bienvenido a **TPS Studio**! Esta es una herramienta profesional diseñada para simplificar la creación de tarjetas de identificación, carnets y acreditaciones. Olvídate de pelearte con medidas milimétricas en programas de diseño genéricos; aquí todo está pensado para el formato estándar **CR80** (85.6 × 54 mm).
+TPS Studio es una solución de escritorio profesional diseñada específicamente para la gestión, diseño y preimpresión de tarjetas plásticas y acreditaciones en formato estándar CR80 (85.6 × 54 mm). 
 
----
-
-## 🚀 ¿Qué puedes hacer con TPS Studio?
-
-Este programa no solo sirve para diseñar, sino para **producir en masa**. Si tienes un diseño y un listado de 500 personas en un Excel, TPS Studio hace el trabajo sucio por ti.
-
-### ✨ Características Estrella:
-*   **🎨 Editor Visual Inteligente**: Diseña con guías de sangrado y seguridad para que la imprenta no te devuelva los archivos.
-*   **📊 Datos Variables (Mail-Merge)**: Vincula tus diseños a archivos **Excel** o **Access**. ¡Cambia de registro y mira cómo se actualiza la tarjeta al instante!
-*   **🖼️ Gestión de Fotos**: Vincula una carpeta de imágenes y asócialas a tus registros automáticamente.
-*   **🔳 Códigos QR y de Barras**: Genera códigos dinámicos basados en la información de tu base de datos.
-*   **📄 Exportación Profesional**:
-    *   **PDF Individuales**: Un archivo por persona listo para enviar.
-    *   **Muestra A4**: Para que el cliente te firme el visto bueno.
-    *   **PDF para Imprenta**: Con sangrado y alta resolución.
-*   **🖨️ Impresión Directa**: Imprime directamente en tu impresora de tarjetas (Frente o Frente+Dorso).
+La aplicación optimiza el flujo de trabajo de producción en masa, integrando herramientas de diseño visual con capacidades avanzadas de automatización de datos.
 
 ---
 
-## 🛠️ Tecnologías utilizadas
+## Funcionalidades Principales
 
-Este proyecto es una aplicación de escritorio robusta construida con:
-*   **Java 21 LTS** (El corazón del programa).
-*   **JavaFX 21** (Para una interfaz moderna y fluida).
-*   **Maven** (Gestión de dependencias).
-*   **PDFBox** (Para la generación de PDFs de alta calidad).
-*   **ZXing** (Para los códigos QR).
-*   **Apache POI & Ucanaccess** (Para leer tus Excels y bases de datos).
+### Motor de Diseño y Preimpresión
+*   **Editor CR80 Nativo**: Entorno de diseño escalable con guías de sangrado (2mm) y márgenes de seguridad (3mm) integrados para cumplimiento con estándares de imprenta.
+*   **Gestión de Capas**: Control preciso sobre la profundidad, visibilidad y orden de los elementos del diseño.
+*   **Diseño Bilateral**: Soporte independiente para Frente y Dorso de la tarjeta con sincronización de estado.
 
----
+### Automatización y Datos Variables
+*   **Integración Mail-Merge**: Vinculación dinámica con bases de datos externas en formato Microsoft Excel (.xlsx) y Microsoft Access (.accdb).
+*   **Procesamiento de Imágenes Dinámicas**: Resolución automática de rutas de archivos para la inserción masiva de fotografías de identificación.
+*   **Generación de Códigos**: Motor integrado para la creación de códigos QR y códigos de barras (Code 128, EAN) vinculados a campos de la base de datos.
 
-## 📂 Estructura del Proyecto
-
-Si eres programador y quieres echar un ojo al código, así es como nos organizamos:
-*   `app/`: El arranque del programa.
-*   `model/`: La definición de los objetos (Tarjetas, Elementos, Clientes...).
-*   `view/`: Toda la magia visual y los controladores de la interfaz.
-*   `viewmodel/`: El estado de la aplicación (siguiendo el patrón **MVVM**).
-*   `service/`: Los "músculos" (gestión de archivos, lógica de proyectos, exportación).
-*   `util/`: Herramientas de apoyo (carga de imágenes, textos, etc.).
+### Salida y Producción
+*   **Exportación Masiva (PDF)**: Generación de documentos individuales personalizados por registro.
+*   **PDF para Artes Gráficas**: Salida de alta resolución con área de sangrado completa para producción en imprenta.
+*   **Módulos de Impresión**: Interfaz directa con controladores de impresoras térmicas de tarjetas para impresión monocromo o color.
 
 ---
 
-## 🏃 Cómo ponerlo en marcha
+## Especificaciones Técnicas
 
-Para ejecutar el proyecto en modo desarrollo, asegúrate de tener **Maven** y **JDK 21** instalados, y lanza:
+El software ha sido desarrollado bajo una arquitectura MVVM (Model-View-ViewModel), garantizando la escalabilidad y mantenibilidad del código.
 
+*   **Lenguaje**: Java 21 (LTS)
+*   **Framework UI**: JavaFX 21.0.4
+*   **Gestor de Proyecto**: Maven
+*   **Bibliotecas Clave**: 
+    *   Apache PDFBox (Generación de PDF)
+    *   ZXing (Generación de códigos)
+    *   Apache POI (Procesamiento de datos Excel)
+    *   Gson (Persistencia de proyectos en formato JSON)
+
+---
+
+## Despliegue y Ejecución
+
+### Requisitos de Desarrollo
+*   Java Development Kit (JDK) 21
+*   Apache Maven 3.9+
+
+### Ejecución
 ```bash
 mvn clean javafx:run
 ```
 
-Para generar un instalador **.exe** para Windows, utiliza `jpackage` apuntando al JAR generado en la carpeta `target/`.
+### Empaquetado
+Para generar el ejecutable nativo de Windows (.exe), se recomienda el uso de la herramienta `jpackage` tras la compilación del proyecto.
 
 ---
 
-## 📝 Documentación adicional
+## Documentación de Usuario
 
-¿Necesitas ayuda? Hemos preparado un **Manual de Usuario** detallado en la carpeta `docs/`:
-*   [Manual Parte 1 - Inicio y Proyectos](docs/manual_tps_studio_parte1.html)
-*   [Manual Parte 2 - Diseño y Exportación](docs/manual_tps_studio_parte2.html)
+El manual de instrucciones detallado se encuentra disponible en formato HTML dentro del directorio `docs/`:
+*   Parte 1: Configuración inicial y Gestión de Proyectos
+*   Parte 2: Herramientas de Diseño y Flujos de Exportación
 
 ---
 
-## 👤 Autor
+## Autoría
 
 **David Gutiérrez Ortiz**  
-*Proyecto Final - Grado Superior de Programación (DAM)*
-
----
-> *Diseñado con ❤️ para que hacer carnets deje de ser una pesadilla.*
+Proyecto Final de Ciclo Formativo de Grado Superior  
+Desarrollo de Aplicaciones Multiplataforma (DAM)
