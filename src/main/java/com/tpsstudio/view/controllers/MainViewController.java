@@ -116,10 +116,12 @@ public class MainViewController {
     // ViewModel: estado observable de la aplicación
     private final MainViewModel viewModel = new MainViewModel();
 
-    // Sub-controlador de acciones de proyecto (crear, abrir, guardar, exportar, imprimir)
+    // Sub-controlador de acciones de proyecto (crear, abrir, guardar, exportar,
+    // imprimir)
     private ProjectActionsController projectActionsController;
 
-    // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo; eliminar)
+    // Sub-controlador de acciones de elementos (añadir texto, imagen, forma, fondo;
+    // eliminar)
     private ElementActionsController elementActionsController;
 
     // Gestor de categorías/etiquetas (por usuario)
@@ -135,7 +137,7 @@ public class MainViewController {
     private void initialize() {
         setupCanvas();
         initUI();
-        
+
         lblProyectoActivo.setOnMouseClicked(e -> {
             isProjectChipCollapsed = !isProjectChipCollapsed;
             actualizarLabelProyecto(true);
@@ -169,7 +171,7 @@ public class MainViewController {
         alert.setTitle("Cerrar Sesión");
         alert.setHeaderText("Vas a salir de la sesión actual.");
         alert.setContentText("¿Estás seguro de que quieres volver al login?");
-        
+
         // Estilo nativo para el diálogo
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
@@ -180,12 +182,13 @@ public class MainViewController {
                 // 2. Obtener Stage y Escena actual
                 Stage stage = (Stage) leftPanel.getScene().getWindow();
                 Scene scene = leftPanel.getScene();
-                
+
                 // Capturar el root actual (Main View) para la animación de salida
                 javafx.scene.Parent mainView = scene.getRoot();
 
                 // 3. Cargar la vista de Login (todavía invisible)
-                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/login_view.fxml"));
+                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                        getClass().getResource("/fxml/login_view.fxml"));
                 javafx.scene.Parent loginView = loader.load();
                 loginView.setOpacity(0);
                 loginView.setScaleX(1.05);
@@ -193,8 +196,8 @@ public class MainViewController {
 
                 // 4. Crear contenedor de transición
                 javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
-                transitionContainer.getStyleClass().add("transition-overlay"); 
-                
+                transitionContainer.getStyleClass().add("transition-overlay");
+
                 // Intercambiamos el root por el contenedor temporal
                 scene.setRoot(transitionContainer);
                 transitionContainer.getChildren().addAll(loginView, mainView);
@@ -202,24 +205,25 @@ public class MainViewController {
                 // 5. SECUENCIA DE ANIMACIÓN
                 javafx.application.Platform.runLater(() -> {
                     Duration duration = Duration.millis(300);
-                    
+
                     // --- Salida (Main) ---
                     javafx.animation.FadeTransition fadeMain = new javafx.animation.FadeTransition(duration, mainView);
                     fadeMain.setFromValue(1.0);
                     fadeMain.setToValue(0.0);
-                    
+
                     fadeMain.setOnFinished(e -> {
-                        // LIMPIEZA CLAVE: Desvinculamos el loginView del contenedor antes de ponerlo como ROOT
-                        transitionContainer.getChildren().clear(); 
-                        
+                        // LIMPIEZA CLAVE: Desvinculamos el loginView del contenedor antes de ponerlo
+                        // como ROOT
+                        transitionContainer.getChildren().clear();
+
                         // Reset de ventana: unmaximize y restaurar tamaño de contenido
                         stage.setMaximized(false);
                         stage.setMinWidth(0);
                         stage.setMinHeight(0);
-                        
+
                         // Aplicar LoginView como root definitivo
                         scene.setRoot(loginView);
-                        
+
                         // Reaplicar CSS al Login (asegurarnos de que hereda el estilo)
                         if (!scene.getStylesheets().contains(getClass().getResource("/css/app.css").toExternalForm())) {
                             scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
@@ -228,7 +232,7 @@ public class MainViewController {
                         // Forzar el tamaño exacto del contenido (760x580)
                         stage.setWidth(776); // Aproximación del marco de Windows (760 + decoraciones)
                         stage.setHeight(619); // Aproximación del marco de Windows (580 + decoraciones)
-                        
+
                         // Ajuste fino: sizeToScene es más preciso si el contenido está listo
                         javafx.application.Platform.runLater(() -> {
                             stage.sizeToScene();
@@ -236,35 +240,40 @@ public class MainViewController {
                         });
 
                         // --- Entrada (Login) ---
-                        javafx.animation.FadeTransition fadeLogin = new javafx.animation.FadeTransition(duration, loginView);
+                        javafx.animation.FadeTransition fadeLogin = new javafx.animation.FadeTransition(duration,
+                                loginView);
                         fadeLogin.setFromValue(0.0);
                         fadeLogin.setToValue(1.0);
-                        
-                        javafx.animation.ScaleTransition scaleLogin = new javafx.animation.ScaleTransition(duration, loginView);
+
+                        javafx.animation.ScaleTransition scaleLogin = new javafx.animation.ScaleTransition(duration,
+                                loginView);
                         scaleLogin.setFromX(1.05);
                         scaleLogin.setFromY(1.05);
                         scaleLogin.setToX(1.0);
                         scaleLogin.setToY(1.0);
-                        
+
                         new javafx.animation.ParallelTransition(fadeLogin, scaleLogin).play();
                     });
 
                     fadeMain.play();
                 });
-                
+
             } catch (Exception e) {
                 e.printStackTrace();
                 // Fallback de emergencia: recarga total
                 try {
                     Stage stage = (Stage) leftPanel.getScene().getWindow();
-                    javafx.scene.Parent root = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/login_view.fxml")).load();
+                    javafx.scene.Parent root = new javafx.fxml.FXMLLoader(
+                            getClass().getResource("/fxml/login_view.fxml")).load();
                     javafx.scene.Scene newScene = new javafx.scene.Scene(root, 760, 580);
                     newScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
                     stage.setScene(newScene);
                     stage.setMaximized(false);
                     stage.sizeToScene();
                     stage.centerOnScreen();
-                } catch (Exception ex) { ex.printStackTrace(); }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
@@ -370,7 +379,7 @@ public class MainViewController {
 
         modeManager.setOnNewCR80(this::onNuevoCR80);
         modeManager.setOnExport(this::onExportarProyecto);
-        
+
         // Inicializar ComboBox de Troquel en la barra superior
         if (cmbTroquelToolbar != null) {
             cmbTroquelToolbar.getItems().addAll(TipoTroquel.values());
@@ -379,13 +388,13 @@ public class MainViewController {
                 if (viewModel.getProyectoActual() != null) {
                     TipoTroquel sel = cmbTroquelToolbar.getValue();
                     viewModel.getProyectoActual().setTipoTroquel(sel);
-                    
+
                     // Asegurar que las guías están visibles si se selecciona un troquel
                     if (sel != TipoTroquel.NINGUNO && !toggleGuias.isSelected()) {
                         toggleGuias.setSelected(true);
                         canvasManager.setMostrarGuias(true);
                     }
-                    
+
                     dibujarCanvas();
                 }
             });
@@ -411,12 +420,12 @@ public class MainViewController {
                 viewModel.setProyectoActual(proyecto);
                 projectManager.setProyectoActual(proyecto);
                 canvasManager.setProyectoActual(proyecto);
-                
+
                 // Adjust zoom if the project is vertical
                 if (proyecto != null && proyecto.getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
                     ajustarZoomVerticalSiNecesario();
                 }
-                
+
                 checkDesignWarnings();
                 dibujarCanvas();
             });
@@ -452,7 +461,8 @@ public class MainViewController {
         canvasManager.setOnElementSelected(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
             ensurePropertiesPanelVisible();
-            // Sincronizar selección en la lista de capas sin reconstruir (solo resalta la capa)
+            // Sincronizar selección en la lista de capas sin reconstruir (solo resalta la
+            // capa)
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
@@ -468,11 +478,13 @@ public class MainViewController {
 
         canvasManager.setOnCanvasChanged(() -> {
             viewModel.setElementoSeleccionado(canvasManager.getElementoSeleccionado());
-            // Actualizar posición sin reconstruir paneles (evita parpadeo y pérdida de foco)
+            // Actualizar posición sin reconstruir paneles (evita parpadeo y pérdida de
+            // foco)
             if (propertiesPanelController != null && viewModel.getElementoSeleccionado() != null) {
                 propertiesPanelController.updatePositionFields(viewModel.getElementoSeleccionado());
             }
-            // Propagar deselección al panel de capas (cuando se hace click en el vacío del canvas)
+            // Propagar deselección al panel de capas (cuando se hace click en el vacío del
+            // canvas)
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), viewModel.getElementoSeleccionado());
             }
@@ -486,7 +498,7 @@ public class MainViewController {
 
         // Importante: configurar mouse handlers para drag & resize
         canvasManager.setupMouseHandlers();
-        
+
         // Habilitar zoom con la rueda del ratón
         canvas.setOnScroll(event -> {
             if (event.getDeltaY() > 0) {
@@ -521,38 +533,39 @@ public class MainViewController {
             canvasOverlay.prefWidthProperty().bind(canvasContainer.widthProperty());
             canvasOverlay.prefHeightProperty().bind(canvasContainer.heightProperty());
         }
-        if (selectorCaraBox != null) selectorCaraBox.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
-        
+        if (selectorCaraBox != null)
+            selectorCaraBox.widthProperty().addListener((obs, old, nw) -> posicionarSelectorCara());
+
         dibujarCanvas();
     }
 
     private void posicionarSelectorCara() {
         if (selectorCaraBox != null && canvasContainer != null) {
             double zoom = viewModel.getZoomLevel();
-            
+
             double baseWidth = EditorCanvasManager.CARD_WIDTH;
             double baseHeight = EditorCanvasManager.CARD_HEIGHT;
-            
-            if (viewModel.getProyectoActual() != null && 
-                viewModel.getProyectoActual().getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
+
+            if (viewModel.getProyectoActual() != null &&
+                    viewModel.getProyectoActual().getOrientacion() == com.tpsstudio.model.enums.Orientacion.VERTICAL) {
                 baseWidth = EditorCanvasManager.CARD_HEIGHT;
                 baseHeight = EditorCanvasManager.CARD_WIDTH;
             }
-            
+
             double cardScaledWidth = baseWidth * zoom;
             double cardScaledHeight = baseHeight * zoom;
             double bleedScaled = EditorCanvasManager.BLEED_MARGIN * zoom;
-            
+
             double cw = canvasContainer.getWidth();
             double ch = canvasContainer.getHeight();
-            
+
             // Posición de la tarjeta absoluta dentro del contenedor (asumiendo centrado)
             double cardX = (cw / 2) - (cardScaledWidth / 2);
             double cardY = (ch / 2) - (cardScaledHeight / 2);
-            
+
             // Borde superior de la tarjeta con sangre
             double topEdge = cardY - bleedScaled;
-            
+
             double offset = 65;
             // Restaurar la posición "perfecta" original a la izquierda
             selectorCaraBox.setLayoutX(cardX - bleedScaled - 20);
@@ -561,7 +574,8 @@ public class MainViewController {
     }
 
     private void checkDesignWarnings() {
-        if (viewModel.getProyectoActual() == null) return;
+        if (viewModel.getProyectoActual() == null)
+            return;
         com.tpsstudio.service.DesignValidatorService validator = new com.tpsstudio.service.DesignValidatorService();
         java.util.List<String> avisos = validator.validarDiseno(viewModel.getProyectoActual());
         modeManager.setValidationWarning(!avisos.isEmpty());
@@ -663,7 +677,8 @@ public class MainViewController {
         // En Producción, los paneles de diseño no aplican: los ocultamos
         if (newMode == AppMode.PRODUCTION) {
             if (bloqueContextual != null && bloqueContextual.isVisible()) {
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
+                        Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> {
                     bloqueContextual.setVisible(false);
@@ -672,10 +687,14 @@ public class MainViewController {
                 ft.play();
             }
             cerrarPanelDerecho();
-            
-            // Forzar un segundo ajuste tras un breve delay para asegurar que el layout se ha asentado
+
+            // Forzar un segundo ajuste tras un breve delay para asegurar que el layout se
+            // ha asentado
             javafx.application.Platform.runLater(() -> {
-                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(100)); // Aumentado para mayor estabilidad
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.millis(100)); // Aumentado
+                                                                                                                     // para
+                                                                                                                     // mayor
+                                                                                                                     // estabilidad
                 delay.setOnFinished(ev -> adjustCanvasCentering());
                 delay.play();
             });
@@ -703,7 +722,8 @@ public class MainViewController {
                 bloqueContextual.setOpacity(0.0);
                 bloqueContextual.setVisible(true);
                 bloqueContextual.setManaged(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
+                        Duration.millis(AnimationHelper.DURATION_MEDIUM), bloqueContextual);
                 ft.setToValue(1.0);
                 ft.play();
             }
@@ -781,22 +801,24 @@ public class MainViewController {
         if (selectorCaraBox != null) {
             boolean hasProject = viewModel.getProyectoActual() != null;
             boolean shouldShow = hasProject && viewModel.getCurrentMode() == AppMode.DESIGN;
-            
+
             if (shouldShow && !selectorCaraBox.isVisible()) {
                 selectorCaraBox.setOpacity(0.0);
                 selectorCaraBox.setVisible(true);
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
+                        Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setToValue(1.0);
                 ft.play();
             } else if (!shouldShow && selectorCaraBox.isVisible() && selectorCaraBox.getOpacity() > 0) {
                 selectorCaraBox.setOpacity(0.0); // Prevenimos multiples animaciones superpuestas
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
+                        Duration.millis(AnimationHelper.DURATION_MEDIUM), selectorCaraBox);
                 ft.setFromValue(1.0);
                 ft.setToValue(0.0);
                 ft.setOnFinished(e -> selectorCaraBox.setVisible(false));
                 ft.play();
             }
-            
+
             if (hasProject) {
                 boolean isFrente = viewModel.getProyectoActual().isMostrandoFrente();
                 btnCaraFrente.setSelected(isFrente);
@@ -1175,7 +1197,8 @@ public class MainViewController {
     }
 
     /**
-     * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF temporal
+     * Abre el diálogo de impresión y, si el usuario confirma, genera un PDF
+     * temporal
      * con el mismo motor que la exportación y lo envía al sistema operativo.
      */
     @FXML
@@ -1190,7 +1213,8 @@ public class MainViewController {
 
     @FXML
     private void onShowFrente() {
-        if (viewModel.getProyectoActual() == null) return;
+        if (viewModel.getProyectoActual() == null)
+            return;
         ejecutarCrossFade(() -> {
             viewModel.getProyectoActual().setMostrandoFrente(true);
             viewModel.setElementoSeleccionado(null);
@@ -1203,7 +1227,8 @@ public class MainViewController {
 
     @FXML
     private void onShowDorso() {
-        if (viewModel.getProyectoActual() == null) return;
+        if (viewModel.getProyectoActual() == null)
+            return;
         ejecutarCrossFade(() -> {
             viewModel.getProyectoActual().setMostrandoFrente(false);
             viewModel.setElementoSeleccionado(null);
@@ -1217,13 +1242,15 @@ public class MainViewController {
     @FXML
     private void onToggleOrientacion() {
         Proyecto p = viewModel.getProyectoActual();
-        if (p == null) return;
+        if (p == null)
+            return;
 
         ejecutarGiroTransition(() -> {
             // Cambiar orientación
-            com.tpsstudio.model.enums.Orientacion nueva = (p.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
-                    ? com.tpsstudio.model.enums.Orientacion.VERTICAL
-                    : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
+            com.tpsstudio.model.enums.Orientacion nueva = (p
+                    .getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
+                            ? com.tpsstudio.model.enums.Orientacion.VERTICAL
+                            : com.tpsstudio.model.enums.Orientacion.HORIZONTAL;
 
             p.setOrientacion(nueva);
             if (p.getMetadata() != null) {
@@ -1255,32 +1282,35 @@ public class MainViewController {
             javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
             params.setFill(javafx.scene.paint.Color.TRANSPARENT);
             javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
-            
+
             javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
             tempView.setMouseTransparent(true);
             tempView.setManaged(false); // Posicionamiento manual para evitar saltos de layout
-            
+
             // Posición exacta actual
             javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
             tempView.setLayoutX(bounds.getMinX());
             tempView.setLayoutY(bounds.getMinY());
-            
+
             canvasContainer.getChildren().add(tempView);
 
             // 2. Animación combinada: Rotación + Desvanecimiento
             // Determinamos el sentido del giro ANTES de ejecutar el cambio
             Proyecto proyectoActual = viewModel.getProyectoActual();
-            if (proyectoActual == null) return;
+            if (proyectoActual == null)
+                return;
             boolean aVertical = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL);
             double anguloFinal = aVertical ? 90 : -90;
 
             // EJECUTAR EL CAMBIO YA (Simultáneo a la animación como prefiere el usuario)
             accionCambio.run();
 
-            javafx.animation.RotateTransition rt = new javafx.animation.RotateTransition(javafx.util.Duration.millis(450), tempView);
+            javafx.animation.RotateTransition rt = new javafx.animation.RotateTransition(
+                    javafx.util.Duration.millis(450), tempView);
             rt.setByAngle(anguloFinal);
-            
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450),
+                    tempView);
             ft.setFromValue(1.0);
             ft.setToValue(0.0);
 
@@ -1305,10 +1335,12 @@ public class MainViewController {
         }
 
         try {
-            // Si el canvas no está en escena o es el primer proyecto, hacemos un fade-in tradicional
+            // Si el canvas no está en escena o es el primer proyecto, hacemos un fade-in
+            // tradicional
             if (canvas.getScene() == null || viewModel.getProyectoActual() == null) {
                 accionCambio.run();
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), canvas);
+                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
+                        javafx.util.Duration.millis(450), canvas);
                 ft.setFromValue(0.0);
                 ft.setToValue(1.0);
                 ft.play();
@@ -1319,46 +1351,50 @@ public class MainViewController {
             javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
             params.setFill(javafx.scene.paint.Color.TRANSPARENT);
             javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
-            
+
             javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
             tempView.setMouseTransparent(true);
             tempView.setManaged(false); // Crítico: evita que el ImageView se mueva si el panel derecho se abre/cierra
-            
+
             // Fijar posición absoluta inicial basada en los bounds del canvas
             javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
             tempView.setLayoutX(bounds.getMinX());
             tempView.setLayoutY(bounds.getMinY());
-            
+
             canvasContainer.getChildren().add(tempView);
 
             // 2. Ejecutar el cambio real
             accionCambio.run();
 
             // 3. Animar el desvanecimiento
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450), tempView);
+            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450),
+                    tempView);
             ft.setFromValue(1.0);
             ft.setToValue(0.0);
             ft.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
             ft.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
             ft.play();
-            
+
         } catch (Exception e) {
             accionCambio.run();
         }
     }
 
     private void ajustarZoomVerticalSiNecesario() {
-        if (canvasContainer == null || canvasContainer.getHeight() <= 0) return;
-        
+        if (canvasContainer == null || canvasContainer.getHeight() <= 0)
+            return;
+
         double currentZoom = viewModel.getZoomLevel();
-        double cardHeightScaled = EditorCanvasManager.CARD_WIDTH * currentZoom; // En vertical, la altura base es CARD_WIDTH
+        double cardHeightScaled = EditorCanvasManager.CARD_WIDTH * currentZoom; // En vertical, la altura base es
+                                                                                // CARD_WIDTH
         double maxHeight = canvasContainer.getHeight() - 80; // Margen superior e inferior
-        
+
         if (cardHeightScaled > maxHeight) {
             double targetZoom = maxHeight / EditorCanvasManager.CARD_WIDTH;
             targetZoom = Math.floor(targetZoom * 10) / 10.0;
-            if (targetZoom < 0.5) targetZoom = 0.5;
-            
+            if (targetZoom < 0.5)
+                targetZoom = 0.5;
+
             if (targetZoom < currentZoom) {
                 viewModel.setZoomLevel(targetZoom);
                 actualizarZoom();
@@ -1448,7 +1484,7 @@ public class MainViewController {
     private void adjustCanvasCentering() {
         boolean panelVisible = viewModel.getCurrentMode() == AppMode.DESIGN &&
                 ((togglePropiedades != null && togglePropiedades.isSelected()) ||
-                (toggleDatosVariables != null && toggleDatosVariables.isSelected()));
+                        (toggleDatosVariables != null && toggleDatosVariables.isSelected()));
 
         if (canvasContainer.getWidth() <= 0) {
             Platform.runLater(this::adjustCanvasCentering);
@@ -1457,7 +1493,7 @@ public class MainViewController {
 
         double targetX = panelVisible ? -(rightPanel.getPrefWidth() / 2.0) : 0;
         double duration = panelVisible ? AnimationHelper.DURATION_OPEN : AnimationHelper.DURATION_CLOSE;
-        
+
         AnimationHelper.shiftCanvas(canvas, targetX, duration);
         if (canvasOverlay != null) {
             AnimationHelper.shiftCanvas(canvasOverlay, targetX, duration);
@@ -1482,13 +1518,16 @@ public class MainViewController {
                 String nombre = viewModel.getProyectoActual().getNombre();
                 String inicial = nombre.isEmpty() ? "P" : nombre.substring(0, 1).toUpperCase();
 
-                // Si la escena no está lista O indicamos no animar, configuramos el estado inicial de golpe
+                // Si la escena no está lista O indicamos no animar, configuramos el estado
+                // inicial de golpe
                 if (lblProyectoActivo.getScene() == null || !animate) {
                     if (isProjectChipCollapsed) {
                         lblProyectoActivo.setText(inicial);
                         lblProyectoActivo.setPrefWidth(28);
                         lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
-                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;"); // Muy oscuro
+                        lblProyectoActivo
+                                .setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;"); // Muy
+                                                                                                                     // oscuro
                     } else {
                         lblProyectoActivo.setText("Proyecto · " + nombre);
                         lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
@@ -1501,47 +1540,55 @@ public class MainViewController {
                 // Transición suave
                 javafx.animation.Timeline timeline = new javafx.animation.Timeline();
                 if (isProjectChipCollapsed) {
-                    // Animación de CERRAR: mantener el texto completo para que se recorte desde la derecha
+                    // Animación de CERRAR: mantener el texto completo para que se recorte desde la
+                    // derecha
                     lblProyectoActivo.setText("Proyecto · " + nombre);
                     lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0 0 0 15;"); 
-                    
+                    lblProyectoActivo
+                            .setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0 0 0 15;");
+
                     // Fijar ancho actual para que empiece a encoger
                     double currentWidth = lblProyectoActivo.getWidth();
                     if (currentWidth > 30) {
                         lblProyectoActivo.setPrefWidth(currentWidth);
                     }
-                    
-                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), 28, javafx.animation.Interpolator.EASE_BOTH);
-                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
+
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(),
+                            28, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(
+                            javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
                     timeline.getKeyFrames().add(kf);
-                    
+
                     timeline.setOnFinished(e -> {
                         // Al terminar de cerrar, ponemos la inicial y centramos
                         lblProyectoActivo.setText(inicial);
                         lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
-                        lblProyectoActivo.setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;");
+                        lblProyectoActivo
+                                .setStyle("-fx-background-color: #0c0d16; -fx-text-fill: #4c5171; -fx-padding: 0;");
                     });
                 } else {
                     // Animación de ABRIR: preparar el texto completo desde el principio
                     lblProyectoActivo.setText("Proyecto · " + nombre);
                     lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    lblProyectoActivo.setStyle(""); 
-                    
+                    lblProyectoActivo.setStyle("");
+
                     // Medimos cuánto va a ocupar expandido
                     lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
                     lblProyectoActivo.applyCss();
                     lblProyectoActivo.layout();
                     double targetWidth = lblProyectoActivo.prefWidth(-1);
-                    
+
                     // Empezamos desde el cuadradito
                     lblProyectoActivo.setPrefWidth(28);
-                    
-                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(), targetWidth, javafx.animation.Interpolator.EASE_BOTH);
-                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
+
+                    javafx.animation.KeyValue kv = new javafx.animation.KeyValue(lblProyectoActivo.prefWidthProperty(),
+                            targetWidth, javafx.animation.Interpolator.EASE_BOTH);
+                    javafx.animation.KeyFrame kf = new javafx.animation.KeyFrame(
+                            javafx.util.Duration.millis(AnimationHelper.DURATION_MEDIUM), kv);
                     timeline.getKeyFrames().add(kf);
-                    
-                    timeline.setOnFinished(e -> lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE));
+
+                    timeline.setOnFinished(
+                            e -> lblProyectoActivo.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE));
                 }
                 timeline.play();
 

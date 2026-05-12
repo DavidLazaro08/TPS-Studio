@@ -106,6 +106,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         // Tamaño, Negrita, Cursiva, Alineación (Fila combinada)
         HBox tools = new HBox(8);
         tools.setAlignment(Pos.BOTTOM_LEFT);
+        tools.setFillHeight(false); // Evita que los botones se estiren a lo alto
 
         Spinner<Integer> spnSize = new Spinner<>(8, 72, (int) texto.getFontSize());
         spnSize.setEditable(true);
@@ -119,12 +120,14 @@ public class TextPropertyHandler extends BasePropertyHandler {
         ToggleButton btnBold = new ToggleButton("B");
         btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
         btnBold.setSelected(texto.isNegrita());
+        btnBold.setMinWidth(32); btnBold.setPrefWidth(32);
         btnBold.setStyle("-fx-font-weight: bold;");
         btnBold.setOnAction(e -> { texto.setNegrita(btnBold.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
 
         ToggleButton btnItalic = new ToggleButton("I");
         btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
         btnItalic.setSelected(texto.isCursiva());
+        btnItalic.setMinWidth(32); btnItalic.setPrefWidth(32);
         btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
         btnItalic.setOnAction(e -> { texto.setCursiva(btnItalic.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
 
@@ -139,7 +142,10 @@ public class TextPropertyHandler extends BasePropertyHandler {
         HBox aligns = new HBox(0, bL, bC, bR);
         aligns.getStyleClass().add("prop-segmented-group");
 
-        tools.getChildren().addAll(new VBox(4, new Label("Tamaño:"), spnSize), styles, aligns);
+        VBox sizeBox = new VBox(4, new Label("Tamaño:"), spnSize);
+        sizeBox.getChildren().get(0).getStyleClass().add("prop-label-small");
+
+        tools.getChildren().addAll(sizeBox, styles, aligns);
         container.getChildren().addAll(lblFuente, cmbFuente, tools);
     }
 
@@ -148,6 +154,7 @@ public class TextPropertyHandler extends BasePropertyHandler {
         b.setToggleGroup(g);
         if (!css.isEmpty()) b.getStyleClass().add(css);
         b.getStyleClass().add("prop-toggle-btn");
+        b.setMinWidth(32); b.setPrefWidth(32);
         b.setSelected(align.equals(texto.getAlineacion()));
         b.setOnAction(e -> { texto.setAlineacion(align); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
         return b;

@@ -113,19 +113,21 @@ public class CodePropertyHandler extends BasePropertyHandler {
                 codigo.setFontSize(n); if (onCanvasRedraw != null) onCanvasRedraw.run();
             });
 
-            ToggleButton bB = new ToggleButton("B");
-            bB.getStyleClass().addAll("prop-toggle-btn", "btn-first");
-            bB.setSelected(codigo.isNegrita());
-            bB.setStyle("-fx-font-weight: bold;");
-            bB.setOnAction(e -> { codigo.setNegrita(bB.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
+            ToggleButton btnBold = new ToggleButton("B");
+            btnBold.getStyleClass().addAll("prop-toggle-btn", "btn-first");
+            btnBold.setSelected(codigo.isNegrita());
+            btnBold.setMinWidth(32); btnBold.setPrefWidth(32);
+            btnBold.setStyle("-fx-font-weight: bold;");
+            btnBold.setOnAction(e -> { codigo.setNegrita(btnBold.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
 
-            ToggleButton bI = new ToggleButton("I");
-            bI.getStyleClass().addAll("prop-toggle-btn", "btn-last");
-            bI.setSelected(codigo.isCursiva());
-            bI.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
-            bI.setOnAction(e -> { codigo.setCursiva(bI.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
+            ToggleButton btnItalic = new ToggleButton("I");
+            btnItalic.getStyleClass().addAll("prop-toggle-btn", "btn-last");
+            btnItalic.setSelected(codigo.isCursiva());
+            btnItalic.setMinWidth(32); btnItalic.setPrefWidth(32);
+            btnItalic.setStyle("-fx-font-style: italic; -fx-font-family: 'Georgia', 'Serif';");
+            btnItalic.setOnAction(e -> { codigo.setCursiva(btnItalic.isSelected()); if (onCanvasRedraw != null) onCanvasRedraw.run(); });
 
-            HBox styles = new HBox(0, bB, bI);
+            HBox styles = new HBox(0, btnBold, btnItalic);
             styles.getStyleClass().add("prop-segmented-group");
 
             row.getChildren().addAll(spSize, styles);
