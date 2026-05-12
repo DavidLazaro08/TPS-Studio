@@ -38,6 +38,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 
+import com.tpsstudio.view.managers.ShortcutManager;
 import java.io.File;
 import javafx.animation.Interpolator;
 import javafx.animation.PauseTransition;
@@ -112,6 +113,8 @@ public class MainViewController {
     private ModeManager modeManager;
     // maneja lógica de negocio de proyectos y elementos
     private ProjectManager projectManager;
+    // maneja los atajos de teclado
+    private ShortcutManager shortcutManager;
 
     // ViewModel: estado observable de la aplicación
     private final MainViewModel viewModel = new MainViewModel();
@@ -147,6 +150,14 @@ public class MainViewController {
 
         // Mostrar el usuario actual en el perfil
         lblCurrentUser.setText("Sesión: " + com.tpsstudio.service.AuthService.getInstance().getCurrentUser());
+
+        // Configurar atajos de teclado cuando la escena esté lista
+        shortcutManager = new ShortcutManager(this, viewModel);
+        canvasContainer.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                shortcutManager.setup(newScene);
+            }
+        });
 
         // Arrancamos en Producción: sin canvas ni paneles de diseño
         switchMode(AppMode.PRODUCTION);
@@ -510,11 +521,8 @@ public class MainViewController {
         });
 
         canvas.setFocusTraversable(true);
-        canvas.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.DELETE && viewModel.getElementoSeleccionado() != null) {
-                onEliminarElemento();
-            }
-        });
+        // Los atajos se gestionan ahora a través de ShortcutManager en la Scene
+
 
         // -------------------------------------------------
         // Zoom
@@ -1422,7 +1430,7 @@ public class MainViewController {
         elementActionsController.añadirCodigo(tipo);
     }
 
-    private void onEliminarElemento() {
+    public void onEliminarElemento() {
         elementActionsController.eliminarElemento();
     }
 

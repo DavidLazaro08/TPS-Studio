@@ -27,6 +27,9 @@ public abstract class BasePropertyHandler {
 
     // Propiedad compartida para el estado del cuentagotas
     protected static final BooleanProperty eyedropperActive = new SimpleBooleanProperty(false);
+    
+    // Bandera para evitar bucles de eventos durante actualizaciones automáticas
+    private boolean isInternalUpdate = false;
 
     // Referencias para actualización en tiempo real (X, Y, W, H)
     protected TextField txtX, txtY, txtW, txtH;
@@ -53,10 +56,15 @@ public abstract class BasePropertyHandler {
      */
     public void updatePositionFields(Elemento elemento) {
         if (elemento == null) return;
-        updateField(txtX, elemento.getX());
-        updateField(txtY, elemento.getY());
-        updateField(txtW, elemento.getWidth());
-        updateField(txtH, elemento.getHeight());
+        isInternalUpdate = true;
+        try {
+            updateField(txtX, elemento.getX());
+            updateField(txtY, elemento.getY());
+            updateField(txtW, elemento.getWidth());
+            updateField(txtH, elemento.getHeight());
+        } finally {
+            isInternalUpdate = false;
+        }
     }
 
     private void updateField(TextField field, double value) {
@@ -72,6 +80,7 @@ public abstract class BasePropertyHandler {
         tf.setPromptText(prompt);
         tf.setMaxWidth(Double.MAX_VALUE);
         tf.textProperty().addListener((obs, old, newVal) -> {
+            if (isInternalUpdate) return;
             try {
                 double value = Double.parseDouble(newVal);
                 onValidChange.accept(value);

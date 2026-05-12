@@ -6,6 +6,7 @@ import com.tpsstudio.service.ProjectManager;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.Cursor;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -132,6 +133,7 @@ public class VariableDataManager {
             lblVal.getStyleClass().add("dato-valor");
             lblVal.setWrapText(true);
             lblVal.setTooltip(new Tooltip("Doble clic para editar valor"));
+            lblVal.setCursor(Cursor.HAND);
             
             StackPane stack = new StackPane(lblVal);
             stack.setAlignment(Pos.CENTER_LEFT);

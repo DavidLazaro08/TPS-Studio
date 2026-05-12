@@ -47,9 +47,15 @@ public class EditorCanvasManager {
     private boolean mostrarGuias = false;
     private AppMode currentMode = AppMode.PRODUCTION;
     private FuenteDatos fuenteDatos;
-    private double hudOpacity = 0.0;
+    private double hudOpacity = 1.0;
     private Timeline hudFadeTimeline;
     private DoubleProperty hudOpacityProp;
+
+    // Estado de animación para Cuentagotas
+    private javafx.animation.AnimationTimer eyedropperTimer;
+    private double eyedropperPulse = 0.0;
+    private long lastPulseUpdate = 0;
+    private double mouseX = 0, mouseY = 0;
 
     // Callbacks
     private Runnable onElementSelected;
@@ -66,8 +72,10 @@ public class EditorCanvasManager {
     // ===================== LÓGICA DE DIBUJO (DELEGADA) =====================
     
     public void dibujarCanvas() {
+        boolean eyedropperActive = interactionHandler != null && interactionHandler.isEyedropperActive();
         renderer.render(canvas.getGraphicsContext2D(), proyectoActual, canvas.getWidth(), canvas.getHeight(),
-                       zoomLevel, mostrarGuias, currentMode, elementoSeleccionado, fuenteDatos, hudOpacity);
+                       zoomLevel, mostrarGuias, currentMode, elementoSeleccionado, fuenteDatos, hudOpacity,
+                       eyedropperActive, mouseX, mouseY, eyedropperPulse);
     }
 
     // ===================== MÉTODOS DE ESTADO =====================
@@ -120,9 +128,47 @@ public class EditorCanvasManager {
     public static double getScaledHeight(Proyecto p) { return (p != null && p.getOrientacion() == Orientacion.VERTICAL) ? CARD_WIDTH : CARD_HEIGHT; }
 
     // ===================== ACCIONES (DELEGADAS AL HANDLER) =====================
+    
+    public void setMousePosition(double x, double y) {
+        this.mouseX = x; this.mouseY = y;
+        if (interactionHandler != null && interactionHandler.isEyedropperActive()) dibujarCanvas();
+    }
 
-    public void activateEyedropper(Consumer<Color> callback) { interactionHandler.activateEyedropper(callback); }
-    public void deactivateEyedropper() { interactionHandler.deactivateEyedropper(); }
+    public void activateEyedropper(Consumer<Color> callback) { 
+        interactionHandler.activateEyedropper(callback); 
+        startEyedropperPulse();
+    }
+    
+    public void deactivateEyedropper() { 
+        interactionHandler.deactivateEyedropper(); 
+        stopEyedropperPulse();
+    }
+
+    private void startEyedropperPulse() {
+        if (eyedropperTimer != null) eyedropperTimer.stop();
+        lastPulseUpdate = System.nanoTime();
+        eyedropperTimer = new javafx.animation.AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                double elapsedSeconds = (now - lastPulseUpdate) / 1_000_000_000.0;
+                lastPulseUpdate = now;
+                
+                eyedropperPulse += elapsedSeconds * 0.8; // Velocidad de crecimiento
+                if (eyedropperPulse > 1.0) eyedropperPulse = 0.0;
+                dibujarCanvas();
+            }
+        };
+        eyedropperTimer.start();
+    }
+
+    private void stopEyedropperPulse() {
+        if (eyedropperTimer != null) {
+            eyedropperTimer.stop();
+            eyedropperTimer = null;
+        }
+        eyedropperPulse = 0.0;
+        dibujarCanvas();
+    }
     
     // ===================== NOTIFICACIONES (PUENTE) =====================
 

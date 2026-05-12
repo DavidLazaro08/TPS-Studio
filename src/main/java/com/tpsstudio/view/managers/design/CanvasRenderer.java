@@ -24,6 +24,10 @@ import java.util.List;
  * Se encarga exclusivamente de dibujar la tarjeta, elementos y guías.
  */
 public class CanvasRenderer {
+    
+    // Estado de animación para el cuentagotas
+    private double eyedropperX, eyedropperY, eyedropperPulse;
+    private boolean isEyedropperActive;
 
     private static Image imagenSilueta = null;
     static {
@@ -34,7 +38,11 @@ public class CanvasRenderer {
 
     public void render(GraphicsContext gc, Proyecto proyecto, double canvasW, double canvasH, 
                        double zoom, boolean mostrarGuias, AppMode currentMode, 
-                       Elemento seleccion, FuenteDatos fuenteDatos, double hudOpacity) {
+                       Elemento seleccion, FuenteDatos fuenteDatos, double hudOpacity,
+                       boolean eyedropperActive, double ex, double ey, double ep) {
+        
+        this.isEyedropperActive = eyedropperActive;
+        this.eyedropperX = ex; this.eyedropperY = ey; this.eyedropperPulse = ep;
         
         gc.clearRect(0, 0, canvasW, canvasH);
 
@@ -86,10 +94,13 @@ public class CanvasRenderer {
         if (mostrarGuias) drawHolePunch(gc, proyecto, cardX, cardY, scaledW, zoom);
 
         // 7. HUD Informativo (Proyecto/Cliente)
-        if (hudOpacity > 0.0) drawHUD(gc, proyecto, canvasW, hudOpacity);
+        if (hudOpacity > 0.0) drawHUD(gc, proyecto, canvasW, hudOpacity, currentMode);
 
         // 8. Información de dimensiones inferior
         drawFooterInfo(gc, proyecto, cardX, cardY, scaledW, scaledH, zoom);
+        
+        // 9. Efecto Cuentagotas (si está activo)
+        if (isEyedropperActive) drawEyedropperPulse(gc);
 
         gc.restore();
     }
@@ -144,10 +155,10 @@ public class CanvasRenderer {
         List<String> lines = TextUtils.computeLines(content, t.isSaltoLinea(), gc.getFont(), ew);
         double lineHeight = fontSize * zoom * 1.2;
         
-        // Calcular altura total para alinear al fondo si sobra espacio (auto-ajuste)
+        // Calcular altura total para centrar verticalmente
         double totalTextHeight = lines.size() * lineHeight;
-        double offsetY = Math.max(0, eh - totalTextHeight);
-        double currentY = ey + offsetY + (fontSize * zoom);
+        double offsetY = Math.max(0, (eh - totalTextHeight) / 2);
+        double currentY = ey + offsetY + (fontSize * zoom * 0.85); // 0.85 para ajustar el baseline visual al centro
 
         for (String line : lines) {
             double tx = ex;
@@ -270,27 +281,32 @@ public class CanvasRenderer {
         gc.strokeRect(x, y, dim, dim);
     }
 
-    private void drawHUD(GraphicsContext gc, Proyecto p, double canvasW, double opacity) {
+    private void drawHUD(GraphicsContext gc, Proyecto p, double canvasW, double opacity, AppMode mode) {
         gc.save();
         gc.setGlobalAlpha(opacity);
         double centroX = canvasW / 2;
         double staticTopY = 35;
 
-        gc.setFont(Font.font("Arial", 18));
-        gc.setFill(Color.web("#e8e6e7"));
-        String pName = "PROYECTO | " + (p.getNombre() != null ? p.getNombre() : "S/N");
-        gc.fillText(pName, centroX - (TextUtils.getTextWidth(pName, gc.getFont()) / 2), staticTopY);
+        // 1. Textos Superiores (Proyecto / Cliente) en modo Producción
+        // Solo si NO es vertical, para evitar que se solapen con la tarjeta
+        if (mode == AppMode.PRODUCTION && p.getOrientacion() != Orientacion.VERTICAL) {
+            gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 18));
+            gc.setFill(Color.WHITE);
+            String pName = "PROYECTO | " + (p.getNombre() != null ? p.getNombre().toUpperCase() : "SIN NOMBRE");
+            gc.fillText(pName, centroX - (TextUtils.getTextWidth(pName, gc.getFont()) / 2), staticTopY);
 
-        gc.setFont(Font.font("Arial", 14));
-        String cName = "Cliente: " + (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null 
-                        ? p.getMetadata().getClienteInfo().getNombreEmpresa() : "Sin Asignar");
-        String btnTxt = "  ✎ Editar datos";
-        double wC = TextUtils.getTextWidth(cName, gc.getFont());
-        double wB = TextUtils.getTextWidth(btnTxt, gc.getFont());
-        double startX = centroX - (wC + wB) / 2;
-        
-        gc.setFill(Color.web("#9a9598")); gc.fillText(cName, startX, staticTopY + 25);
-        gc.setFill(Color.web("#8b78d4")); gc.fillText(btnTxt, startX + wC, staticTopY + 25);
+            gc.setFont(javafx.scene.text.Font.font("System", 14));
+            gc.setFill(Color.LIGHTGRAY);
+            
+            String cName = "Cliente: " + (p.getMetadata() != null && p.getMetadata().getClienteInfo() != null 
+                            ? p.getMetadata().getClienteInfo().getNombreEmpresa() : "Sin Asignar");
+            String link = " 🔗 Editar datos";
+            double totalW = TextUtils.getTextWidth(cName + link, gc.getFont());
+            gc.fillText(cName, centroX - (totalW / 2), staticTopY + 25);
+            
+            gc.setFill(Color.web("#8181f7"));
+            gc.fillText(link, centroX - (totalW / 2) + TextUtils.getTextWidth(cName, gc.getFont()), staticTopY + 25);
+        }
         gc.restore();
     }
 
@@ -348,4 +364,18 @@ public class CanvasRenderer {
     }
 
     private Proyecto proyectoParaFotos(Elemento e) { return null; /* Inyectar si es necesario */ }
+
+    private void drawEyedropperPulse(GraphicsContext gc) {
+        gc.save();
+        double r1 = 5 + (eyedropperPulse * 20);
+        double r2 = 2 + (eyedropperPulse * 12);
+        double alpha = 1.0 - eyedropperPulse;
+
+        gc.setStroke(Color.WHITE); gc.setLineWidth(2); gc.setGlobalAlpha(alpha);
+        gc.strokeOval(eyedropperX - r1, eyedropperY - r1, r1 * 2, r1 * 2);
+        
+        gc.setStroke(Color.web("#8181f7")); gc.setLineWidth(1.5); gc.setGlobalAlpha(alpha * 0.7);
+        gc.strokeOval(eyedropperX - r2, eyedropperY - r2, r2 * 2, r2 * 2);
+        gc.restore();
+    }
 }

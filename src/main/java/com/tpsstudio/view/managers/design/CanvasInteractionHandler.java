@@ -141,6 +141,11 @@ public class CanvasInteractionHandler {
         lastScreenX = e.getScreenX(); lastScreenY = e.getScreenY();
         gestionarHoverGuias(e);
 
+        if (eyedropperActive) {
+            manager.setMousePosition(e.getX(), e.getY());
+            return;
+        }
+
         if (manager.getProyectoActual() == null || manager.getCurrentMode() != AppMode.DESIGN) {
             canvas.setCursor(Cursor.DEFAULT); return;
         }
@@ -252,12 +257,16 @@ public class CanvasInteractionHandler {
         canvas.setCursor(Cursor.DEFAULT);
     }
 
+    public boolean isEyedropperActive() {
+        return eyedropperActive;
+    }
+
     private void pickColorAt(double x, double y) {
         javafx.scene.image.Image snap = canvas.snapshot(null, null);
         javafx.scene.image.PixelReader pr = snap.getPixelReader();
         int ix = (int) Math.max(0, Math.min(snap.getWidth() - 1, x));
         int iy = (int) Math.max(0, Math.min(snap.getHeight() - 1, y));
         if (onColorPickedCallback != null) onColorPickedCallback.accept(pr.getColor(ix, iy));
-        eyedropperActive = false; canvas.setCursor(Cursor.DEFAULT);
+        manager.deactivateEyedropper();
     }
 }
