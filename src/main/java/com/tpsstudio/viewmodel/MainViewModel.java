@@ -26,6 +26,12 @@ public class MainViewModel {
     // Nivel de zoom actual
     private final DoubleProperty zoomLevel = new SimpleDoubleProperty(1.5);
 
+    // Visibilidad de guías de troquel
+    private final BooleanProperty mostrarGuias = new SimpleBooleanProperty(true);
+
+    // Estado del chip de proyecto (Colapsado/Expandido)
+    private final BooleanProperty projectChipCollapsed = new SimpleBooleanProperty(true);
+
     // =====================================================
     // statusText
     // =====================================================
@@ -65,4 +71,20 @@ public class MainViewModel {
     public DoubleProperty zoomLevelProperty()   { return zoomLevel; }
     public double getZoomLevel()                { return zoomLevel.get(); }
     public void   setZoomLevel(double zoom)     { zoomLevel.set(zoom); }
+
+    // =====================================================
+    // mostrarGuias
+    // =====================================================
+
+    public BooleanProperty mostrarGuiasProperty() { return mostrarGuias; }
+    public boolean isMostrarGuias()              { return mostrarGuias.get(); }
+    public void    setMostrarGuias(boolean show) { mostrarGuias.set(show); }
+
+    // =====================================================
+    // projectChipCollapsed
+    // =====================================================
+
+    public BooleanProperty projectChipCollapsedProperty() { return projectChipCollapsed; }
+    public boolean isProjectChipCollapsed()               { return projectChipCollapsed.get(); }
+    public void    setProjectChipCollapsed(boolean b)      { projectChipCollapsed.set(b); }
 }

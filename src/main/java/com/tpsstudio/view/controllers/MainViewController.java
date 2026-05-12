@@ -22,6 +22,8 @@ import com.tpsstudio.model.print.TrabajoImpresion;
 import com.tpsstudio.util.TPSToast;
 import com.tpsstudio.view.controllers.sub.ElementActionsController;
 import com.tpsstudio.view.controllers.sub.ProjectActionsController;
+import com.tpsstudio.view.controllers.sub.SessionController;
+import com.tpsstudio.view.managers.design.CanvasAnimationManager;
 import com.tpsstudio.view.dialogs.ImpresionDialog;
 import com.tpsstudio.viewmodel.MainViewModel;
 import javafx.application.Platform;
@@ -130,8 +132,11 @@ public class MainViewController {
     // Gestor de categorías/etiquetas (por usuario)
     private EtiquetasManager etiquetasManager;
 
-    // Estado para el chip de proyecto colapsable (Cerrado por defecto)
-    private boolean isProjectChipCollapsed = true;
+    // Gestor de animaciones del canvas (Refactorización Phase 7)
+    private CanvasAnimationManager animationManager;
+
+    // Sub-controlador de sesión (Refactorización Phase 7)
+    private SessionController sessionController;
 
     // =====================================================
     // Inicialización
@@ -140,9 +145,10 @@ public class MainViewController {
     private void initialize() {
         setupCanvas();
         initUI();
+        setupBindings();
 
         lblProyectoActivo.setOnMouseClicked(e -> {
-            isProjectChipCollapsed = !isProjectChipCollapsed;
+            viewModel.setProjectChipCollapsed(!viewModel.isProjectChipCollapsed());
             actualizarLabelProyecto(true);
         });
 
@@ -161,6 +167,9 @@ public class MainViewController {
 
         // Arrancamos en Producción: sin canvas ni paneles de diseño
         switchMode(AppMode.PRODUCTION);
+
+        // Inicializar controlador de sesión usando el panel izquierdo como ancla
+        sessionController = new SessionController(leftPanel);
     }
 
     private void initUI() {
@@ -175,118 +184,39 @@ public class MainViewController {
         rightPanel.setManaged(false);
     }
 
+    private void setupBindings() {
+        // Binding del texto del Zoom
+        lblZoom.textProperty().bind(
+            javafx.beans.binding.Bindings.createStringBinding(
+                () -> String.format("%.0f%%", viewModel.getZoomLevel() * 100),
+                viewModel.zoomLevelProperty()
+            )
+        );
+
+        // Binding bidireccional para las guías
+        toggleGuias.selectedProperty().bindBidirectional(viewModel.mostrarGuiasProperty());
+
+        // Listener para propagar el cambio de guías al CanvasManager
+        viewModel.mostrarGuiasProperty().addListener((obs, old, nw) -> {
+            if (canvasManager != null) {
+                canvasManager.setMostrarGuias(nw);
+                dibujarCanvas();
+            }
+        });
+
+        // Listener para propagar el zoom al CanvasManager
+        viewModel.zoomLevelProperty().addListener((obs, old, nw) -> {
+            if (canvasManager != null) {
+                canvasManager.setZoomLevel(nw.doubleValue());
+                posicionarSelectorCara();
+                dibujarCanvas();
+            }
+        });
+    }
+
     @FXML
     private void onLogout() {
-        // Confirmar cierre de sesión con diálogo estándar
-        Alert alert = com.tpsstudio.util.AlertHelper.createAlert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Cerrar Sesión");
-        alert.setHeaderText("Vas a salir de la sesión actual.");
-        alert.setContentText("¿Estás seguro de que quieres volver al login?");
-
-        // Estilo nativo para el diálogo
-
-        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            try {
-                // 1. Limpiar sesión en el servicio
-                com.tpsstudio.service.AuthService.getInstance().logout();
-
-                // 2. Obtener Stage y Escena actual
-                Stage stage = (Stage) leftPanel.getScene().getWindow();
-                Scene scene = leftPanel.getScene();
-
-                // Capturar el root actual (Main View) para la animación de salida
-                javafx.scene.Parent mainView = scene.getRoot();
-
-                // 3. Cargar la vista de Login (todavía invisible)
-                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
-                        getClass().getResource("/fxml/login_view.fxml"));
-                javafx.scene.Parent loginView = loader.load();
-                loginView.setOpacity(0);
-                loginView.setScaleX(1.05);
-                loginView.setScaleY(1.05);
-
-                // 4. Crear contenedor de transición
-                javafx.scene.layout.StackPane transitionContainer = new javafx.scene.layout.StackPane();
-                transitionContainer.getStyleClass().add("transition-overlay");
-
-                // Intercambiamos el root por el contenedor temporal
-                scene.setRoot(transitionContainer);
-                transitionContainer.getChildren().addAll(loginView, mainView);
-
-                // 5. SECUENCIA DE ANIMACIÓN
-                javafx.application.Platform.runLater(() -> {
-                    Duration duration = Duration.millis(300);
-
-                    // --- Salida (Main) ---
-                    javafx.animation.FadeTransition fadeMain = new javafx.animation.FadeTransition(duration, mainView);
-                    fadeMain.setFromValue(1.0);
-                    fadeMain.setToValue(0.0);
-
-                    fadeMain.setOnFinished(e -> {
-                        // LIMPIEZA CLAVE: Desvinculamos el loginView del contenedor antes de ponerlo
-                        // como ROOT
-                        transitionContainer.getChildren().clear();
-
-                        // Reset de ventana: unmaximize y restaurar tamaño de contenido
-                        stage.setMaximized(false);
-                        stage.setMinWidth(0);
-                        stage.setMinHeight(0);
-
-                        // Aplicar LoginView como root definitivo
-                        scene.setRoot(loginView);
-
-                        // Reaplicar CSS al Login (asegurarnos de que hereda el estilo)
-                        if (!scene.getStylesheets().contains(getClass().getResource("/css/app.css").toExternalForm())) {
-                            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
-                        }
-
-                        // Forzar el tamaño exacto del contenido (760x580)
-                        stage.setWidth(776); // Aproximación del marco de Windows (760 + decoraciones)
-                        stage.setHeight(619); // Aproximación del marco de Windows (580 + decoraciones)
-
-                        // Ajuste fino: sizeToScene es más preciso si el contenido está listo
-                        javafx.application.Platform.runLater(() -> {
-                            stage.sizeToScene();
-                            stage.centerOnScreen();
-                        });
-
-                        // --- Entrada (Login) ---
-                        javafx.animation.FadeTransition fadeLogin = new javafx.animation.FadeTransition(duration,
-                                loginView);
-                        fadeLogin.setFromValue(0.0);
-                        fadeLogin.setToValue(1.0);
-
-                        javafx.animation.ScaleTransition scaleLogin = new javafx.animation.ScaleTransition(duration,
-                                loginView);
-                        scaleLogin.setFromX(1.05);
-                        scaleLogin.setFromY(1.05);
-                        scaleLogin.setToX(1.0);
-                        scaleLogin.setToY(1.0);
-
-                        new javafx.animation.ParallelTransition(fadeLogin, scaleLogin).play();
-                    });
-
-                    fadeMain.play();
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                // Fallback de emergencia: recarga total
-                try {
-                    Stage stage = (Stage) leftPanel.getScene().getWindow();
-                    javafx.scene.Parent root = new javafx.fxml.FXMLLoader(
-                            getClass().getResource("/fxml/login_view.fxml")).load();
-                    javafx.scene.Scene newScene = new javafx.scene.Scene(root, 760, 580);
-                    newScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
-                    stage.setScene(newScene);
-                    stage.setMaximized(false);
-                    stage.sizeToScene();
-                    stage.centerOnScreen();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        }
+        sessionController.logout();
     }
 
     private void setupCanvas() {
@@ -296,9 +226,10 @@ public class MainViewController {
         // -------------------------------------------------
         projectManager = new ProjectManager();
 
-        // Inicializar gestor de categorías con el usuario actual
+        // Inicializar gestores de apoyo
         String currentUser = com.tpsstudio.service.AuthService.getInstance().getCurrentUser();
         etiquetasManager = new EtiquetasManager(currentUser);
+        animationManager = new CanvasAnimationManager(canvas, canvasContainer);
 
         // Inicializar sub-controlador de acciones de proyecto
         projectActionsController = new ProjectActionsController(
@@ -401,9 +332,8 @@ public class MainViewController {
                     viewModel.getProyectoActual().setTipoTroquel(sel);
 
                     // Asegurar que las guías están visibles si se selecciona un troquel
-                    if (sel != TipoTroquel.NINGUNO && !toggleGuias.isSelected()) {
-                        toggleGuias.setSelected(true);
-                        canvasManager.setMostrarGuias(true);
+                    if (sel != TipoTroquel.NINGUNO && !viewModel.isMostrarGuias()) {
+                        viewModel.setMostrarGuias(true);
                     }
 
                     dibujarCanvas();
@@ -427,7 +357,7 @@ public class MainViewController {
         });
 
         modeManager.setOnProjectSelected(proyecto -> {
-            ejecutarCrossFade(() -> {
+            animationManager.ejecutarCrossFade(() -> {
                 viewModel.setProyectoActual(proyecto);
                 projectManager.setProyectoActual(proyecto);
                 canvasManager.setProyectoActual(proyecto);
@@ -439,7 +369,7 @@ public class MainViewController {
 
                 checkDesignWarnings();
                 dibujarCanvas();
-            });
+            }, proyecto);
         });
 
         modeManager.setOnEditExternal(this::abrirEditorExterno);
@@ -525,9 +455,9 @@ public class MainViewController {
 
 
         // -------------------------------------------------
-        // Zoom
+        // Zoom e Inicialización de UI
         // -------------------------------------------------
-        actualizarZoom();
+        posicionarSelectorCara();
 
         // Clip para evitar que el canvas se desborde sobre el panel izquierdo
         javafx.scene.shape.Rectangle clipRect = new javafx.scene.shape.Rectangle();
@@ -702,7 +632,6 @@ public class MainViewController {
     private void onZoomIn() {
         if (viewModel.getZoomLevel() < 2.0) {
             viewModel.setZoomLevel(viewModel.getZoomLevel() + 0.1);
-            actualizarZoom();
         }
     }
 
@@ -710,16 +639,10 @@ public class MainViewController {
     private void onZoomOut() {
         if (viewModel.getZoomLevel() > 0.5) {
             viewModel.setZoomLevel(viewModel.getZoomLevel() - 0.1);
-            actualizarZoom();
         }
     }
 
-    private void actualizarZoom() {
-        lblZoom.setText(String.format("%.0f%%", viewModel.getZoomLevel() * 100));
-        canvasManager.setZoomLevel(viewModel.getZoomLevel());
-        posicionarSelectorCara();
-        dibujarCanvas();
-    }
+
 
     // =====================================================
     // Toggles / opciones visuales
@@ -727,8 +650,7 @@ public class MainViewController {
 
     @FXML
     private void onToggleGuias() {
-        canvasManager.setMostrarGuias(toggleGuias.isSelected());
-        dibujarCanvas();
+        // Ya se gestiona mediante binding bidireccional en setupBindings()
     }
 
     // =====================================================
@@ -1042,28 +964,28 @@ public class MainViewController {
     private void onShowFrente() {
         if (viewModel.getProyectoActual() == null)
             return;
-        ejecutarCrossFade(() -> {
+        animationManager.ejecutarCrossFade(() -> {
             viewModel.getProyectoActual().setMostrandoFrente(true);
             viewModel.setElementoSeleccionado(null);
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
             }
             dibujarCanvas();
-        });
+        }, viewModel.getProyectoActual());
     }
 
     @FXML
     private void onShowDorso() {
         if (viewModel.getProyectoActual() == null)
             return;
-        ejecutarCrossFade(() -> {
+        animationManager.ejecutarCrossFade(() -> {
             viewModel.getProyectoActual().setMostrandoFrente(false);
             viewModel.setElementoSeleccionado(null);
             if (viewModel.getCurrentMode() == AppMode.DESIGN) {
                 modeManager.refreshLayersPanel(viewModel.getProyectoActual(), null);
             }
             dibujarCanvas();
-        });
+        }, viewModel.getProyectoActual());
     }
 
     @FXML
@@ -1072,7 +994,7 @@ public class MainViewController {
         if (p == null)
             return;
 
-        ejecutarGiroTransition(() -> {
+        animationManager.ejecutarGiroTransition(() -> {
             // Cambiar orientación
             com.tpsstudio.model.enums.Orientacion nueva = (p
                     .getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL)
@@ -1091,121 +1013,10 @@ public class MainViewController {
                 ajustarZoomVerticalSiNecesario();
             }
             dibujarCanvas();
-        });
+        }, p);
     }
 
-    /**
-     * Transición específica para el giro de la tarjeta.
-     * Captura el estado actual y lo rota 90 grados mientras se desvanece.
-     */
-    private void ejecutarGiroTransition(Runnable accionCambio) {
-        if (canvas == null || canvasContainer == null) {
-            accionCambio.run();
-            return;
-        }
 
-        try {
-            // 1. Captura transparente
-            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
-            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
-            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
-
-            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
-            tempView.setMouseTransparent(true);
-            tempView.setManaged(false); // Posicionamiento manual para evitar saltos de layout
-
-            // Posición exacta actual
-            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
-            tempView.setLayoutX(bounds.getMinX());
-            tempView.setLayoutY(bounds.getMinY());
-
-            canvasContainer.getChildren().add(tempView);
-
-            // 2. Animación combinada: Rotación + Desvanecimiento
-            // Determinamos el sentido del giro ANTES de ejecutar el cambio
-            Proyecto proyectoActual = viewModel.getProyectoActual();
-            if (proyectoActual == null)
-                return;
-            boolean aVertical = (proyectoActual.getOrientacion() == com.tpsstudio.model.enums.Orientacion.HORIZONTAL);
-            double anguloFinal = aVertical ? 90 : -90;
-
-            // EJECUTAR EL CAMBIO YA (Simultáneo a la animación como prefiere el usuario)
-            accionCambio.run();
-
-            javafx.animation.RotateTransition rt = new javafx.animation.RotateTransition(
-                    javafx.util.Duration.millis(450), tempView);
-            rt.setByAngle(anguloFinal);
-
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450),
-                    tempView);
-            ft.setFromValue(1.0);
-            ft.setToValue(0.0);
-
-            javafx.animation.ParallelTransition parallel = new javafx.animation.ParallelTransition(rt, ft);
-            parallel.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
-            parallel.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
-            parallel.play();
-
-        } catch (Exception e) {
-            accionCambio.run();
-        }
-    }
-
-    /**
-     * Realiza una transición de fundido cruzado (cross-fade) entre el estado actual
-     * del canvas y el nuevo estado tras ejecutar la acción de cambio.
-     */
-    private void ejecutarCrossFade(Runnable accionCambio) {
-        if (canvas == null || canvasContainer == null) {
-            accionCambio.run();
-            return;
-        }
-
-        try {
-            // Si el canvas no está en escena o es el primer proyecto, hacemos un fade-in
-            // tradicional
-            if (canvas.getScene() == null || viewModel.getProyectoActual() == null) {
-                accionCambio.run();
-                javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(
-                        javafx.util.Duration.millis(450), canvas);
-                ft.setFromValue(0.0);
-                ft.setToValue(1.0);
-                ft.play();
-                return;
-            }
-
-            // 1. Capturar el estado actual del canvas
-            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
-            params.setFill(javafx.scene.paint.Color.TRANSPARENT);
-            javafx.scene.image.WritableImage snapshot = canvas.snapshot(params, null);
-
-            javafx.scene.image.ImageView tempView = new javafx.scene.image.ImageView(snapshot);
-            tempView.setMouseTransparent(true);
-            tempView.setManaged(false); // Crítico: evita que el ImageView se mueva si el panel derecho se abre/cierra
-
-            // Fijar posición absoluta inicial basada en los bounds del canvas
-            javafx.geometry.Bounds bounds = canvas.getBoundsInParent();
-            tempView.setLayoutX(bounds.getMinX());
-            tempView.setLayoutY(bounds.getMinY());
-
-            canvasContainer.getChildren().add(tempView);
-
-            // 2. Ejecutar el cambio real
-            accionCambio.run();
-
-            // 3. Animar el desvanecimiento
-            javafx.animation.FadeTransition ft = new javafx.animation.FadeTransition(javafx.util.Duration.millis(450),
-                    tempView);
-            ft.setFromValue(1.0);
-            ft.setToValue(0.0);
-            ft.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
-            ft.setOnFinished(e -> canvasContainer.getChildren().remove(tempView));
-            ft.play();
-
-        } catch (Exception e) {
-            accionCambio.run();
-        }
-    }
 
     private void ajustarZoomVerticalSiNecesario() {
         if (canvasContainer == null || canvasContainer.getHeight() <= 0)
@@ -1224,7 +1035,6 @@ public class MainViewController {
 
             if (targetZoom < currentZoom) {
                 viewModel.setZoomLevel(targetZoom);
-                actualizarZoom();
             }
         }
     }
@@ -1348,7 +1158,7 @@ public class MainViewController {
                 // Si la escena no está lista O indicamos no animar, configuramos el estado
                 // inicial de golpe
                 if (lblProyectoActivo.getScene() == null || !animate) {
-                    if (isProjectChipCollapsed) {
+                    if (viewModel.isProjectChipCollapsed()) {
                         lblProyectoActivo.setText(inicial);
                         lblProyectoActivo.setPrefWidth(28);
                         lblProyectoActivo.setAlignment(javafx.geometry.Pos.CENTER);
@@ -1366,7 +1176,7 @@ public class MainViewController {
 
                 // Transición suave
                 javafx.animation.Timeline timeline = new javafx.animation.Timeline();
-                if (isProjectChipCollapsed) {
+                if (viewModel.isProjectChipCollapsed()) {
                     // Animación de CERRAR: mantener el texto completo para que se recorte desde la
                     // derecha
                     lblProyectoActivo.setText("Proyecto · " + nombre);
